@@ -80,8 +80,8 @@
 - 前端 React + TypeScript，样式写在 `web/src/styles.css` 的设计变量上；颜色只表达状态和风险等级，状态不只靠颜色表达。
 - 模块路径是 `github.com/tsienwan/hostower`；包都放在 `internal/` 下，命令行入口在 `cmd/`，开发工具在 `tools/`。
 - 文档里不写开发计划和未来规划，只写已经实现的行为；用户会遇到的问题写进 `docs/faq.md`。
-- README 和常见问题有七种语言（和界面一致：简体中文原文，加 `*.zh-TW.md`、`*.en.md`、`*.ja.md`、`*.ko.md`、`*.fr.md`、`*.de.md`）；变更记录、贡献指南、安全策略、商标说明、行为准则有中英两份。改一份就要同步改其他语言；`AGENTS.md` 和设计文档只有中文。
-- README 里的截图在 `docs/images/screenshots/`（`zh-CN` 给简体中文 README 用，`en` 给其他语言用），用开发模式的模拟主机截取，界面变了要重截。
+- README 和常见问题有七种语言，和界面一致。README：`README.md` 是英文（GitHub 默认显示它），简体中文是 `README.zh-CN.md`，另有 `README.zh-TW.md`、`README.ja.md`、`README.ko.md`、`README.fr.md`、`README.de.md`；常见问题：`docs/faq.md` 是简体中文原文，另有 `faq.zh-TW.md`、`faq.en.md`、`faq.ja.md`、`faq.ko.md`、`faq.fr.md`、`faq.de.md`。变更记录、贡献指南、安全策略、商标说明、行为准则有中英两份。改一份就要同步改其他语言；`AGENTS.md` 和设计文档只有中文。
+- README 里的截图在 `docs/images/screenshots/`（`zh-CN` 给 `README.zh-CN.md` 用，`en` 给其他语言用），用开发模式的模拟主机截取，界面变了要重截。
 
 ## 版本与提交
 

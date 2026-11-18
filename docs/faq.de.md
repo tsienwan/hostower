@@ -215,7 +215,7 @@ Automatische Updates funktionieren nur für offizielle Releases, weil sie die Re
 In der Datei `initial-password` im Datenverzeichnis; es wird nie in Protokolle geschrieben. Mit Docker:
 
 ```bash
-docker exec <container> cat /data/initial-password
+sudo cat data/initial-password   # im Verzeichnis mit der compose.yaml ausführen
 ```
 
 Ändern Sie nach der Anmeldung so bald wie möglich das Passwort und fügen Sie einen Passkey oder einen Authenticator hinzu. Wenn alle Anmeldemethoden verloren sind, führen Sie auf dem Server `hostower auth reset-password` aus.

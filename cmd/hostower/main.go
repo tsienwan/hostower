@@ -294,7 +294,7 @@ func serve(args []string) error {
 		if owner == "" {
 			owner = auth.DefaultOwnerName
 		}
-		fmt.Fprintf(os.Stderr, "\n  已创建所有者 %s，初始密码在 %s（权限 0600）。\n  用它登录 %s，登录后请修改密码，并添加 Passkey 或动态码。\n  用 Docker 时：docker exec <容器> cat /data/%s\n\n",
+		fmt.Fprintf(os.Stderr, "\n  已创建所有者 %s，初始密码在 %s（权限 0600）。\n  用它登录 %s，登录后请修改密码，并添加 Passkey 或动态码。\n  用 Docker 时：在 compose 文件所在的目录执行 sudo cat data/%s\n\n",
 			owner, initialPassword, cfg.PublicURL, auth.InitialPasswordFile)
 	}
 	if cfg.TLSCert != "" {

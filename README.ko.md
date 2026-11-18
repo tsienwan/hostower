@@ -1,6 +1,6 @@
 # Hostower
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [日本語](README.ja.md) | **한국어** | [Français](README.fr.md) | [Deutsch](README.de.md)
+[简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [English](README.md) | [日本語](README.ja.md) | **한국어** | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 **자체 호스팅하는 다중 호스트 운영 등대입니다.** 한 사람이나 작은 팀이 모든 호스트를 한곳에서 살펴보고 작업을 지시할 수 있습니다. 모든 변경은 결정적인 위험 판정과 사람의 승인을 거치며, 검증 가능한 감사 기록을 남깁니다.
 
@@ -55,6 +55,104 @@
 | **감사: 검증 가능한 해시 체인** |  |
 | ![감사: 검증 가능한 해시 체인](docs/images/screenshots/en/audit.png) |  |
 
+## 빠른 시작
+
+Docker와 Docker Compose v2가 설치된 Linux 서버에서 root(또는 sudo 가능한 계정)로 실행합니다.
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
+```
+
+특정 버전을 설치하려면 태그(예: `v0.1.0`)를 붙입니다.
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.0
+```
+
+호스트 모드 이미지(실행 중인 머신도 관리하며 특권 컨테이너로 실행)를 설치하려면 `--host`를 붙입니다.
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) --host
+```
+
+HTTPS 리버스 프록시 뒤에 둘 경우 `--url`로 공개 주소를 지정합니다.
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) --url https://hostower.example.com
+```
+
+스크립트는 `/opt/hostower`에 설치하고(`--dir`로 변경 가능), 선택한 릴리스의 compose 파일을 받아 컨테이너를 시작한 뒤 URL, 사용자 이름 `admin`, 초기 비밀번호를 출력합니다. 다시 실행하면 그 자리에서 업그레이드하며 `data/`는 그대로 유지됩니다. `127.0.0.1`에서만 수신합니다. SSH 터널, HTTPS, 백업은 [Docker 이미지로 배포](#docker-이미지로-배포)를 참고하세요.
+
+root로 실행하기 전에 스크립트를 먼저 읽어 보고 싶다면 내려받아서 실행하세요.
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh
+less install.sh
+bash install.sh
+```
+
+## Docker 이미지로 배포
+
+공식 이미지는 GitHub Container Registry에 게시되며 linux/amd64와 linux/arm64를 지원합니다.
+
+| 이미지 | 용도 |
+| --- | --- |
+| `ghcr.io/tsienwan/hostower:0.1.0` | 기본 이미지: root가 아니고 루트 파일 시스템은 읽기 전용이며 셸이 없습니다. SSH로 호스트를 관리합니다(실행 중인 머신 자체도 일반 SSH 호스트로 추가). 권장합니다. |
+| `ghcr.io/tsienwan/hostower:0.1.0-host` | 호스트 모드 이미지: 실행 중인 머신도 내장 `local` 호스트로 관리합니다. 특권 컨테이너로 실행되며 그 머신에서의 명령은 root로 실행됩니다. |
+
+`0`과 `latest`(호스트 모드는 `0-host`와 `latest-host`)는 항상 최신 릴리스를 가리킵니다. 운영 환경에서는 `0.1.0`처럼 정확한 버전을 고정하세요.
+
+### 1. 시작
+
+```bash
+mkdir -p ~/hostower && cd ~/hostower
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/deploy/compose.yaml
+mkdir -p data config
+sudo chown 65532:65532 data        # 기본 이미지는 UID 65532로 실행되므로 data/에 쓸 수 있어야 합니다
+docker compose up -d
+```
+
+호스트 모드 이미지는 대신 `compose.host.yaml`을 사용합니다(root로 실행되므로 `chown`이 필요 없습니다).
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/deploy/compose.host.yaml
+mkdir -p data config
+docker compose -f compose.host.yaml up -d
+```
+
+### 2. 첫 로그인
+
+```bash
+sudo cat data/initial-password
+```
+
+이 비밀번호로 <http://localhost:18443>에 `admin`으로 로그인한 뒤 **설정 → 보안**에서 비밀번호를 바꾸고 Passkey 또는 인증 코드를 추가하세요. compose 파일은 `127.0.0.1`에서만 수신합니다. 원격 서버라면 먼저 SSH 터널을 열고 내 컴퓨터에서 같은 주소를 엽니다.
+
+```bash
+ssh -L 18443:127.0.0.1:18443 user@your-server
+```
+
+### 3. HTTPS로 외부에 제공
+
+TLS를 종료하는 리버스 프록시 뒤에 둡니다. `compose.yaml`에서 `HOSTOWER_PUBLIC_URL`을 공개 주소(예: `https://hostower.example.com`)로 바꾸고 `127.0.0.1` 포트 매핑은 그대로 둔 채 `docker compose up -d`를 다시 실행합니다. Caddy를 쓰면 사이트 설정은 이것뿐입니다.
+
+```
+hostower.example.com {
+    reverse_proxy 127.0.0.1:18443
+}
+```
+
+### 4. 백업과 업데이트
+
+- `data/` 디렉터리 전체를 백업하세요. 데이터베이스, 감사 로그, 마스터 키가 들어 있습니다. 백업은 서버 자체만큼 안전하게 보관하세요.
+- **설정 → 자동 업데이트**는 릴리스 서명을 검증한 뒤 Hostower를 그 자리에서 업데이트합니다. 이미지를 바꾸려면 compose 파일의 태그를 수정하고 다시 받아 옵니다.
+- 모든 로그인 방법을 잃었다면 소유자 비밀번호를 재설정한 뒤 `data/initial-password`를 다시 읽으세요.
+
+```bash
+docker compose pull && docker compose up -d
+docker compose exec hostower /hostower auth reset-password   # 새 비밀번호를 data/initial-password에 기록합니다
+```
+
 ## 빠른 체험(개발 모드)
 
 Go 1.26+와 Node 24+가 필요합니다. 개발 모드는 실제 머신에 전혀 연결하지 않고 내장된 시뮬레이션 호스트를 사용합니다.
@@ -102,7 +200,7 @@ go build -o bin/hostower ./cmd/hostower
        credential: ref:ssh/ops     # 참조만 적고, 자격 증명 자체는 적지 않음
        tags: [web, prod]
    ```
-4. `HOSTOWER_CONFIG=/path/to/config ./bin/hostower serve`를 실행합니다. 처음 시작할 때 소유자 `admin`이 생성됩니다(다른 이름을 쓰려면 처음 시작하기 전에 `HOSTOWER_ADMIN_USER`를 설정하거나, 로그인한 뒤 **설정 → 보안**에서 바꿀 수 있습니다). 초기 비밀번호는 데이터 디렉터리의 `initial-password` 파일에 기록됩니다(권한 0600, 로그에는 남지 않음. Docker를 쓰는 경우 `docker exec <컨테이너> cat /data/initial-password`). 로그인한 뒤 비밀번호를 바꾸고 Passkey나 인증 코드를 추가하세요. 모든 로그인 수단을 잃었다면 서버에서 `hostower auth reset-password`를 실행합니다.
+4. `HOSTOWER_CONFIG=/path/to/config ./bin/hostower serve`를 실행합니다. 처음 시작할 때 소유자 `admin`이 생성됩니다(다른 이름을 쓰려면 처음 시작하기 전에 `HOSTOWER_ADMIN_USER`를 설정하거나, 로그인한 뒤 **설정 → 보안**에서 바꿀 수 있습니다). 초기 비밀번호는 데이터 디렉터리의 `initial-password` 파일에 기록됩니다(권한 0600, 로그에는 남지 않음. Docker를 쓰는 경우 `sudo cat data/initial-password`). 로그인한 뒤 비밀번호를 바꾸고 Passkey나 인증 코드를 추가하세요. 모든 로그인 수단을 잃었다면 서버에서 `hostower auth reset-password`를 실행합니다.
 
 호스트 공개 키는 "처음 연결할 때 신뢰하고 이후에는 고정"하는 방식으로 처리하며, 일치하지 않으면 연결을 거부합니다.
 
@@ -165,6 +263,7 @@ tools/                개발 도구: 저장소 위생, 다국어 검사, 고급 
 deploy/               배포 예시(Compose, systemd)
 examples/config/      설정 디렉터리 예시(호스트 목록, Snippet, 규칙 팩)
 docs/                 문서
+install.sh            한 줄 설치 스크립트(빠른 시작 참고)
 ```
 
 ## 개발

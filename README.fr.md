@@ -1,6 +1,6 @@
 # Hostower
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | **Français** | [Deutsch](README.de.md)
+[简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [English](README.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | **Français** | [Deutsch](README.de.md)
 
 **Une tour de contrôle auto-hébergée pour vos serveurs.** Une personne seule ou une petite équipe voit tous ses hôtes au même endroit et agit sur eux. Chaque modification passe par une évaluation déterministe du risque et une approbation humaine, et laisse une piste d'audit vérifiable.
 
@@ -55,6 +55,104 @@ Captures prises en mode développement (hôtes simulés), interface en anglais.
 | **Audit : une chaîne de hachage vérifiable** |  |
 | ![Audit : une chaîne de hachage vérifiable](docs/images/screenshots/en/audit.png) |  |
 
+## Démarrage rapide
+
+Sur un serveur Linux avec Docker et Docker Compose v2, lancez en root (ou avec un compte sudo) :
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
+```
+
+Pour installer une version précise, ajoutez son étiquette (par exemple `v0.1.0`) :
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.0
+```
+
+Pour installer l’image mode hôte (elle gère aussi la machine qui l’exécute, en mode privilégié), ajoutez `--host` :
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) --host
+```
+
+Si elle sera derrière un proxy inverse HTTPS, indiquez l’adresse publique avec `--url` :
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) --url https://hostower.example.com
+```
+
+Le script installe dans `/opt/hostower` (modifiable avec `--dir`), récupère le fichier compose de la version choisie, démarre le conteneur et affiche l’URL, l’utilisateur `admin` et le mot de passe initial. Le relancer met à jour sur place et conserve `data/`. Il n’écoute que sur `127.0.0.1` ; voir [Déployer avec Docker](#déployer-avec-docker) pour le tunnel SSH, HTTPS et les sauvegardes.
+
+Vous préférez lire le script avant de le lancer en root ? Téléchargez-le d’abord :
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh
+less install.sh
+bash install.sh
+```
+
+## Déployer avec Docker
+
+Les images officielles sont publiées sur GitHub Container Registry pour linux/amd64 et linux/arm64 :
+
+| Image | Usage |
+| --- | --- |
+| `ghcr.io/tsienwan/hostower:0.1.0` | Image par défaut : sans root, système de fichiers racine en lecture seule, sans shell. Gère les hôtes par SSH (y compris la machine qui l’exécute, ajoutée comme un hôte SSH ordinaire). Recommandée. |
+| `ghcr.io/tsienwan/hostower:0.1.0-host` | Image mode hôte : gère aussi la machine qui l’exécute comme hôte `local` intégré. S’exécute en mode privilégié — les commandes sur cette machine s’exécutent en root. |
+
+`0` et `latest` (ou `0-host` et `latest-host`) pointent toujours vers la dernière version ; en production, fixez une version précise comme `0.1.0`.
+
+### 1. Démarrer
+
+```bash
+mkdir -p ~/hostower && cd ~/hostower
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/deploy/compose.yaml
+mkdir -p data config
+sudo chown 65532:65532 data        # l’image par défaut s’exécute avec l’UID 65532 et doit pouvoir écrire dans data/
+docker compose up -d
+```
+
+Pour l’image mode hôte, utilisez plutôt `compose.host.yaml` (elle s’exécute en root, pas besoin de `chown`) :
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/deploy/compose.host.yaml
+mkdir -p data config
+docker compose -f compose.host.yaml up -d
+```
+
+### 2. Première connexion
+
+```bash
+sudo cat data/initial-password
+```
+
+Connectez-vous en tant que `admin` avec ce mot de passe sur <http://localhost:18443>, puis changez le mot de passe et ajoutez une Passkey ou une application d’authentification dans **Paramètres → Sécurité**. Les fichiers compose n’écoutent que sur `127.0.0.1` ; sur un serveur distant, ouvrez d’abord un tunnel SSH puis ouvrez la même adresse sur votre ordinateur :
+
+```bash
+ssh -L 18443:127.0.0.1:18443 user@your-server
+```
+
+### 3. Le servir en HTTPS
+
+Placez Hostower derrière un proxy inverse qui termine TLS. Dans `compose.yaml`, réglez `HOSTOWER_PUBLIC_URL` sur l’adresse publique (par exemple `https://hostower.example.com`), gardez la redirection de port sur `127.0.0.1`, puis relancez `docker compose up -d`. Avec Caddy, toute la configuration du site tient en ceci :
+
+```
+hostower.example.com {
+    reverse_proxy 127.0.0.1:18443
+}
+```
+
+### 4. Sauvegarder et mettre à jour
+
+- Sauvegardez tout le répertoire `data/` : il contient la base de données, le journal d’audit et la clé maîtresse. Protégez la sauvegarde autant que le serveur lui-même.
+- **Paramètres → Mises à jour automatiques** met Hostower à jour sur place après vérification de la signature. Pour changer d’image, modifiez l’étiquette dans le fichier compose puis récupérez-la.
+- Si toutes les méthodes de connexion sont perdues, réinitialisez le mot de passe du propriétaire, puis relisez `data/initial-password`.
+
+```bash
+docker compose pull && docker compose up -d
+docker compose exec hostower /hostower auth reset-password   # écrit un nouveau mot de passe dans data/initial-password
+```
+
 ## Essayer (mode développement)
 
 Il vous faut Go 1.26+ et Node 24+. Le mode développement ne touche jamais une vraie machine ; il utilise des hôtes simulés intégrés.
@@ -102,7 +200,7 @@ La ligne de commande passe par le même noyau :
        credential: ref:ssh/ops     # une référence uniquement, jamais l'identifiant lui-même
        tags: [web, prod]
    ```
-4. Lancez `HOSTOWER_CONFIG=/path/to/config ./bin/hostower serve`. Le premier démarrage crée le propriétaire `admin` (définissez `HOSTOWER_ADMIN_USER` avant le premier démarrage pour utiliser un autre nom, ou renommez-le plus tard sous **Paramètres → Sécurité**). Le mot de passe initial est écrit dans `initial-password` dans le répertoire de données (mode 0600, jamais journalisé ; avec Docker : `docker exec <conteneur> cat /data/initial-password`). Après vous être connecté, changez le mot de passe et ajoutez une Passkey ou une application d'authentification. Si toutes les méthodes de connexion sont perdues, lancez `hostower auth reset-password` sur le serveur.
+4. Lancez `HOSTOWER_CONFIG=/path/to/config ./bin/hostower serve`. Le premier démarrage crée le propriétaire `admin` (définissez `HOSTOWER_ADMIN_USER` avant le premier démarrage pour utiliser un autre nom, ou renommez-le plus tard sous **Paramètres → Sécurité**). Le mot de passe initial est écrit dans `initial-password` dans le répertoire de données (mode 0600, jamais journalisé ; avec Docker : `sudo cat data/initial-password`). Après vous être connecté, changez le mot de passe et ajoutez une Passkey ou une application d'authentification. Si toutes les méthodes de connexion sont perdues, lancez `hostower auth reset-password` sur le serveur.
 
 Les clés d'hôte sont approuvées à la première connexion puis épinglées ; en cas de non-correspondance, la connexion est refusée.
 
@@ -165,6 +263,7 @@ tools/                outils de développement : hygiène du dépôt, vérificat
 deploy/               exemples de déploiement (Compose, systemd)
 examples/config/      exemple de répertoire de configuration (inventaire, Snippets, paquets de règles)
 docs/                 documentation
+install.sh            script d’installation en une ligne (voir Démarrage rapide)
 ```
 
 ## Développement

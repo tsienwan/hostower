@@ -215,7 +215,7 @@ Les mises à jour automatiques ne fonctionnent que pour les versions officielles
 Dans le fichier `initial-password` du répertoire de données ; il n'est jamais écrit dans les journaux. Avec Docker :
 
 ```bash
-docker exec <conteneur> cat /data/initial-password
+sudo cat data/initial-password   # à lancer dans le répertoire qui contient compose.yaml
 ```
 
 Après vous être connecté, changez le mot de passe et ajoutez une Passkey ou une application d'authentification dès que possible. Si toutes les méthodes de connexion sont perdues, lancez `hostower auth reset-password` sur le serveur.

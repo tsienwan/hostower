@@ -1,6 +1,6 @@
 # Hostower
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | **日本語** | [한국어](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
+[简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [English](README.md) | **日本語** | [한국어](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 **セルフホスト型のマルチホスト運用灯台です。** 一人または小さなチームが、すべてのホストを一か所で見渡し、操作を指示できます。すべての変更は決定論的なリスク判定と人による承認を経て、検証可能な監査記録を残します。
 
@@ -55,6 +55,104 @@ Web 画面、コマンドライン、チャットボットのどこから来た�
 | **監査：検証できるハッシュチェーン** |  |
 | ![監査：検証できるハッシュチェーン](docs/images/screenshots/en/audit.png) |  |
 
+## クイックスタート
+
+Docker と Docker Compose v2 が入った Linux サーバーで、root（または sudo できるユーザー）として実行します。
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
+```
+
+特定のバージョンを入れるには、タグ（例：`v0.1.0`）を付けます。
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.0
+```
+
+ホストモード版（動作中のマシンも管理し、特権コンテナーとして動作）を入れるには `--host` を付けます。
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) --host
+```
+
+HTTPS のリバースプロキシの背後に置く場合は、`--url` で公開アドレスを指定します。
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) --url https://hostower.example.com
+```
+
+スクリプトは `/opt/hostower` にインストールし（`--dir` で変更可）、選んだリリースの compose ファイルを取得してコンテナーを起動し、URL、ユーザー名 `admin`、初期パスワードを表示します。もう一度実行するとその場でアップグレードし、`data/` はそのまま残ります。待ち受けは `127.0.0.1` のみです。SSH トンネル、HTTPS、バックアップは [Docker イメージでデプロイ](#docker-イメージでデプロイ) を参照してください。
+
+root で実行する前にスクリプトを読みたい場合は、先にダウンロードします。
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh
+less install.sh
+bash install.sh
+```
+
+## Docker イメージでデプロイ
+
+公式イメージは GitHub Container Registry で公開しており、linux/amd64 と linux/arm64 に対応しています。
+
+| イメージ | 用途 |
+| --- | --- |
+| `ghcr.io/tsienwan/hostower:0.1.0` | 既定イメージ：非 root、ルートファイルシステムは読み取り専用、シェルなし。SSH でホストを管理します（動作中のマシン自体も、通常の SSH ホストとして追加します）。推奨。 |
+| `ghcr.io/tsienwan/hostower:0.1.0-host` | ホストモード版：動作中のマシンも組み込みの `local` ホストとして管理します。特権コンテナーとして動作し、そのマシンでのコマンドは root で実行されます。 |
+
+`0` と `latest`（ホストモード版は `0-host` と `latest-host`）は常に最新リリースを指します。本番環境では `0.1.0` のように具体的なバージョンを固定してください。
+
+### 1. 起動
+
+```bash
+mkdir -p ~/hostower && cd ~/hostower
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/deploy/compose.yaml
+mkdir -p data config
+sudo chown 65532:65532 data        # 既定イメージは UID 65532 で動作し、data/ に書き込める必要があります
+docker compose up -d
+```
+
+ホストモード版は代わりに `compose.host.yaml` を使います（root で動作するので `chown` は不要です）。
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/deploy/compose.host.yaml
+mkdir -p data config
+docker compose -f compose.host.yaml up -d
+```
+
+### 2. 初回ログイン
+
+```bash
+sudo cat data/initial-password
+```
+
+このパスワードで <http://localhost:18443> に `admin` としてログインし、**設定 → セキュリティ** でパスワードを変更して、Passkey または認証コードを追加してください。compose ファイルは `127.0.0.1` でのみ待ち受けます。リモートサーバーの場合は、先に SSH トンネルを張り、手元のコンピューターで同じアドレスを開きます。
+
+```bash
+ssh -L 18443:127.0.0.1:18443 user@your-server
+```
+
+### 3. HTTPS で公開する
+
+TLS を終端するリバースプロキシの背後に置きます。`compose.yaml` の `HOSTOWER_PUBLIC_URL` を公開アドレス（例：`https://hostower.example.com`）に変更し、`127.0.0.1` のポート割り当てはそのままにして、もう一度 `docker compose up -d` を実行します。Caddy なら、サイト設定はこれだけです。
+
+```
+hostower.example.com {
+    reverse_proxy 127.0.0.1:18443
+}
+```
+
+### 4. バックアップと更新
+
+- `data/` ディレクトリ全体をバックアップしてください。データベース、監査ログ、マスターキーが入っています。バックアップはサーバー本体と同じくらい厳重に保管してください。
+- **設定 → 自動更新** は、リリース署名を検証したうえで Hostower をその場で更新します。イメージを切り替える場合は、compose ファイルのタグを変更して取得し直します。
+- すべてのログイン方法を失った場合は、所有者のパスワードをリセットし、もう一度 `data/initial-password` を読んでください。
+
+```bash
+docker compose pull && docker compose up -d
+docker compose exec hostower /hostower auth reset-password   # 新しいパスワードを data/initial-password に書き込みます
+```
+
 ## お試し（開発モード）
 
 Go 1.26 以上と Node 24 以上が必要です。開発モードは実機には一切接続せず、内蔵のシミュレーションホストを使います。
@@ -102,7 +200,7 @@ go build -o bin/hostower ./cmd/hostower
        credential: ref:ssh/ops     # 参照だけを書き、認証情報そのものは書かない
        tags: [web, prod]
    ```
-4. `HOSTOWER_CONFIG=/path/to/config ./bin/hostower serve` を実行します。初回起動時に所有者 `admin` が作成されます（別の名前にしたい場合は、初回起動前に `HOSTOWER_ADMIN_USER` を設定してください。ログイン後に **設定 → セキュリティ** で変更することもできます）。初期パスワードはデータディレクトリの `initial-password` ファイルに書き込まれます（権限 0600、ログには出力されません。Docker の場合は `docker exec <コンテナ> cat /data/initial-password`）。ログイン後はパスワードを変更し、Passkey または認証コードを追加してください。すべてのログイン手段を失った場合は、サーバー上で `hostower auth reset-password` を実行します。
+4. `HOSTOWER_CONFIG=/path/to/config ./bin/hostower serve` を実行します。初回起動時に所有者 `admin` が作成されます（別の名前にしたい場合は、初回起動前に `HOSTOWER_ADMIN_USER` を設定してください。ログイン後に **設定 → セキュリティ** で変更することもできます）。初期パスワードはデータディレクトリの `initial-password` ファイルに書き込まれます（権限 0600、ログには出力されません。Docker の場合は `sudo cat data/initial-password`）。ログイン後はパスワードを変更し、Passkey または認証コードを追加してください。すべてのログイン手段を失った場合は、サーバー上で `hostower auth reset-password` を実行します。
 
 ホストの公開鍵は「初回接続時に信頼し、以後は固定」として扱います。一致しない場合は接続を拒否します。
 
@@ -165,6 +263,7 @@ tools/                開発ツール：リポジトリの衛生、多言語チ�
 deploy/               デプロイ例（Compose、systemd）
 examples/config/      設定ディレクトリの例（ホスト一覧、Snippet、ルールパック）
 docs/                 ドキュメント
+install.sh            ワンライナーのインストールスクリプト（クイックスタートを参照）
 ```
 
 ## 開発

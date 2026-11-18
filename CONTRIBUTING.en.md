@@ -44,5 +44,5 @@ Don't write a separate copy of the rules for any one tool; put personal local ad
 - **Nothing from a real environment goes into the repository**: examples use reserved address ranges and `example.com` only.
 - One change does one thing; the description explains *why*, not just *what*.
 - Code comments, UI text and error messages are written in Simplified Chinese (the UI translates them); identifiers are in English.
-- README and the FAQ exist in seven languages, the other guides in Chinese and English (`*.en.md` is English); when you change one, update the others. Screenshots live in `docs/images/screenshots/`; retake them when the UI changes.
+- README and the FAQ exist in seven languages (`README.md` is English, `README.zh-CN.md` is Simplified Chinese), the other guides in Chinese and English (`*.en.md` is English); when you change one, update the others. Screenshots live in `docs/images/screenshots/`; retake them when the UI changes.
 - Don't open public issues for security problems; see [SECURITY.en.md](SECURITY.en.md).

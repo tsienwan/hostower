@@ -215,7 +215,7 @@ Automatic updates only work for official releases, because they verify the relea
 In the `initial-password` file in the data directory; it is never written to logs. With Docker:
 
 ```bash
-docker exec <container> cat /data/initial-password
+sudo cat data/initial-password   # run in the directory that holds compose.yaml
 ```
 
 After signing in, change the password and add a Passkey or authenticator as soon as possible. If every sign-in method is lost, run `hostower auth reset-password` on the server.

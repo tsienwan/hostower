@@ -215,7 +215,7 @@ Hostower는 단일 페이지 앱입니다. 서버가 업데이트되어 재시�
 데이터 디렉터리의 `initial-password` 파일에 있으며, 로그에는 기록되지 않습니다. Docker로 배포한 경우:
 
 ```bash
-docker exec <컨테이너_이름> cat /data/initial-password
+sudo cat data/initial-password   # compose.yaml이 있는 디렉터리에서 실행
 ```
 
 로그인한 뒤 되도록 빨리 비밀번호를 바꾸고 Passkey나 인증 코드를 추가하세요. 모든 로그인 수단을 잃었다면 서버에서 `hostower auth reset-password`를 실행합니다.

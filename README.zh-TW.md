@@ -1,6 +1,6 @@
 # Hostower
 
-[简体中文](README.md) | **繁體中文** | [English](README.en.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
+[简体中文](README.zh-CN.md) | **繁體中文** | [English](README.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 **自行託管的多主機維運燈塔。** 一個人或一個小團隊在同一處看清所有主機、對它們下達操作；每一步變更都經過確定性的風險判定和人工核准，並留下可驗證的稽核紀錄。
 
@@ -55,6 +55,104 @@
 | **稽核：雜湊鏈可校驗** |  |
 | ![稽核：雜湊鏈可校驗](docs/images/screenshots/en/audit.png) |  |
 
+## 快速開始
+
+在裝好 Docker 與 Docker Compose v2 的 Linux 伺服器上，以 root（或能 sudo 的帳號）執行：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
+```
+
+要安裝指定版本，在後面加上版本標籤（例如 `v0.1.0`）：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.0
+```
+
+要安裝宿主機版（還會管理所在的這台機器，以特權容器執行），加上 `--host`：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) --host
+```
+
+放在 HTTPS 反向代理後面時，用 `--url` 指定對外位址：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) --url https://hostower.example.com
+```
+
+腳本會安裝到 `/opt/hostower`（用 `--dir` 可以更換），下載所選版本的 compose 檔並啟動容器，最後列出存取位址、使用者名稱 `admin` 和初始密碼。再執行一次就是原地升級，`data/` 保留不變。它只監聽 `127.0.0.1`；SSH 通道、HTTPS 與備份請見[使用 Docker 映像檔部署](#使用-docker-映像檔部署)。
+
+想先看過腳本再用 root 執行？先下載下來：
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh
+less install.sh
+bash install.sh
+```
+
+## 使用 Docker 映像檔部署
+
+官方映像檔發布在 GitHub Container Registry，支援 linux/amd64 與 linux/arm64：
+
+| 映像檔 | 用途 |
+| --- | --- |
+| `ghcr.io/tsienwan/hostower:0.1.0` | 預設映像檔：非 root、根檔案系統唯讀、沒有 shell，透過 SSH 管理主機（要管理所在的這台機器，就把它當作一般 SSH 主機加進來）。建議使用。 |
+| `ghcr.io/tsienwan/hostower:0.1.0-host` | 宿主機版：還會把所在的機器當作內建的 `local` 主機來管理。以特權容器執行，在這台機器上執行的指令是 root 身分。 |
+
+`0` 和 `latest`（宿主機版是 `0-host` 和 `latest-host`）一律指向最新版本；正式環境請固定具體版本，例如 `0.1.0`。
+
+### 1. 啟動
+
+```bash
+mkdir -p ~/hostower && cd ~/hostower
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/deploy/compose.yaml
+mkdir -p data config
+sudo chown 65532:65532 data        # 預設映像檔以 UID 65532 執行，需要能寫入 data/
+docker compose up -d
+```
+
+使用宿主機版時改用 `compose.host.yaml`（它以 root 執行，不需要 `chown`）：
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/tsienwan/hostower/main/deploy/compose.host.yaml
+mkdir -p data config
+docker compose -f compose.host.yaml up -d
+```
+
+### 2. 首次登入
+
+```bash
+sudo cat data/initial-password
+```
+
+用這組密碼以 `admin` 登入 <http://localhost:18443>，然後在 **設定 → 安全** 裡修改密碼，並新增 Passkey 或動態驗證碼。compose 檔只監聽 `127.0.0.1`；部署在遠端伺服器時，先建立一條 SSH 通道，再在自己的電腦上開啟同一個位址：
+
+```bash
+ssh -L 18443:127.0.0.1:18443 user@your-server
+```
+
+### 3. 透過 HTTPS 對外提供
+
+把 Hostower 放在終結 TLS 的反向代理後面：在 `compose.yaml` 裡把 `HOSTOWER_PUBLIC_URL` 改成對外位址（例如 `https://hostower.example.com`），保持 `127.0.0.1` 的連接埠對應，再執行一次 `docker compose up -d`。使用 Caddy 的話，整個網站設定就是：
+
+```
+hostower.example.com {
+    reverse_proxy 127.0.0.1:18443
+}
+```
+
+### 4. 備份與更新
+
+- 備份整個 `data/` 目錄：裡面有資料庫、稽核紀錄和主金鑰。備份要和伺服器本身一樣妥善保管。
+- **設定 → 自動更新** 會在驗證發布簽章後原地更新 Hostower。也可以修改 compose 檔裡的映像檔標籤，再拉取新映像檔。
+- 所有登入方式都遺失時，重設擁有者的密碼，再讀一次 `data/initial-password`。
+
+```bash
+docker compose pull && docker compose up -d
+docker compose exec hostower /hostower auth reset-password   # 把新密碼寫進 data/initial-password
+```
+
 ## 快速體驗（開發模式）
 
 需要 Go 1.26+ 和 Node 24+。開發模式不連接任何真實機器，用的是內建的模擬主機。
@@ -102,7 +200,7 @@ go build -o bin/hostower ./cmd/hostower
        credential: ref:ssh/ops     # 只寫引用，不寫憑據本身
        tags: [web, prod]
    ```
-4. `HOSTOWER_CONFIG=/path/to/config ./bin/hostower serve`。首次啟動會建立擁有者 `admin`（想用別的名稱，在首次啟動前設定 `HOSTOWER_ADMIN_USER`；登入後也能在「設定 → 安全」裡修改），初始密碼寫在資料目錄的 `initial-password` 檔案裡（權限 0600，不進日誌；使用 Docker 時 `docker exec <容器> cat /data/initial-password`）。登入後修改密碼，並新增 Passkey 或動態驗證碼。所有登入方式都遺失時，在伺服器上執行 `hostower auth reset-password`。
+4. `HOSTOWER_CONFIG=/path/to/config ./bin/hostower serve`。首次啟動會建立擁有者 `admin`（想用別的名稱，在首次啟動前設定 `HOSTOWER_ADMIN_USER`；登入後也能在「設定 → 安全」裡修改），初始密碼寫在資料目錄的 `initial-password` 檔案裡（權限 0600，不進日誌；使用 Docker 時 `sudo cat data/initial-password`）。登入後修改密碼，並新增 Passkey 或動態驗證碼。所有登入方式都遺失時，在伺服器上執行 `hostower auth reset-password`。
 
 主機公鑰按「首次連線時信任、之後固定」處理；不一致時拒絕連線。
 
@@ -147,7 +245,7 @@ go build -o bin/hostower ./cmd/hostower
 | [docs/design.md](docs/design.md) | 設計：架構、安全核心、指標取樣、各功能模組 |
 | [docs/threat-model.md](docs/threat-model.md) | 威脅模型：信任邊界、威脅與對策、部署方式的取捨 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本變更紀錄 |
-| [README.en.md](README.en.md) 等 `*.en.md` | README、常見問題、變更紀錄、貢獻指南、安全政策、商標說明的英文版 |
+| [README.en.md](README.md) 等 `*.en.md` | README、常見問題、變更紀錄、貢獻指南、安全政策、商標說明的英文版 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 貢獻指南：開發環境、提交前檢查、慣例 |
 | [AGENTS.md](AGENTS.md) | 專案規範：核心硬規則、相容性、儲存庫衛生、多語言、版本（對人和 AI 程式設計助手都適用） |
 | [SECURITY.md](SECURITY.md) | 如何私下回報安全問題 |
@@ -166,6 +264,7 @@ tools/                開發工具：儲存庫衛生、多語言檢查、增強�
 deploy/               部署範例（Compose、systemd）
 examples/config/      設定目錄範例（主機清單、Snippet、規則包）
 docs/                 文件
+install.sh            一鍵安裝腳本（見「快速開始」）
 ```
 
 ## 開發

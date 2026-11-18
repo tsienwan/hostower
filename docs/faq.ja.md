@@ -215,7 +215,7 @@ Hostower はシングルページアプリケーションです。サーバー�
 データディレクトリの `initial-password` ファイルにあり、ログには書き込まれません。Docker でデプロイした場合：
 
 ```bash
-docker exec <コンテナ名> cat /data/initial-password
+sudo cat data/initial-password   # compose.yaml のあるディレクトリで実行
 ```
 
 ログイン後はできるだけ早くパスワードを変更し、Passkey または認証コードを追加してください。すべてのログイン手段を失った場合は、サーバー上で `hostower auth reset-password` を実行します。

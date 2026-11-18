@@ -43,5 +43,5 @@ cd web && npm run build
 - **安全内核不接受扩展点**：判级取最高、L3、审批状态机、审计写入不加开关和钩子。
 - **仓库里不放真实环境的任何信息**：示例只用保留网段和 `example.com`。
 - 一个改动只做一件事；说明里写清楚“为什么”，而不只是“改了什么”。
-- README 和常见问题有七种语言，其他说明文件有中英两份（`*.en.md` 是英文版）；改一份就要同步改其他语言。截图在 `docs/images/screenshots/`，界面变了要重截。
+- README 和常见问题有七种语言（`README.md` 是英文，简体中文是 `README.zh-CN.md`），其他说明文件有中英两份（`*.en.md` 是英文版）；改一份就要同步改其他语言。截图在 `docs/images/screenshots/`，界面变了要重截。
 - 安全问题不要开公开 issue，见 [SECURITY.md](SECURITY.md)。

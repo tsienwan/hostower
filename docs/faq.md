@@ -215,7 +215,7 @@ Hostower 是单页应用。服务器更新重启后，已经打开的页面会�
 在数据目录的 `initial-password` 文件里，不会写进日志。用 Docker 部署时：
 
 ```bash
-docker exec <容器名> cat /data/initial-password
+sudo cat data/initial-password   # 在 compose.yaml 所在的目录执行
 ```
 
 登录后请尽快修改密码，并添加 Passkey 或动态码。所有登录方式都丢了的话，在服务器上运行 `hostower auth reset-password`。
