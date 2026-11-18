@@ -16,10 +16,9 @@ jobs:
         run: go run ./tools/hygiene
       - name: 多语言（每种语言的词典、服务端词表和占位符是否齐全）
         run: go run ./tools/i18n
+      # 直接扫描全部历史，不用 gitleaks-action：它按推送前后的范围扫，新仓库第一次推送时范围算错，会以出错结束。
       - name: 密钥扫描（完整历史）
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.3 detect --source /repo --redact -v
   test:
     runs-on: ubuntu-latest
     steps:
