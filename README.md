@@ -1,6 +1,6 @@
 # Hostower
 
-**简体中文** | [English](README.en.md)
+**简体中文** | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 **自托管的多主机运维灯塔。** 一个人或一个小团队在一处看清所有主机、对它们下达操作；每一步变更都经过确定性的风险判定和人的批准，并留下可校验的审计。
 
@@ -40,6 +40,20 @@
 | 测速 | 延迟、下载、上传，可选路由追踪并推测线路（电信 CN2 GIA/GT、联通 9929/4837、移动 CMIN2/CMI） |
 | 部署 | 单个静态二进制；默认镜像和宿主机版镜像；签名的自我更新 |
 | 界面 | 简体中文、繁體中文、English、日本語、한국어、Français、Deutsch；深浅主题 |
+
+## 截图
+
+截图来自开发模式（模拟主机）。
+
+| **总览：所有主机一屏看清** | **主机详情：实时指标** |
+| --- | --- |
+| ![总览：所有主机一屏看清](docs/images/screenshots/zh-CN/overview.png) | ![主机详情：实时指标](docs/images/screenshots/zh-CN/host.png) |
+| **执行：先看判级预览再提交** | **审批：批准绑定实际命令** |
+| ![执行：先看判级预览再提交](docs/images/screenshots/zh-CN/run.png) | ![审批：批准绑定实际命令](docs/images/screenshots/zh-CN/request.png) |
+| **容器：带占用和更新提示** | **应用目录** |
+| ![容器：带占用和更新提示](docs/images/screenshots/zh-CN/containers.png) | ![应用目录](docs/images/screenshots/zh-CN/apps.png) |
+| **审计：哈希链可校验** |  |
+| ![审计：哈希链可校验](docs/images/screenshots/zh-CN/audit.png) |  |
 
 ## 快速体验（开发模式）
 
@@ -133,7 +147,7 @@ go build -o bin/hostower ./cmd/hostower
 | [docs/design.md](docs/design.md) | 设计：架构、安全内核、指标采样、各功能模块 |
 | [docs/threat-model.md](docs/threat-model.md) | 威胁模型：信任边界、威胁与对策、部署方式的取舍 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更记录 |
-| [README.en.md](README.en.md) 等 `*.en.md` | README、常见问题、变更记录、贡献指南、安全策略、商标说明的英文版 |
+| 其他语言 | README 和常见问题有繁體中文、English、日本語、한국어、Français、Deutsch 版（`*.zh-TW.md`、`*.en.md`、`*.ja.md`、`*.ko.md`、`*.fr.md`、`*.de.md`）；变更记录、贡献指南、安全策略、商标说明有英文版 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南：开发环境、提交前检查、约定 |
 | [AGENTS.md](AGENTS.md) | 项目规范：内核硬规则、兼容、仓库卫生、多语言、版本（对人和 AI 编码助手都适用） |
 | [SECURITY.md](SECURITY.md) | 如何私下报告安全问题 |

@@ -1516,3 +1516,7 @@ button.tag:hover { background: color-mix(in srgb, var(--text) 10%, transparent);
 .sr-hops tr.sr-haul td { white-space: normal; text-align: left; width: auto; padding-top: 6px; padding-bottom: 6px; color: var(--warn); background: var(--warn-soft); font-size: 12px; }
 .sr-hops tr.sr-haul td > * { vertical-align: middle; }
 .sr-hops tr.sr-haul svg { width: 13px; height: 13px; margin-right: 6px; }
+
+/* 容器表的名字那一格：徽章多时换到下一行，不挤掉名字、不压到旁边的列 */
+.cell-2 > span.ctr-name-row { gap: 4px 6px; min-width: 0; flex-wrap: wrap; white-space: normal; }
+.ctr-name-row .badge { flex: none; }

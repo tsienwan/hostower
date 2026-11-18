@@ -285,7 +285,7 @@ function ContainerTable({ host, containers, stats, onLogs, onAct, onEdit, onUnin
                       <tr key={c.ID}>
                         <td>
                           <div className="cell-2">
-                            <span className="row" style={{ gap: 6, minWidth: 0 }}>
+                            <span className="row ctr-name-row">
                               <button className="link-btn ellipsis" title={t("查看 {name} 的配置", { name: c.Names })} onClick={() => setDetail(c)}>{c.Names}</button>
                               {app && <AppBadge instance={app} />}
                               {app && info?.update && <span className="badge accent" title={t("由应用市场更新")}><ArrowUpCircle />{t("可更新到 {v}", { v: info.update })}</span>}

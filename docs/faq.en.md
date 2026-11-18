@@ -1,6 +1,6 @@
 # FAQ
 
-[简体中文](faq.md) | **English**
+[简体中文](faq.md) | [繁體中文](faq.zh-TW.md) | **English** | [日本語](faq.ja.md) | [한국어](faq.ko.md) | [Français](faq.fr.md) | [Deutsch](faq.de.md)
 
 The most common problems and tips when connecting hosts, installing Docker and installing apps. Host names and addresses in the examples are placeholders; replace them with your own.
 

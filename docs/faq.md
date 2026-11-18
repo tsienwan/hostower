@@ -1,6 +1,6 @@
 # 常见问题
 
-**简体中文** | [English](faq.en.md)
+**简体中文** | [繁體中文](faq.zh-TW.md) | [English](faq.en.md) | [日本語](faq.ja.md) | [한국어](faq.ko.md) | [Français](faq.fr.md) | [Deutsch](faq.de.md)
 
 接入主机、装 Docker、装应用这几步里最常遇到的问题和注意事项。示例里的主机名、地址都是占位符，换成你自己的。
 

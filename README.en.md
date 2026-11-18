@@ -1,6 +1,6 @@
 # Hostower
 
-[简体中文](README.md) | **English**
+[简体中文](README.md) | [繁體中文](README.zh-TW.md) | **English** | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 **A self-hosted control tower for your servers.** One person or a small team can see every host in one place and act on them. Every change goes through a deterministic risk check and a human approval, and leaves a verifiable audit trail.
 
@@ -40,6 +40,20 @@ A rule engine assigns the level: a shell parser splits pipes, `&&`, command subs
 | Speed test | Latency, download and upload, with optional traceroutes that guess the carrier route (China Telecom CN2 GIA/GT, China Unicom 9929/4837, China Mobile CMIN2/CMI) |
 | Deployment | A single static binary; a default image and a host-mode image; signed self-update |
 | Interface | Simplified Chinese, Traditional Chinese, English, Japanese, Korean, French, German; light and dark themes |
+
+## Screenshots
+
+Screenshots are from development mode (simulated hosts).
+
+| **Overview: every host at a glance** | **Host details: live metrics** |
+| --- | --- |
+| ![Overview: every host at a glance](docs/images/screenshots/en/overview.png) | ![Host details: live metrics](docs/images/screenshots/en/host.png) |
+| **Run: see the risk preview before submitting** | **Approval: bound to the exact command** |
+| ![Run: see the risk preview before submitting](docs/images/screenshots/en/run.png) | ![Approval: bound to the exact command](docs/images/screenshots/en/request.png) |
+| **Containers: usage and update hints** | **App catalog** |
+| ![Containers: usage and update hints](docs/images/screenshots/en/containers.png) | ![App catalog](docs/images/screenshots/en/apps.png) |
+| **Audit: a verifiable hash chain** |  |
+| ![Audit: a verifiable hash chain](docs/images/screenshots/en/audit.png) |  |
 
 ## Try it (development mode)
 
