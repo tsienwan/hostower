@@ -36,7 +36,15 @@ Official binaries carry a build seal at the end of the file, signed with the rel
 
 The interface indicator alone is not enough: someone who changes the code can forge it too. **The public key fingerprint is what counts** — it must exactly match the official fingerprint published below.
 
-Official release public key fingerprint: **no official release has been published yet**. Before the first release, generate the release key with `go run ./tools/relsign gen`, put the printed fingerprint here, and publish it on the official website or releases page at the same time.
+Official release public key fingerprint: **`228B-FAB7-18CF-6945-AE2D-4539-30A8-14BF`**
+
+Official release public key (for offline verification):
+
+```
+T/UQ4YvFU4tm8dfuwL63MjGtamOPWrI2bxgnblWRUXk=
+```
+
+A build whose fingerprint does not match is not an official build.
 
 ## Third-party trademarks
 
