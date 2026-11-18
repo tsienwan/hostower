@@ -1,0 +1,20 @@
+apiVersion: hostower/v1
+kind: Snippet
+name: restart-service
+title: 重启服务
+description: 滚动重启一个 systemd 服务：先在一台上预演，失败就停。
+version: 1.1.0
+level: L1
+selector: "tag:web"
+params:
+  - name: service
+    title: 服务名
+    type: enum
+    required: true
+    default: nginx
+    values: [nginx, docker, cron]
+command: systemctl restart {{ .service }}
+strategy:
+  concurrency: 1
+  canary: true
+  stopOnError: true

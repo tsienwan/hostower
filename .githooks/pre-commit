@@ -1,0 +1,5 @@
+#!/bin/sh
+# 提交前检查：密钥、非保留网段的 IP、非示例域名、不该进仓库的文件；多语言有没有漏。
+# 启用：git config core.hooksPath .githooks
+go run ./tools/hygiene --staged || exit 1
+exec go run ./tools/i18n

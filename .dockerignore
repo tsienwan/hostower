@@ -1,0 +1,12 @@
+.git
+bin
+data
+config
+web/node_modules
+web/dist
+*.log
+*.db
+master_key
+.env*
+
+internal/agentbin/dist/hostower-agent_*

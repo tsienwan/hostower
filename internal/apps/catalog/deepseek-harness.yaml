@@ -1,0 +1,19 @@
+apiVersion: hostower/v1
+kind: App
+name: deepseek-harness
+version: 0.2.2-rc.1
+title: DeepSeek Harness
+category: AI 工具
+icon: bot
+summary: DeepSeek 官方的命令行编程助手框架（dsh）。
+description: 上游还是预览版。装进登录账号自己的目录（~/.hostower/npm），不用 sudo；需要 Node.js 24.9 以上，系统里没有时自动装一份校验过的 Node.js。
+preview: true
+type: npm
+npm:
+  package: "@deepseek-ai/dsh"
+  version: 0.2.2-rc.1
+  bins: [dsh]
+  node: 24
+configure:
+  kind: dsh
+notes: 在“已安装”里点“配置”选模型提供商（DeepSeek 或第三方）、填 API Key，然后在主机的终端里运行 dsh。

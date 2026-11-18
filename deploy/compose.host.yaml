@@ -1,0 +1,33 @@
+# 宿主机版的示例部署：主机列表里默认有一台 local，就是运行这个容器的机器。
+# 指标、容器、Snippet、文件、终端都不用再配 SSH。
+#
+# 代价要先看清楚：
+#   - 容器是特权的，并且共用宿主机的进程命名空间；本机主机上的命令以 root 身份在宿主机上执行。
+#   - 也就是说，Hostower 一旦被攻破，这台机器就被完全控制。判级、审批、审计照常生效，但没有账号隔离。
+#   - 不接受这个代价时，用 compose.yaml（默认镜像），把宿主机当作一台普通的 SSH 主机加进来。
+#
+# 主密钥：不配置也能用，第一次启动会在 ./data/master_key 自动生成。想和数据分开保管时，
+# 先生成一把（docker run --rm ghcr.io/<owner>/hostower:0.1.0-host keygen > master_key），再打开下面带 master_key 的三行；
+# 已经在用自动生成的那把时，把 ./data/master_key 移出来当作 ./master_key，不要重新生成。
+#
+# TLS 由谁终结的说明和 compose.yaml 相同（见 README 的“暴露方式”）。
+services:
+  hostower:
+    image: ghcr.io/<owner>/hostower:0.1.0-host
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    read_only: true
+    tmpfs: [/tmp]
+    ports: ["127.0.0.1:18443:18443"]
+    volumes:
+      - ./data:/data
+      - ./config:/config:ro
+    environment:
+      HOSTOWER_TLS: proxy
+      HOSTOWER_PUBLIC_URL: http://localhost:18443
+      # HOSTOWER_MASTER_KEY_FILE: /run/secrets/master_key
+    # secrets: [master_key]
+# secrets:
+#   master_key:
+#     file: ./master_key

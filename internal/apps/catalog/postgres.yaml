@@ -1,0 +1,44 @@
+apiVersion: hostower/v1
+kind: App
+name: postgres
+version: 18-1
+title: PostgreSQL
+category: 数据库
+icon: database
+summary: 关系型数据库。
+description: 数据保存在实例目录下的 data 里。超级用户 postgres 的密码来自应用密钥，不出现在命令和审计里。
+type: compose
+params:
+  - name: bind
+    title: 监听地址
+    type: enum
+    options: ["127.0.0.1", "0.0.0.0"]
+    default: 127.0.0.1
+    hint: 数据库一般只在本机访问；对外开放前先确认防火墙规则。
+  - name: port
+    title: 端口
+    type: port
+    default: "5432"
+  - name: database
+    title: 默认数据库名
+    type: string
+    pattern: "[a-z][a-z0-9_]{0,62}"
+    default: app
+  - name: password
+    title: postgres 用户的密码
+    type: secret
+    env: POSTGRES_PASSWORD
+compose: |
+  services:
+    db:
+      image: postgres:18-alpine
+      restart: unless-stopped
+      environment:
+        POSTGRES_DB: "{{ .database }}"
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ports: ["{{ .bind }}:{{ .port }}:5432"]
+      volumes: ["./data:/var/lib/postgresql"]
+upgrade:
+  note: PostgreSQL 的大版本之间数据目录不兼容，17 不能直接换成 18：要用 pg_upgrade，或者先导出（pg_dumpall）再导入新装的 18。Hostower 不会自动做这一步。
+  blockFrom: ["17-"]
+notes: 连接地址 {{ .bind }}:{{ .port }}，用户 postgres，数据库 {{ .database }}。

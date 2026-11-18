@@ -1,0 +1,33 @@
+// HostForm.tsx：新增、编辑主机。
+const dict: Record<string, string> = {
+  "本机直连": "Local (no SSH)",
+  "主机已更新": "Host updated",
+  "主机已添加": "Host added",
+  "编辑主机 {name}": "Edit host {name}",
+  "添加主机": "Add host",
+  "取消": "Cancel",
+  "保存": "Save",
+  "添加": "Add",
+  "名称": "Name",
+  "地址": "Address",
+  "192.0.2.10 或 192.0.2.10:2222": "192.0.2.10 or 192.0.2.10:2222",
+  "连接方式": "Connection",
+  "模拟主机": "Simulated host",
+  "塔台 → 主机": "tower → host",
+  "仅开发模式": "dev mode only",
+  "敏感度": "Sensitivity",
+  "低": "Low",
+  "普通": "Normal",
+  "高": "High",
+  "写操作自动升一级": "writes go up one risk level",
+  "SSH 凭据": "SSH credential",
+  "还没有凭据。先到“设置 → SSH 凭据”添加一条，再回来选。": "No credentials yet. Add one under Settings → SSH credentials, then come back and pick it.",
+  "没有配置主密钥，凭据功能不可用（见“设置”页的说明）。": "No master key is configured, so credentials are unavailable (see the notes on the Settings page).",
+  "标签": "Tags",
+  "输入后按回车新建，例如 web": "Type and press Enter to add, e.g. web",
+  "分组按标签自动匹配：带": "Groups match by tag automatically: hosts tagged",
+  "标签的主机会进入选择器是": "join the groups whose selector is",
+  "的分组。": ".",
+};
+
+export default dict;

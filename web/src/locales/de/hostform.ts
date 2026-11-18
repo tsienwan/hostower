@@ -1,0 +1,33 @@
+// Deutsches Wörterbuch: HostForm.tsx – Hosts hinzufügen und bearbeiten.
+const dict: Record<string, string> = {
+  "本机直连": "Lokal (ohne SSH)",
+  "主机已更新": "Host aktualisiert",
+  "主机已添加": "Host hinzugefügt",
+  "编辑主机 {name}": "Host {name} bearbeiten",
+  "添加主机": "Host hinzufügen",
+  "取消": "Abbrechen",
+  "保存": "Speichern",
+  "添加": "Hinzufügen",
+  "名称": "Name",
+  "地址": "Adresse",
+  "192.0.2.10 或 192.0.2.10:2222": "192.0.2.10 oder 192.0.2.10:2222",
+  "连接方式": "Verbindung",
+  "模拟主机": "Simulierter Host",
+  "塔台 → 主机": "Tower → Host",
+  "仅开发模式": "nur im Entwicklungsmodus",
+  "敏感度": "Sensibilität",
+  "低": "Niedrig",
+  "普通": "Normal",
+  "高": "Hoch",
+  "写操作自动升一级": "Schreibvorgänge steigen eine Risikostufe auf",
+  "SSH 凭据": "SSH-Zugangsdaten",
+  "还没有凭据。先到“设置 → SSH 凭据”添加一条，再回来选。": "Noch keine Zugangsdaten. Legen Sie unter Einstellungen → SSH-Zugangsdaten welche an und wählen Sie sie dann hier aus.",
+  "没有配置主密钥，凭据功能不可用（见“设置”页的说明）。": "Es ist kein Hauptschlüssel konfiguriert, daher sind Zugangsdaten nicht verfügbar (siehe Hinweise auf der Seite Einstellungen).",
+  "标签": "Tags",
+  "输入后按回车新建，例如 web": "Eingeben und Enter drücken, z. B. web",
+  "分组按标签自动匹配：带": "Gruppen werden automatisch über Tags zugeordnet: Hosts mit dem Tag",
+  "标签的主机会进入选择器是": "kommen in die Gruppen mit dem Selektor",
+  "的分组。": ".",
+};
+
+export default dict;

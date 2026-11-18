@@ -1,0 +1,71 @@
+# 示例清单：全部是模拟主机（executor: sim），只在 `hostower serve --dev` 下可用。
+# 地址用的是文档保留网段。真实清单放在仓库之外，通过 HOSTOWER_CONFIG 挂载。
+apiVersion: hostower/v1
+kind: Inventory
+hosts:
+  web-1:
+    addr: 192.0.2.10
+    executor: sim
+    tags: [web, prod, docker]
+    vars: { compose_root: /opt/stack }
+  web-2:
+    addr: 192.0.2.11
+    executor: sim
+    tags: [web, prod, docker]
+    vars: { compose_root: /opt/stack }
+  web-3:
+    addr: 192.0.2.12
+    executor: sim
+    tags: [web, staging, docker]
+    sensitivity: low
+    vars: { compose_root: /opt/stack }
+  api-1:
+    addr: 192.0.2.30
+    executor: sim
+    tags: [api, prod, docker]
+    vars: { compose_root: /srv/api }
+  api-2:
+    addr: 192.0.2.31
+    executor: sim
+    tags: [api, prod, docker]
+    vars: { compose_root: /srv/api }
+  db-1:
+    addr: 192.0.2.20
+    executor: sim
+    tags: [db, prod]
+    sensitivity: high
+  db-2:
+    addr: 192.0.2.21
+    executor: sim
+    tags: [db, prod]
+    sensitivity: high
+  cache-1:
+    addr: 198.51.100.7
+    executor: sim
+    tags: [cache, prod, docker]
+    vars: { compose_root: /opt/cache }
+  build-1:
+    addr: 198.51.100.40
+    executor: sim
+    tags: [ci, staging]
+    sensitivity: low
+  edge-1:
+    addr: 203.0.113.5
+    executor: sim
+    tags: [edge, prod]
+  edge-2:
+    addr: 203.0.113.6
+    executor: sim
+    tags: [edge, prod]
+    vars: { sim_state: offline }
+  home-nas:
+    addr: 198.51.100.200
+    executor: sim
+    tags: [home, storage]
+groups:
+  all:     { selector: "*" }
+  safe:    { selector: "* and not sensitivity:high" }
+  prod:    { selector: "tag:prod" }
+  docker:  { selector: "tag:docker" }
+  web:     { selector: "tag:web" }
+  data:    { hosts: [db-1, db-2, cache-1] }

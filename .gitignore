@@ -1,0 +1,59 @@
+# ---- 真实环境的东西永远不进仓库 ----
+# 主机清单、Snippet、主机手册放在仓库之外，通过 HOSTOWER_CONFIG 挂载。
+/config/
+/data/
+/backups/
+master_key
+*.master_key
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+id_ecdsa*
+known_hosts
+audit.jsonl
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# ---- 构建产物 ----
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+coverage.*
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep
+*.tsbuildinfo
+
+# ---- 本机与工具 ----
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*~
+.idea/
+.vscode/
+.claude/
+.p4config
+.p4ignore
+*.local
+tmp/
+
+# 构建时生成的增强采集程序
+/internal/agentbin/dist/hostower-agent_*
+
+# AI 编码助手的个人本地补充（共享的规范只写在 AGENTS.md）
+AGENTS.local.md
+AGENTS.override.md
+CLAUDE.local.md
+.codex/
+.dsh/

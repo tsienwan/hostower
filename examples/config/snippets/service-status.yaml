@@ -1,0 +1,15 @@
+apiVersion: hostower/v1
+kind: Snippet
+name: service-status
+title: 查看服务状态
+description: 查看一个 systemd 服务的运行状态。
+version: 1.0.0
+level: L0
+params:
+  - name: service
+    title: 服务名
+    type: string
+    required: true
+    default: nginx
+    pattern: "[a-zA-Z0-9@._-]+"
+command: systemctl status {{ .service }}

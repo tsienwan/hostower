@@ -1,0 +1,20 @@
+apiVersion: hostower/v1
+kind: Snippet
+name: tail-log
+title: 查看日志末尾
+description: 读取一个日志文件的最后若干行。
+version: 1.0.0
+level: L0
+params:
+  - name: file
+    title: 日志文件
+    type: path
+    required: true
+    default: /var/log/syslog
+  - name: lines
+    title: 行数
+    type: int
+    default: 50
+    min: 1
+    max: 2000
+command: tail -n {{ .lines }} {{ .file }}

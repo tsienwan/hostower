@@ -1,0 +1,14 @@
+{
+  "_": "支持的语言只登记在这里：界面、通知、聊天机器人都从这份清单读。加一种语言：在这里加一行，建 web/src/locales/<code>/ 和 internal/i18n/text/<code>.json，然后运行 go run ./tools/i18n，按它列出的缺口补齐。source 是原文语言（代码里直接写的中文），不需要词典。fallback 是缺译文时退到哪种语言（空表示退回原文）。browser 是浏览器语言的前缀，最长匹配的那个生效。telegram 是机器人命令菜单用的语言代码（Telegram 只认两个字母，空表示不单独设置）。feishu 是飞书富文本的语言键。colon 是“名称：值”中间的分隔符。geo 是查测速路由节点地区时向查询服务（internal/speedtest/geo.go）要的语言（它只认 en、de、es、pt-BR、fr、ja、zh-CN、ru）。",
+  "source": "zh-CN",
+  "browserDefault": "en",
+  "languages": [
+    { "code": "zh-CN", "label": "简体中文", "fallback": "", "browser": ["zh"], "telegram": "zh", "feishu": "zh_cn", "colon": "：", "geo": "zh-CN" },
+    { "code": "zh-TW", "label": "繁體中文", "fallback": "", "browser": ["zh-hant", "zh-tw", "zh-hk", "zh-mo"], "telegram": "", "feishu": "zh_cn", "colon": "：", "geo": "zh-CN" },
+    { "code": "en", "label": "English", "fallback": "", "browser": ["en"], "telegram": "", "feishu": "en_us", "colon": ": ", "geo": "en" },
+    { "code": "ja", "label": "日本語", "fallback": "en", "browser": ["ja"], "telegram": "ja", "feishu": "ja_jp", "colon": "：", "geo": "ja" },
+    { "code": "ko", "label": "한국어", "fallback": "en", "browser": ["ko"], "telegram": "ko", "feishu": "en_us", "colon": ": ", "geo": "en" },
+    { "code": "fr", "label": "Français", "fallback": "en", "browser": ["fr"], "telegram": "fr", "feishu": "en_us", "colon": " : ", "geo": "fr" },
+    { "code": "de", "label": "Deutsch", "fallback": "en", "browser": ["de"], "telegram": "de", "feishu": "en_us", "colon": ": ", "geo": "de" }
+  ]
+}

@@ -1,0 +1,33 @@
+// pages/Login.tsx：登录与初始化。
+const dict: Record<string, string> = {
+  "保存恢复码": "Save your recovery code",
+  "Passkey 全部丢失时，这是唯一的找回方式。它只显示这一次，请存进密码管理器或打印出来。": "If you lose every Passkey, this is the only way back in. It is shown only this once, so store it in a password manager or print it.",
+  "我已经把恢复码保存到安全的地方": "I have saved the recovery code somewhere safe",
+  "进入塔台": "Enter the tower",
+  "建议登录后在“设置”里再注册一把备用 Passkey。": "After signing in, we recommend registering a backup Passkey in Settings.",
+  "初始化 Hostower": "Set up Hostower",
+  "注册所有者的 Passkey。初始化令牌在塔台的启动日志里，用过即失效。": "Register the owner's Passkey. The setup token is in the tower's startup log and expires once used.",
+  "初始化令牌": "Setup token",
+  "从启动日志复制": "Copy from the startup log",
+  "所有者名称": "Owner name",
+  "注册 Passkey 并完成初始化": "Register Passkey and finish setup",
+  "登录 Hostower": "Sign in to Hostower",
+  "用 Passkey 登录。没有密码，也就没有可以被撞库或钓走的东西。": "Sign in with a Passkey. There is no password, so there is nothing to stuff or phish.",
+  "使用 Passkey 登录": "Sign in with Passkey",
+  "开发模式": "Dev mode",
+  "开发模式下可以用启动日志里的令牌直接登录。主机全部是模拟的。": "In dev mode you can sign in directly with the token from the startup log. All hosts are simulated.",
+  "启动令牌": "Boot token",
+  "用令牌登录": "Sign in with token",
+  "每一步变更都经过风险判定和人的批准": "every change goes through risk assessment and human approval",
+  "使用 {name} 登录": "Sign in with {name}",
+  "这个账号不在允许登录的列表里。请让所有者在“设置 → 安全 → 单点登录”里加上它。": "This account is not on the allowed list. Ask the owner to add it in Settings → Security → Single sign-on.",
+  "登录流程已过期或无效，请重新登录。": "The sign-in attempt expired or is invalid. Please sign in again.",
+  "身份提供方拒绝了这次登录。": "The identity provider refused this sign-in.",
+  "没有启用单点登录。": "Single sign-on is not enabled.",
+  "暂时连不上身份提供方，请稍后再试。": "Cannot reach the identity provider right now. Try again later.",
+  "还没有完成初始化：先用 Passkey 注册所有者。": "Setup isn't finished: register the owner with a Passkey first.",
+  "单点登录失败，详情记在审计里。": "Single sign-on failed; details are in the audit log.",
+  "跟随浏览器": "Browser language",
+};
+
+export default dict;

@@ -1,0 +1,20 @@
+apiVersion: hostower/v1
+kind: App
+name: claude-code
+version: 2.1.326
+title: Claude Code
+category: AI 工具
+icon: sparkles
+summary: Anthropic 的命令行编程助手。
+description: 装进登录账号自己的目录（~/.hostower/npm），不用 sudo；系统里的 Node.js 不够新时自动装一份校验过的 Node.js。安装时会运行这个 npm 包自带的安装脚本（下载对应平台的程序）。
+type: npm
+npm:
+  package: "@anthropic-ai/claude-code"
+  version: 2.1.326
+  bins: [claude]
+  node: 22
+configure:
+  kind: claude
+  login: ~/.local/bin/claude auth login
+  loginHint: 终端里会打印一个链接：在你自己的浏览器里打开、登录 Claude，再把页面上显示的代码粘贴回终端。
+notes: 在“已安装”里点“配置”选模型供应商（DeepSeek、Kimi、智谱等）并填 API Key；用 Claude 订阅就点“订阅登录”。然后在主机的终端里运行 claude。

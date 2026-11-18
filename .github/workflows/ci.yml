@@ -1,0 +1,45 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - name: 仓库卫生（密钥、非保留 IP、非示例域名、不该提交的文件）
+        run: go run ./tools/hygiene
+      - name: 多语言（每种语言的词典、服务端词表和占位符是否齐全）
+        run: go run ./tools/i18n
+      - name: 密钥扫描（完整历史）
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: web/package-lock.json }
+      - name: 构建前端
+        working-directory: web
+        run: npm ci && npm run build
+      - name: 检查与测试
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test -race ./...
+      - name: 判级性能（设计目标：一条命令 1 毫秒以内）
+        run: go test -run '^$' -bench Classify -benchtime 2000x ./internal/kernel/risk/
+      - name: 依赖漏洞扫描
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - name: 前端依赖审计
+        working-directory: web
+        run: npm audit --omit=dev --audit-level=high

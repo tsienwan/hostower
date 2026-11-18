@@ -1,0 +1,30 @@
+// zh-TW 词典：防火墙和站点的服务端文字。
+const dict: Record<string, string> = {
+  "在 {a} 上启用防火墙 {b}（放行 {c}）": "在 {a} 上啟用防火牆 {b}（放行 {c}）",
+  "在 {a} 的防火墙上放行 {b}": "在 {a} 的防火牆上放行 {b}",
+  "在 {a} 的防火墙上关闭 {b}": "在 {a} 的防火牆上關閉 {b}",
+  "在 {a} 上添加站点 {b} → 127.0.0.1:{c}": "在 {a} 上新增站點 {b} → 127.0.0.1:{c}",
+  "在 {a} 上撤下站点 {b}": "在 {a} 上撤下站點 {b}",
+  "在 {a} 上安装 Caddy": "在 {a} 上安裝 Caddy",
+  "协议只能是 tcp 或 udp": "協定只能是 tcp 或 udp",
+  "ufw 和 firewalld 同时启用了：请先在主机上停掉其中一个，Hostower 不会同时管两个": "ufw 和 firewalld 同時啟用了：請先在主機上停掉其中一個，Hostower 不會同時管兩個",
+  "登录账号不是 root，也没有 sudo：改不了防火墙": "登入帳號不是 root，也沒有 sudo：改不了防火牆",
+  "这台主机已经在用 {a} 了": "這台主機已經在用 {a} 了",
+  "只在 Debian / Ubuntu 上一键安装 ufw": "只在 Debian / Ubuntu 上一鍵安裝 ufw",
+  "只在 RHEL / Rocky / Alma / Fedora 上一键安装 firewalld": "只在 RHEL / Rocky / Alma / Fedora 上一鍵安裝 firewalld",
+  "这台主机的系统不支持一键安装防火墙，请在主机上自己安装 ufw 或 firewalld": "這台主機的系統不支援一鍵安裝防火牆，請在主機上自己安裝 ufw 或 firewalld",
+  "这台主机还没有启用防火墙：先安装并启用": "這台主機還沒有啟用防火牆：先安裝並啟用",
+  "没有选端口": "沒有選連接埠",
+  "{a} 是 SSH 或面板在用的端口，关掉会把你锁在外面": "{a} 是 SSH 或面板在用的連接埠，關掉會把你鎖在外面",
+  "地址不合法": "位址不合法",
+  "地址要是域名（例如 app.example.com，可以带端口），或者 IP:端口": "位址要是網域（例如 app.example.com，可以帶連接埠），或者 IP:連接埠",
+  "转发到的端口要在 1 到 65535 之间": "轉發到的連接埠要在 1 到 65535 之間",
+  "这台主机还没有装 Caddy": "這台主機還沒有裝 Caddy",
+  "登录账号不是 root，也没有 sudo：改不了 Caddy 的配置": "登入帳號不是 root，也沒有 sudo：改不了 Caddy 的設定",
+  "没有这个站点（只能删 Hostower 添加的站点）": "沒有這個站點（只能刪 Hostower 新增的站點）",
+  "Caddy 已经装好了": "Caddy 已經裝好了",
+  "登录账号不是 root，也没有 sudo：装不了 Caddy": "登入帳號不是 root，也沒有 sudo：裝不了 Caddy",
+  "这台主机的系统不支持一键安装 Caddy，请按 Caddy 官网的说明安装": "這台主機的系統不支援一鍵安裝 Caddy，請依 Caddy 官網的說明安裝",
+};
+
+export default dict;

@@ -1,0 +1,408 @@
+# 判级测试表：每行 “期望等级 <空格> 命令”。
+# 这张表锁定规则引擎的行为。改规则之前先改这张表。
+
+# ---- L0 只读 ----
+L0 df -h
+L0 docker ps
+L0 docker ps -a --format '{{.Names}}'
+L0 docker compose ps
+L0 docker logs --tail 100 web
+L0 cat /etc/nginx/nginx.conf
+L0 cat /etc/ssh/sshd_config
+L0 cat ~/.ssh/authorized_keys
+L0 cat ~/.ssh/id_ed25519.pub
+L0 ls -l ~/.ssh/id_rsa
+L0 ls -la ~/.ssh
+L0 uptime
+L0 free -m
+L0 ps aux | grep nginx | wc -l
+L0 systemctl status nginx
+L0 systemctl list-units --type=service --state=failed
+L0 journalctl -u nginx -n 200 --no-pager
+L0 tail -n 50 /var/log/syslog 2>/dev/null
+L0 du -sh /var/log/* 2>/dev/null | sort -h | tail
+L0 ss -tlnp
+L0 ip addr show
+L0 ip -br a
+L0 iptables -L -n
+L0 nft list ruleset
+L0 ufw status verbose
+L0 curl -fsSL https://example.com/health
+L0 curl -sI https://example.com
+L0 find /var/log -name '*.log' -mtime +7
+L0 sed -n '1,20p' /etc/hosts
+L0 awk '{print $1}' /var/log/nginx/access.log
+L0 sudo docker ps
+L0 sudo -l
+L0 uname -a && cat /etc/os-release
+L0 echo $HOSTNAME
+L0 apt list --upgradable
+L0 dpkg -l
+L0 git status
+L0 tar tzf backup.tar.gz
+L0 crontab -l
+L0 mount
+L0 fdisk -l
+L0 date
+L0 env
+L0 timeout 5 ping -c 1 192.0.2.1
+L0 kubectl get pods -A
+L0 sysctl net.ipv4.ip_forward
+L0 if [ -f /etc/debian_version ]; then cat /etc/debian_version; fi
+L0 for f in /etc/hostname /etc/hosts; do wc -l "$f"; done
+L0 sh -c 'df -h'
+L0 # 只有注释
+
+# ---- L1 变更 ----
+L1 apt-get install -y nginx
+L1 apt update
+L1 systemctl restart nginx
+L1 systemctl enable --now docker
+L1 docker restart web
+L1 docker compose up -d
+L1 docker compose pull
+L1 docker rm -f web
+L1 mkdir -p /opt/stack
+L1 touch /tmp/marker
+L1 cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+L1 sed -i 's/80/8080/' /etc/nginx/nginx.conf
+L1 echo hello > /tmp/out.txt
+L1 echo 'x' >> /etc/motd
+L1 tee /etc/motd
+L1 chmod 600 ~/.ssh/id_rsa
+L1 chmod 644 /etc/nginx/nginx.conf
+L1 curl -o /tmp/pkg.deb https://example.com/pkg.deb
+L1 curl -X POST https://example.com/hook
+L1 wget https://example.com/file
+L1 kill 4242
+L1 rm /tmp/pkg.deb
+L1 rm -rf /tmp/build-cache
+L1 git pull
+L1 crontab /tmp/cron.txt
+L1 some-unknown-binary --flag
+L1 $CMD --flag
+L1 cat $FILE
+L1 cat "$(ls /etc | head -1)"
+L1 find /var/log -name '*.log' -exec gzip {} +
+L1 find /etc -name '*.conf' -exec cat {} +
+L1 ls /etc | xargs cat
+L1 python3 script.py
+L1 bash deploy.sh
+L1 sudo -i
+L1 ssh web-2 uptime
+L1 sort -o /tmp/sorted.txt /tmp/in.txt
+L1 awk '{print > "/tmp/x"}' /tmp/in
+L1 sysctl -w vm.swappiness=10
+L1 journalctl --vacuum-time=7d
+L1 kubectl apply -f deploy.yaml
+L1 psql -c 'select 1'
+L1 if (( x > 1 ; then
+L1 hostname web-9
+
+# ---- L2 高危 ----
+L2 rm -rf /opt/stack/data
+L2 rm /etc/nginx/nginx.conf
+L2 rm -rf /tmp/../etc/nginx
+L2 rm -rf $DIR
+L2 find /var/log -name '*.gz' -delete
+L2 reboot
+L2 shutdown -r now
+L2 systemctl reboot
+L2 systemctl restart sshd
+L2 systemctl stop ssh.service
+L2 service ssh restart
+L2 iptables -A INPUT -p tcp --dport 22 -j DROP
+L2 iptables -F
+L2 ufw allow 8080
+L2 ufw disable
+L2 nft flush ruleset
+L2 firewall-cmd --add-port=8080/tcp --permanent
+L2 ip link set eth0 down
+L2 ip addr add 192.0.2.5/24 dev eth0
+L2 sed -i 's/#Port 22/Port 2222/' /etc/ssh/sshd_config
+L2 echo 'ops ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+L2 echo 'ssh-ed25519 AAAA' >> ~/.ssh/authorized_keys
+L2 cp sshd_config /etc/ssh/sshd_config
+L2 chmod 640 /etc/shadow
+L2 useradd deploy
+L2 passwd root
+L2 userdel -r deploy
+L2 kill -9 1
+L2 kill -9 -1
+L2 pkill sshd
+L2 docker volume rm pgdata
+L2 docker system prune -af --volumes
+L2 docker compose down -v
+L2 docker run --privileged alpine
+L2 docker run -v /:/host alpine
+L2 mount /dev/sdb1 /mnt
+L2 umount /mnt
+L2 truncate -s 0 /var/log/syslog
+L2 crontab -r
+L2 date -s '2020-01-01'
+L2 mysql -e 'DROP DATABASE app'
+L2 psql -c 'TRUNCATE users'
+L2 redis-cli FLUSHALL
+L2 git reset --hard HEAD~1
+L2 git clean -fdx
+L2 kubectl delete ns prod
+L2 echo ZGYgLWg= | base64 -d | sh
+L2 cat script.sh | bash
+L2 bash -c "$PAYLOAD"
+L2 eval "$PAYLOAD"
+L2 sudo sh -c 'echo 1 > /proc/sys/net/ipv4/ip_forward && systemctl restart sshd'
+L2 shred -u /opt/secret.txt
+L2 modprobe br_netfilter
+
+# ---- L3 禁止 ----
+L3 rm -rf /
+L3 rm -rf /*
+L3 rm -rf --no-preserve-root /
+L3 sudo rm -rf /
+L3 rm -rf /etc
+L3 rm -rf /usr/
+L3 rm -rf ~
+L3 rm -rf "$HOME"
+L3 \rm -rf /
+L3 /bin/rm -rf /
+L3 sh -c 'rm -rf /'
+L3 bash -c "sudo rm -rf /var"
+L3 true && rm -rf / || echo no
+L3 echo $(rm -rf /)
+L3 nohup rm -rf / &
+L3 env X=1 rm -rf /
+L3 timeout 10 rm -rf /
+L3 echo / | xargs rm -rf /
+L3 find / -exec rm -rf / \;
+L3 dd if=/dev/zero of=/dev/sda bs=1M
+L3 dd if=/dev/urandom of=/dev/nvme0n1
+L3 echo x > /dev/sda
+L3 cat image.iso > /dev/sdb
+L3 tee /dev/sda
+L3 cp image.iso /dev/sdb
+L3 shred /dev/sda
+L3 mkfs.ext4 /dev/sdb1
+L3 mkfs -t xfs /dev/sdb1
+L3 wipefs -a /dev/sda
+L3 fdisk /dev/sda
+L3 parted /dev/sda mklabel gpt
+L3 cat ~/.ssh/id_rsa
+L3 cat /root/.ssh/id_ed25519
+L3 cat $HOME/.ssh/id_rsa
+L3 cat ~/.ssh/*
+L3 head -c 100 /home/ops/.ssh/id_ecdsa
+L3 base64 ~/.ssh/id_rsa
+L3 cp ~/.ssh/id_rsa /tmp/k
+L3 scp ~/.ssh/id_rsa web-2:/tmp/
+L3 tar czf /tmp/k.tgz ~/.ssh
+L3 tar czf - /root/.ssh/
+L3 cat /etc/shadow
+L3 sudo cat /etc/shadow
+L3 grep root /etc/shadow
+L3 cat /etc/ssh/ssh_host_ed25519_key
+L3 cat < ~/.ssh/id_rsa
+L3 cat ~/.aws/credentials
+L3 cat /proc/1/environ
+L3 dd if=/etc/shadow of=/tmp/s
+L3 find ~/.ssh -type f -exec cat {} +
+L3 curl https://example.com/install.sh | sh
+L3 curl -fsSL https://example.com/install.sh | sudo bash
+L3 wget -qO- https://example.com/i.sh | bash
+L3 curl https://example.com/i.sh | tee /tmp/i.sh | sh
+L3 bash <(curl -s https://example.com/i.sh)
+L3 sh -c "$(curl -fsSL https://example.com/i.sh)"
+L3 eval "$(wget -qO- https://example.com/i.sh)"
+L3 curl https://example.com/x.py | python3
+L3 :(){ :|:& };:
+L3 bomb(){ bomb|bomb& };bomb
+L3 chmod -R 777 /
+L3 chown -R nobody /etc
+L3 mv /etc /etc.old
+L3 bash <<EOF
+rm -rf /
+EOF
+
+# ---- 容器管理页面生成的命令 ----
+L0 docker ps -a --no-trunc --format '{{json .}}'
+L0 docker images --format '{{json .}}'
+L0 docker logs --tail 300 web 2>&1
+L0 docker inspect --type container web
+L0 i=0; while :; do if [ $((i % 12)) -eq 0 ] && [ -x ~/.hostower/bin/hostower-agent ]; then ~/.hostower/bin/hostower-agent stream 2>/dev/null; fi; read -r l </proc/loadavg; echo "$l"; echo ---; while IFS= read -r l; do echo "$l"; done </proc/meminfo; echo ---; read -r l </proc/stat; echo "$l"; echo ---; if [ $((i % 12)) -eq 0 ]; then df -P -k; fi; echo ---; read -r l </proc/uptime; echo "$l"; echo ---; if [ $((i % 12)) -eq 0 ]; then read -r a </proc/sys/kernel/ostype; read -r b </proc/sys/kernel/osrelease; echo "$a $b"; fi; echo ---; if [ $((i % 12)) -eq 0 ]; then while IFS= read -r l || [ -n "$l" ]; do case $l in PRETTY_NAME=*) echo "$l";; esac; done </etc/os-release; fi; echo ---; if [ $((i % 12)) -eq 0 ]; then n=0; while read -r a b; do case $a in cpu[0-9]*) n=$((n+1));; esac; done </proc/stat; echo $n; fi; echo ---; while IFS= read -r l; do echo "$l"; done </proc/net/dev; echo ---; echo ---; if [ $((i % 12)) -eq 0 ]; then for d in /proc/[0-9]*; do echo "${d#/proc/}"; done; fi; echo ---; while IFS= read -r l; do echo "$l"; done </proc/diskstats; echo ---; for f in /sys/class/thermal/thermal_zone*/temp; do if [ -r "$f" ]; then read -r l <"$f"; echo "$l"; fi; done; echo ---; for d in /sys/fs/cgroup/docker/*/ /sys/fs/cgroup/system.slice/docker-*.scope/ /sys/fs/cgroup/cpuacct/docker/*/ /sys/fs/cgroup/cpuacct/system.slice/docker-*.scope/; do d=${d%/}; u=; m=0; f=0; if [ -r "$d/cpu.stat" ] && [ -r "$d/memory.current" ]; then read -r k u <"$d/cpu.stat"; read -r m <"$d/memory.current"; while read -r k v; do case $k in inactive_file) f=$v; break;; esac; done <"$d/memory.stat"; elif [ -r "$d/cpuacct.usage" ]; then read -r u <"$d/cpuacct.usage"; u=$((u / 1000)); g="/sys/fs/cgroup/memory/${d#/sys/fs/cgroup/cpuacct/}"; if [ -r "$g/memory.usage_in_bytes" ]; then read -r m <"$g/memory.usage_in_bytes"; fi; fi; if [ -n "$u" ]; then id=${d##*/}; id=${id#docker-}; id=${id%.scope}; rx=0; tx=0; p=; if [ -r "$d/cgroup.procs" ]; then read -r p <"$d/cgroup.procs"; fi; if [ -n "$p" ] && [ -r "/proc/$p/net/dev" ]; then while read -r n a b c e h j q r t z; do case $n in lo:) ;; *:) rx=$((rx + a)); tx=$((tx + t));; esac; done <"/proc/$p/net/dev"; fi; echo "$id $u $m $f $rx $tx"; fi; done; echo ---; if [ $((i % 12)) -eq 0 ]; then docker ps --no-trunc --format '{{.ID}} {{.Names}}' 2>/dev/null; fi; echo ===; i=$((i+1)); sleep 5; done
+# 测速（speedtest.Command，带两个路由追踪目标）：向外下载和上传一段数据，消耗流量，必须审批；路由追踪本身是只读的
+L1 if ! curl --version >/dev/null 2>&1; then echo 'speedtest error=no-curl'; exit 0; fi; curl -s -m 10 'https://speed.cloudflare.com/cdn-cgi/trace' | while IFS= read -r l; do echo "speedtest trace $l"; done; for i in 1 2 3 4 5; do curl -s -o /dev/null -m 10 -w 'speedtest ping dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} ttfb=%{time_starttransfer}\n' 'https://speed.cloudflare.com/__down?bytes=0'; done; for t in 'speed.cloudflare.com' '198.51.100.7'; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q 1 -w 1 -m 30 "$t" 2>/dev/null || traceroute -n -q 1 -w 1 -m 30 "$t" 2>&1; elif command -v tracepath >/dev/null 2>&1; then tracepath -n -m 30 "$t" 2>&1; else echo 'error=no-traceroute'; fi | while IFS= read -r l; do echo "speedtest route $t $l"; done; done; curl -s -o /dev/null -m 120 -w 'speedtest down speed=%{speed_download} bytes=%{size_download} time=%{time_total} ttfb=%{time_starttransfer} ip=%{remote_ip} http=%{http_version}\n' 'https://speed.cloudflare.com/__down?bytes=25000000'; head -c 6250000 /dev/zero | curl -s -o /dev/null -m 120 -w 'speedtest up speed=%{speed_upload} bytes=%{size_upload} time=%{time_total}\n' --data-binary @- 'https://speed.cloudflare.com/__up'
+# 测速前自动安装 curl，有追踪目标时还装 traceroute（speedtest.CommandWith(…, true, …)）：变更软件包，L1
+L1 if ! command -v curl >/dev/null 2>&1; then echo 'speedtest installing curl'; if command -v apt-get >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then { apt-get install -y -q curl || { apt-get update -q && apt-get install -y -q curl; }; }; else { sudo -n apt-get install -y -q curl || { sudo -n apt-get update -q && sudo -n apt-get install -y -q curl; }; }; fi elif command -v dnf >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then dnf install -y -q curl; else sudo -n dnf install -y -q curl; fi elif command -v yum >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then yum install -y -q curl; else sudo -n yum install -y -q curl; fi elif command -v apk >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then apk add -q curl; else sudo -n apk add -q curl; fi elif command -v zypper >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then zypper -n -q install curl; else sudo -n zypper -n -q install curl; fi elif command -v pacman >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then pacman -S --noconfirm --needed curl; else sudo -n pacman -S --noconfirm --needed curl; fi; else echo 'speedtest error=no-package-manager'; exit 0; fi; if ! command -v curl >/dev/null 2>&1; then echo 'speedtest error=install-failed'; exit 0; fi; fi; if ! command -v traceroute >/dev/null 2>&1 && ! command -v tracepath >/dev/null 2>&1; then echo 'speedtest installing traceroute'; if command -v apt-get >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then { apt-get install -y -q traceroute || { apt-get update -q && apt-get install -y -q traceroute; }; }; else { sudo -n apt-get install -y -q traceroute || { sudo -n apt-get update -q && sudo -n apt-get install -y -q traceroute; }; }; fi elif command -v dnf >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then dnf install -y -q traceroute; else sudo -n dnf install -y -q traceroute; fi elif command -v yum >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then yum install -y -q traceroute; else sudo -n yum install -y -q traceroute; fi elif command -v apk >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then apk add -q traceroute; else sudo -n apk add -q traceroute; fi elif command -v zypper >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then zypper -n -q install traceroute; else sudo -n zypper -n -q install traceroute; fi elif command -v pacman >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then pacman -S --noconfirm --needed traceroute; else sudo -n pacman -S --noconfirm --needed traceroute; fi; else echo 'speedtest warn=no-package-manager'; fi; fi; if ! curl --version >/dev/null 2>&1; then echo 'speedtest error=no-curl'; exit 0; fi; curl -s -m 10 'https://speed.cloudflare.com/cdn-cgi/trace' | while IFS= read -r l; do echo "speedtest trace $l"; done; for i in 1 2 3 4 5; do curl -s -o /dev/null -m 10 -w 'speedtest ping dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} ttfb=%{time_starttransfer}\n' 'https://speed.cloudflare.com/__down?bytes=0'; done; for t in 'speed.cloudflare.com' '198.51.100.7'; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q 1 -w 1 -m 30 "$t" 2>/dev/null || traceroute -n -q 1 -w 1 -m 30 "$t" 2>&1; elif command -v tracepath >/dev/null 2>&1; then tracepath -n -m 30 "$t" 2>&1; else echo 'error=no-traceroute'; fi | while IFS= read -r l; do echo "speedtest route $t $l"; done; done; curl -s -o /dev/null -m 120 -w 'speedtest down speed=%{speed_download} bytes=%{size_download} time=%{time_total} ttfb=%{time_starttransfer} ip=%{remote_ip} http=%{http_version}\n' 'https://speed.cloudflare.com/__down?bytes=25000000'; head -c 6250000 /dev/zero | curl -s -o /dev/null -m 120 -w 'speedtest up speed=%{speed_upload} bytes=%{size_upload} time=%{time_total}\n' --data-binary @- 'https://speed.cloudflare.com/__up'
+# 测速前检查有没有 curl：只读
+L0 command -v curl
+L0 for c in curl traceroute tracepath; do command -v "$c"; done
+# Speedtest 单线程、只用 IPv6（speedtest.OoklaCommandWith）：绑定 IPv6 出口地址、连接数限成 1，L1
+L1 d="$HOME/.hostower/ookla-1.2.0"; b="$d/speedtest"; u=pinned; v="$(speedtest --version 2>/dev/null | head -n 1)"; case "$v" in "Speedtest by Ookla "*) b="$(command -v speedtest)"; u=system; echo "speedtest version $v";; esac; if [ "$u" = pinned ]; then case "$(uname -m)" in x86_64|amd64) a=x86_64; th=5690596c54ff9bed63fa3732f818a05dbc2db19ad36ed68f21ca5f64d5cfeeb7; bh=31f1124c5ab8acdae6b9fe1741e704df420f9f2e7d429679fabe62075453c051;; aarch64|arm64) a=aarch64; th=3953d231da3783e2bf8904b6dd72767c5c6e533e163d3742fd0437affa431bd3; bh=d99fa13293f658b53eaa79fe81f4b210db39fdfc1e9698f33da3f234a6008df7;; armv7*|armv8l) a=armhf; th=e45fcdebbd8a185553535533dd032d6b10bc8c64eee4139b1147b9c09835d08d; bh=66ad57568664e6f8580e14ad67316a57038fd22b30548bef98531df4ebcc8956;; armv6*|armv5*) a=armel; th=629a455a2879224bd0dbd4b36d8c721dda540717937e4660b4d2c966029466bf; bh=d103b5372da7720413f5263e0b557b6d477669785da2b6d7393d00e9708daf2b;; i386|i486|i586|i686) a=i386; th=9ff7e18dbae7ee0e03c66108445a2fb6ceea6c86f66482e1392f55881b772fe8; bh=8c600519568eddf31849fbbe9c65b1987dd6f81d69d9b443d4e4afdb3f4864b0;; *) echo 'speedtest error=unsupported-arch'; exit 0;; esac; if ! command -v sha256sum >/dev/null 2>&1; then echo 'speedtest error=no-sha256sum'; exit 0; fi; if [ "$(sha256sum "$b" 2>/dev/null | cut -d ' ' -f 1)" != "$bh" ]; then echo 'speedtest installing ookla'; if ! curl --version >/dev/null 2>&1; then echo 'speedtest error=no-curl'; exit 0; fi; mkdir -p "$d" && curl -fsSL -m 120 -o "$d/speedtest.tgz" "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-$a.tgz" || { echo 'speedtest error=download-failed'; exit 0; }; if [ "$(sha256sum "$d/speedtest.tgz" | cut -d ' ' -f 1)" != "$th" ]; then echo 'speedtest error=bad-checksum'; exit 0; fi; tar xzf "$d/speedtest.tgz" -C "$d" speedtest; if [ "$(sha256sum "$b" 2>/dev/null | cut -d ' ' -f 1)" != "$bh" ]; then echo 'speedtest error=bad-checksum'; exit 0; fi; chmod 755 "$b"; fi; fi; src="$(ip -6 route get 2001:db8::1 2>/dev/null | sed -n 's/.* src \([^ ]*\).*/\1/p')"; [ -n "$src" ] || { echo 'speedtest error=no-ipv6'; exit 0; }; echo "speedtest using=$u"; "$b" --accept-license --accept-gdpr -f json -p no -s 3633 --download-conn-range=1-1 --upload-conn-range=1-1 -i "$src" 2>&1 | while IFS= read -r l; do echo "speedtest ookla $l"; done
+# Cloudflare 多线程、只用 IPv4（speedtest.CloudflareCommand）：四条连接同时下载、上传（后台运行的命令照样判级），L1
+L1 if ! curl --version >/dev/null 2>&1; then echo 'speedtest error=no-curl'; exit 0; fi; curl -4 -s -m 10 'https://speed.cloudflare.com/cdn-cgi/trace' | while IFS= read -r l; do echo "speedtest trace $l"; done; for i in 1 2 3 4 5; do curl -4 -s -o /dev/null -m 10 -w 'speedtest ping dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} ttfb=%{time_starttransfer}\n' 'https://speed.cloudflare.com/__down?bytes=0'; done; for t in '198.51.100.7'; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q 1 -w 1 -m 30 "$t" 2>/dev/null || traceroute -n -q 1 -w 1 -m 30 "$t" 2>&1; elif command -v tracepath >/dev/null 2>&1; then tracepath -n -m 30 "$t" 2>&1; else echo 'error=no-traceroute'; fi | while IFS= read -r l; do echo "speedtest route $t $l"; done; done; for c in 1 2 3 4; do curl -4 -s -o /dev/null -m 120 -w 'speedtest down speed=%{speed_download} bytes=%{size_download} time=%{time_total} ttfb=%{time_starttransfer} ip=%{remote_ip} http=%{http_version}\n' 'https://speed.cloudflare.com/__down?bytes=6250000' & done; wait; for c in 1 2 3 4; do head -c 1562500 /dev/zero | curl -4 -s -o /dev/null -m 120 -w 'speedtest up speed=%{speed_upload} bytes=%{size_upload} time=%{time_total}\n' --data-binary @- 'https://speed.cloudflare.com/__up' & done; wait
+# Speedtest by Ookla（speedtest.OoklaCommand，自动选服务器）：系统里有官方的 speedtest 就用它，没有才下载固定版本的官方压缩包、校验 SHA-256 后运行；会消耗流量，L1
+L1 d="$HOME/.hostower/ookla-1.2.0"; b="$d/speedtest"; u=pinned; v="$(speedtest --version 2>/dev/null | head -n 1)"; case "$v" in "Speedtest by Ookla "*) b="$(command -v speedtest)"; u=system; echo "speedtest version $v";; esac; if [ "$u" = pinned ]; then case "$(uname -m)" in x86_64|amd64) a=x86_64; th=5690596c54ff9bed63fa3732f818a05dbc2db19ad36ed68f21ca5f64d5cfeeb7; bh=31f1124c5ab8acdae6b9fe1741e704df420f9f2e7d429679fabe62075453c051;; aarch64|arm64) a=aarch64; th=3953d231da3783e2bf8904b6dd72767c5c6e533e163d3742fd0437affa431bd3; bh=d99fa13293f658b53eaa79fe81f4b210db39fdfc1e9698f33da3f234a6008df7;; armv7*|armv8l) a=armhf; th=e45fcdebbd8a185553535533dd032d6b10bc8c64eee4139b1147b9c09835d08d; bh=66ad57568664e6f8580e14ad67316a57038fd22b30548bef98531df4ebcc8956;; armv6*|armv5*) a=armel; th=629a455a2879224bd0dbd4b36d8c721dda540717937e4660b4d2c966029466bf; bh=d103b5372da7720413f5263e0b557b6d477669785da2b6d7393d00e9708daf2b;; i386|i486|i586|i686) a=i386; th=9ff7e18dbae7ee0e03c66108445a2fb6ceea6c86f66482e1392f55881b772fe8; bh=8c600519568eddf31849fbbe9c65b1987dd6f81d69d9b443d4e4afdb3f4864b0;; *) echo 'speedtest error=unsupported-arch'; exit 0;; esac; if ! command -v sha256sum >/dev/null 2>&1; then echo 'speedtest error=no-sha256sum'; exit 0; fi; if [ "$(sha256sum "$b" 2>/dev/null | cut -d ' ' -f 1)" != "$bh" ]; then echo 'speedtest installing ookla'; if ! curl --version >/dev/null 2>&1; then echo 'speedtest error=no-curl'; exit 0; fi; mkdir -p "$d" && curl -fsSL -m 120 -o "$d/speedtest.tgz" "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-$a.tgz" || { echo 'speedtest error=download-failed'; exit 0; }; if [ "$(sha256sum "$d/speedtest.tgz" | cut -d ' ' -f 1)" != "$th" ]; then echo 'speedtest error=bad-checksum'; exit 0; fi; tar xzf "$d/speedtest.tgz" -C "$d" speedtest; if [ "$(sha256sum "$b" 2>/dev/null | cut -d ' ' -f 1)" != "$bh" ]; then echo 'speedtest error=bad-checksum'; exit 0; fi; chmod 755 "$b"; fi; fi; echo "speedtest using=$u"; "$b" --accept-license --accept-gdpr -f json -p no 2>&1 | while IFS= read -r l; do echo "speedtest ookla $l"; done
+# 指定服务器，带两个路由追踪目标
+L1 for t in 'speed.cloudflare.com' '198.51.100.7'; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q 1 -w 1 -m 30 "$t" 2>/dev/null || traceroute -n -q 1 -w 1 -m 30 "$t" 2>&1; elif command -v tracepath >/dev/null 2>&1; then tracepath -n -m 30 "$t" 2>&1; else echo 'error=no-traceroute'; fi | while IFS= read -r l; do echo "speedtest route $t $l"; done; done; d="$HOME/.hostower/ookla-1.2.0"; b="$d/speedtest"; u=pinned; v="$(speedtest --version 2>/dev/null | head -n 1)"; case "$v" in "Speedtest by Ookla "*) b="$(command -v speedtest)"; u=system; echo "speedtest version $v";; esac; if [ "$u" = pinned ]; then case "$(uname -m)" in x86_64|amd64) a=x86_64; th=5690596c54ff9bed63fa3732f818a05dbc2db19ad36ed68f21ca5f64d5cfeeb7; bh=31f1124c5ab8acdae6b9fe1741e704df420f9f2e7d429679fabe62075453c051;; aarch64|arm64) a=aarch64; th=3953d231da3783e2bf8904b6dd72767c5c6e533e163d3742fd0437affa431bd3; bh=d99fa13293f658b53eaa79fe81f4b210db39fdfc1e9698f33da3f234a6008df7;; armv7*|armv8l) a=armhf; th=e45fcdebbd8a185553535533dd032d6b10bc8c64eee4139b1147b9c09835d08d; bh=66ad57568664e6f8580e14ad67316a57038fd22b30548bef98531df4ebcc8956;; armv6*|armv5*) a=armel; th=629a455a2879224bd0dbd4b36d8c721dda540717937e4660b4d2c966029466bf; bh=d103b5372da7720413f5263e0b557b6d477669785da2b6d7393d00e9708daf2b;; i386|i486|i586|i686) a=i386; th=9ff7e18dbae7ee0e03c66108445a2fb6ceea6c86f66482e1392f55881b772fe8; bh=8c600519568eddf31849fbbe9c65b1987dd6f81d69d9b443d4e4afdb3f4864b0;; *) echo 'speedtest error=unsupported-arch'; exit 0;; esac; if ! command -v sha256sum >/dev/null 2>&1; then echo 'speedtest error=no-sha256sum'; exit 0; fi; if [ "$(sha256sum "$b" 2>/dev/null | cut -d ' ' -f 1)" != "$bh" ]; then echo 'speedtest installing ookla'; if ! curl --version >/dev/null 2>&1; then echo 'speedtest error=no-curl'; exit 0; fi; mkdir -p "$d" && curl -fsSL -m 120 -o "$d/speedtest.tgz" "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-$a.tgz" || { echo 'speedtest error=download-failed'; exit 0; }; if [ "$(sha256sum "$d/speedtest.tgz" | cut -d ' ' -f 1)" != "$th" ]; then echo 'speedtest error=bad-checksum'; exit 0; fi; tar xzf "$d/speedtest.tgz" -C "$d" speedtest; if [ "$(sha256sum "$b" 2>/dev/null | cut -d ' ' -f 1)" != "$bh" ]; then echo 'speedtest error=bad-checksum'; exit 0; fi; chmod 755 "$b"; fi; fi; echo "speedtest using=$u"; "$b" --accept-license --accept-gdpr -f json -p no -s 3633 2>&1 | while IFS= read -r l; do echo "speedtest ookla $l"; done
+# 先自动安装 curl（和 traceroute），再下载 Ookla 的程序测速：变更软件包，L1
+L1 if ! command -v curl >/dev/null 2>&1; then echo 'speedtest installing curl'; if command -v apt-get >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then { apt-get install -y -q curl || { apt-get update -q && apt-get install -y -q curl; }; }; else { sudo -n apt-get install -y -q curl || { sudo -n apt-get update -q && sudo -n apt-get install -y -q curl; }; }; fi elif command -v dnf >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then dnf install -y -q curl; else sudo -n dnf install -y -q curl; fi elif command -v yum >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then yum install -y -q curl; else sudo -n yum install -y -q curl; fi elif command -v apk >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then apk add -q curl; else sudo -n apk add -q curl; fi elif command -v zypper >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then zypper -n -q install curl; else sudo -n zypper -n -q install curl; fi elif command -v pacman >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then pacman -S --noconfirm --needed curl; else sudo -n pacman -S --noconfirm --needed curl; fi; else echo 'speedtest error=no-package-manager'; exit 0; fi; if ! command -v curl >/dev/null 2>&1; then echo 'speedtest error=install-failed'; exit 0; fi; fi; if ! command -v traceroute >/dev/null 2>&1 && ! command -v tracepath >/dev/null 2>&1; then echo 'speedtest installing traceroute'; if command -v apt-get >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then { apt-get install -y -q traceroute || { apt-get update -q && apt-get install -y -q traceroute; }; }; else { sudo -n apt-get install -y -q traceroute || { sudo -n apt-get update -q && sudo -n apt-get install -y -q traceroute; }; }; fi elif command -v dnf >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then dnf install -y -q traceroute; else sudo -n dnf install -y -q traceroute; fi elif command -v yum >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then yum install -y -q traceroute; else sudo -n yum install -y -q traceroute; fi elif command -v apk >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then apk add -q traceroute; else sudo -n apk add -q traceroute; fi elif command -v zypper >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then zypper -n -q install traceroute; else sudo -n zypper -n -q install traceroute; fi elif command -v pacman >/dev/null 2>&1; then if [ "$(id -u)" = 0 ]; then pacman -S --noconfirm --needed traceroute; else sudo -n pacman -S --noconfirm --needed traceroute; fi; else echo 'speedtest warn=no-package-manager'; fi; fi; for t in 'speed.cloudflare.com' '198.51.100.7'; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q 1 -w 1 -m 30 "$t" 2>/dev/null || traceroute -n -q 1 -w 1 -m 30 "$t" 2>&1; elif command -v tracepath >/dev/null 2>&1; then tracepath -n -m 30 "$t" 2>&1; else echo 'error=no-traceroute'; fi | while IFS= read -r l; do echo "speedtest route $t $l"; done; done; d="$HOME/.hostower/ookla-1.2.0"; b="$d/speedtest"; u=pinned; v="$(speedtest --version 2>/dev/null | head -n 1)"; case "$v" in "Speedtest by Ookla "*) b="$(command -v speedtest)"; u=system; echo "speedtest version $v";; esac; if [ "$u" = pinned ]; then case "$(uname -m)" in x86_64|amd64) a=x86_64; th=5690596c54ff9bed63fa3732f818a05dbc2db19ad36ed68f21ca5f64d5cfeeb7; bh=31f1124c5ab8acdae6b9fe1741e704df420f9f2e7d429679fabe62075453c051;; aarch64|arm64) a=aarch64; th=3953d231da3783e2bf8904b6dd72767c5c6e533e163d3742fd0437affa431bd3; bh=d99fa13293f658b53eaa79fe81f4b210db39fdfc1e9698f33da3f234a6008df7;; armv7*|armv8l) a=armhf; th=e45fcdebbd8a185553535533dd032d6b10bc8c64eee4139b1147b9c09835d08d; bh=66ad57568664e6f8580e14ad67316a57038fd22b30548bef98531df4ebcc8956;; armv6*|armv5*) a=armel; th=629a455a2879224bd0dbd4b36d8c721dda540717937e4660b4d2c966029466bf; bh=d103b5372da7720413f5263e0b557b6d477669785da2b6d7393d00e9708daf2b;; i386|i486|i586|i686) a=i386; th=9ff7e18dbae7ee0e03c66108445a2fb6ceea6c86f66482e1392f55881b772fe8; bh=8c600519568eddf31849fbbe9c65b1987dd6f81d69d9b443d4e4afdb3f4864b0;; *) echo 'speedtest error=unsupported-arch'; exit 0;; esac; if ! command -v sha256sum >/dev/null 2>&1; then echo 'speedtest error=no-sha256sum'; exit 0; fi; if [ "$(sha256sum "$b" 2>/dev/null | cut -d ' ' -f 1)" != "$bh" ]; then echo 'speedtest installing ookla'; if ! curl --version >/dev/null 2>&1; then echo 'speedtest error=no-curl'; exit 0; fi; mkdir -p "$d" && curl -fsSL -m 120 -o "$d/speedtest.tgz" "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-$a.tgz" || { echo 'speedtest error=download-failed'; exit 0; }; if [ "$(sha256sum "$d/speedtest.tgz" | cut -d ' ' -f 1)" != "$th" ]; then echo 'speedtest error=bad-checksum'; exit 0; fi; tar xzf "$d/speedtest.tgz" -C "$d" speedtest; if [ "$(sha256sum "$b" 2>/dev/null | cut -d ' ' -f 1)" != "$bh" ]; then echo 'speedtest error=bad-checksum'; exit 0; fi; chmod 755 "$b"; fi; fi; echo "speedtest using=$u"; "$b" --accept-license --accept-gdpr -f json -p no -s 3633 2>&1 | while IFS= read -r l; do echo "speedtest ookla $l"; done
+# 硬件信息采集（executor.HardwareProbeCommand）：只读，必须是 L0
+L0 LC_ALL=C lscpu 2>/dev/null; echo ---; while IFS= read -r l; do case $l in "model name"*|"cpu model"*|Hardware*|"cpu MHz"*|vendor_id*|flags*) echo "$l";; "") break;; esac; done </proc/cpuinfo; echo ---; for f in sys_vendor product_name product_version board_vendor board_name; do if [ -r /sys/class/dmi/id/$f ]; then read -r v </sys/class/dmi/id/$f; echo "$f=$v"; fi; done; echo ---; for d in /sys/block/*; do n=${d##*/}; case $n in loop*|ram*|zram*|dm-*|sr*|fd*|md*|nbd*) continue;; esac; s=0; r=; m=; if [ -r $d/size ]; then read -r s <$d/size; fi; if [ -r $d/queue/rotational ]; then read -r r <$d/queue/rotational; fi; if [ -r $d/device/model ]; then read -r m <$d/device/model; fi; echo "$n $s $r $m"; done
+L0 ~/.hostower/bin/hostower-agent stream
+L1 ~/.hostower/bin/hostower-agent stream --anything
+L1 ~/.hostower/bin/hostower-agent install
+L1 /tmp/hostower-agent stream
+L1 mkdir -p ~/.hostower/bin && cat > ~/.hostower/bin/hostower-agent.new && chmod 755 ~/.hostower/bin/hostower-agent.new && mv -f ~/.hostower/bin/hostower-agent.new ~/.hostower/bin/hostower-agent
+L2 rm -f ~/.hostower/bin/hostower-agent
+L0 find '/srv/my dir' -xdev -maxdepth 6 -iname '*nginx*' 2>/dev/null | head -n 200
+L1 cat > '/opt/app/release 2.tar.gz'
+L2 cat > '/etc/sudoers.d/ops'
+L0 docker image inspect sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef --format '{{json .Config.Env}}'
+L1 docker pull nginx:1.27
+L1 docker load
+L1 docker login registry.example.com -u deploy --password-stdin
+L1 docker pull nginx:1.27 && docker rm -f web && docker run -d --name web --restart unless-stopped -p 8080:80 -e APP_ENV=production -v /opt/app/data:/data nginx:1.27
+L2 docker pull alpine && docker run -d --name x --restart no -v /:/host alpine
+L2 docker pull alpine && docker run -d --name x --restart no -v /var/run/docker.sock:/var/run/docker.sock alpine
+L1 umask 077 && mkdir -p ~/.hostower/env && cat > ~/.hostower/env/web.env && docker pull nginx:1.27 && docker run -d --name web --restart unless-stopped --env-file ~/.hostower/env/web.env nginx:1.27
+
+# ---- 写进 compose 文件的内容（heredoc）：内容本身也判级 ----
+# 普通的服务：写文件 + 启动，L1
+L1 mkdir -p ~/.hostower/apps/kuma && cd ~/.hostower/apps/kuma && cat > compose.yaml <<'HOSTOWER_EOF' && docker compose -p kuma up -d
+services:
+  kuma:
+    image: louislam/uptime-kuma:1
+    ports: ["127.0.0.1:3001:3001"]
+    volumes: ["./data:/app/data", "kuma-cache:/cache"]
+    environment:
+      PASSWORD: ${ADMIN_PASSWORD}
+    restart: unless-stopped
+volumes:
+  kuma-cache: {}
+HOSTOWER_EOF
+# 特权模式
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    privileged: true
+EOF
+# 宿主机网络
+L2 cat > /opt/stack/docker-compose.yml <<'EOF'
+services:
+  x:
+    image: alpine
+    network_mode: host
+EOF
+# 共享宿主机进程命名空间
+L2 cat > compose.yml <<'EOF'
+services:
+  x:
+    image: alpine
+    pid: "host"
+EOF
+# 长格式挂载 Docker 套接字
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+EOF
+# 短格式挂载宿主机根目录
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    volumes: ["/:/host:ro"]
+EOF
+# 挂载宿主机的 /etc
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    volumes: ["/etc/ssh:/ssh"]
+EOF
+# 增加内核能力、访问设备、关闭安全隔离
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    cap_add: [NET_ADMIN]
+EOF
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    devices: ["/dev/net/tun:/dev/net/tun"]
+EOF
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    security_opt: ["seccomp:unconfined"]
+EOF
+# 安全相关的设置用了变量：无法静态判定
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    network_mode: ${MODE}
+EOF
+# 引用别的文件：看不到全部内容
+L2 cat > compose.yaml <<'EOF'
+include: [other.yaml]
+services:
+  x:
+    image: alpine
+EOF
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    extends: {file: base.yaml, service: web}
+EOF
+# 解析不了的 compose 文件
+L2 cat > compose.yaml <<'EOF'
+services: [unclosed
+EOF
+# 不加引号的 heredoc 里有运行时展开：写进去的内容无法静态判定
+L2 cat > compose.yaml <<EOF
+services:
+  x:
+    image: $IMAGE
+EOF
+# 用 tee 写也一样
+L2 tee compose.yaml >/dev/null <<'EOF'
+services:
+  x:
+    image: alpine
+    privileged: true
+EOF
+# 普通文件不按 compose 检查
+L1 cat > notes.yaml <<'EOF'
+privileged: true
+EOF
+# 挂载家目录里的 SSH 密钥
+L2 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    volumes: ["~/.ssh:/root/.ssh"]
+EOF
+# 普通的数据目录、加入别的服务的网络：不算越权
+L1 cat > compose.yaml <<'EOF'
+services:
+  x:
+    image: alpine
+    volumes: ["/opt/app/data:/data"]
+    network_mode: "service:db"
+  db:
+    image: postgres:17-alpine
+EOF
+
+# 检查主机有没有 Docker 和 Compose、能不能以 root 运行、是什么系统（apps.DockerStatusCommand）：只读
+L0 if command -v docker >/dev/null 2>&1; then echo docker; fi; if docker compose version >/dev/null 2>&1; then echo compose; fi; if [ "$(id -u)" = 0 ]; then echo root; elif sudo -n true 2>/dev/null; then echo sudo; fi; for c in apt-get dnf yum apk pacman zypper systemctl rc-service curl; do if command -v "$c" >/dev/null 2>&1; then echo "has $c"; fi; done; if command -v dpkg >/dev/null 2>&1; then echo "arch $(dpkg --print-architecture)"; fi; while IFS= read -r l || [ -n "$l" ]; do case $l in ID=*|ID_LIKE=*|VERSION_CODENAME=*|UBUNTU_CODENAME=*) echo "os $l";; esac; done </etc/os-release
+# 安装 Docker（apps.DockerInstallCommand）：加 Docker 官方软件源、装软件包、启动服务，变更，L1
+L1 sudo -n env DEBIAN_FRONTEND=noninteractive apt-get update -q && sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y -q ca-certificates curl && sudo -n install -m 0755 -d /etc/apt/keyrings && sudo -n curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && sudo -n chmod a+r /etc/apt/keyrings/docker.asc && echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable' | sudo -n tee /etc/apt/sources.list.d/docker.list >/dev/null && sudo -n env DEBIAN_FRONTEND=noninteractive apt-get update -q && sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && sudo -n systemctl enable --now docker && docker compose version
+L1 curl -fsSL https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo && dnf install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && systemctl enable --now docker && docker compose version

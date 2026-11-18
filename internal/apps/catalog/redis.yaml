@@ -1,0 +1,36 @@
+apiVersion: hostower/v1
+kind: App
+name: redis
+version: 8-1
+title: Redis
+category: 数据库
+icon: database
+summary: 内存键值数据库，带密码和持久化。
+description: 开启 AOF 持久化，数据保存在实例目录下的 data 里。密码来自应用密钥，不出现在命令和审计里。
+type: compose
+params:
+  - name: bind
+    title: 监听地址
+    type: enum
+    options: ["127.0.0.1", "0.0.0.0"]
+    default: 127.0.0.1
+    hint: 数据库一般只在本机访问；对外开放前先确认防火墙规则。
+  - name: port
+    title: 端口
+    type: port
+    default: "6379"
+  - name: password
+    title: 访问密码
+    type: secret
+    env: REDIS_PASSWORD
+compose: |
+  services:
+    redis:
+      image: redis:8-alpine
+      restart: unless-stopped
+      command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+      ports: ["{{ .bind }}:{{ .port }}:6379"]
+      volumes: ["./data:/data"]
+upgrade:
+  note: Redis 8 直接读取 7.x 的数据文件；升级前建议先备份实例目录下的 data。
+notes: 连接地址 {{ .bind }}:{{ .port }}，密码是所选的应用密钥。

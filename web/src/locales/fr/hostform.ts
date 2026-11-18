@@ -1,0 +1,33 @@
+// Dictionnaire français：HostForm.tsx（新增、编辑主机）。
+const dict: Record<string, string> = {
+  "本机直连": "Local (sans SSH)",
+  "主机已更新": "Hôte mis à jour",
+  "主机已添加": "Hôte ajouté",
+  "编辑主机 {name}": "Modifier l'hôte {name}",
+  "添加主机": "Ajouter un hôte",
+  "取消": "Annuler",
+  "保存": "Enregistrer",
+  "添加": "Ajouter",
+  "名称": "Nom",
+  "地址": "Adresse",
+  "192.0.2.10 或 192.0.2.10:2222": "192.0.2.10 ou 192.0.2.10:2222",
+  "连接方式": "Connexion",
+  "模拟主机": "Hôte simulé",
+  "塔台 → 主机": "tour → hôte",
+  "仅开发模式": "mode développement uniquement",
+  "敏感度": "Sensibilité",
+  "低": "Faible",
+  "普通": "Normale",
+  "高": "Élevée",
+  "写操作自动升一级": "les écritures montent d'un niveau de risque",
+  "SSH 凭据": "Identifiant SSH",
+  "还没有凭据。先到“设置 → SSH 凭据”添加一条，再回来选。": "Aucun identifiant pour l'instant. Ajoutez-en un dans Paramètres → Identifiants SSH, puis revenez le choisir.",
+  "没有配置主密钥，凭据功能不可用（见“设置”页的说明）。": "Aucune clé maîtresse n'est configurée, les identifiants sont donc indisponibles (voir les explications de la page Paramètres).",
+  "标签": "Étiquettes",
+  "输入后按回车新建，例如 web": "Saisissez puis appuyez sur Entrée pour ajouter, p. ex. web",
+  "分组按标签自动匹配：带": "Les groupes correspondent automatiquement par étiquette : les hôtes étiquetés",
+  "标签的主机会进入选择器是": "rejoignent les groupes dont le sélecteur est",
+  "的分组。": ".",
+};
+
+export default dict;

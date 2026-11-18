@@ -1,0 +1,31 @@
+apiVersion: hostower/v1
+kind: App
+name: portainer
+version: lts-1
+title: Portainer CE
+category: 运维
+icon: box
+summary: 网页版的 Docker 管理界面。
+description: 需要挂载 Docker 套接字，等同把这台主机的 root 权限交给它，所以安装是高危操作。只在你确实需要它的界面时安装。
+type: compose
+params:
+  - name: bind
+    title: 监听地址
+    type: enum
+    options: ["127.0.0.1", "0.0.0.0"]
+    default: 127.0.0.1
+    hint: 建议只在本机监听，用 SSH 隧道访问。
+  - name: port
+    title: HTTPS 端口
+    type: port
+    default: "9443"
+compose: |
+  services:
+    portainer:
+      image: portainer/portainer-ce:lts
+      restart: unless-stopped
+      ports: ["{{ .bind }}:{{ .port }}:9443"]
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ./data:/data
+notes: 打开 https://<主机地址>:{{ .port }}，5 分钟内创建管理员账号，否则要重启容器。

@@ -1,0 +1,33 @@
+// Dictionnaire français：pages/Login.tsx（登录与初始化）。
+const dict: Record<string, string> = {
+  "保存恢复码": "Enregistrez votre code de récupération",
+  "Passkey 全部丢失时，这是唯一的找回方式。它只显示这一次，请存进密码管理器或打印出来。": "Si vous perdez toutes vos Passkeys, c'est le seul moyen de récupérer l'accès. Il n'est affiché qu'une seule fois : conservez-le dans un gestionnaire de mots de passe ou imprimez-le.",
+  "我已经把恢复码保存到安全的地方": "J'ai enregistré le code de récupération en lieu sûr",
+  "进入塔台": "Entrer dans la tour",
+  "建议登录后在“设置”里再注册一把备用 Passkey。": "Après la connexion, nous recommandons d'enregistrer une Passkey de secours dans Paramètres.",
+  "初始化 Hostower": "Initialiser Hostower",
+  "注册所有者的 Passkey。初始化令牌在塔台的启动日志里，用过即失效。": "Enregistrez la Passkey du propriétaire. Le jeton d'initialisation se trouve dans le journal de démarrage de la tour et expire après usage.",
+  "初始化令牌": "Jeton d'initialisation",
+  "从启动日志复制": "Copiez-le depuis le journal de démarrage",
+  "所有者名称": "Nom du propriétaire",
+  "注册 Passkey 并完成初始化": "Enregistrer la Passkey et terminer l'initialisation",
+  "登录 Hostower": "Se connecter à Hostower",
+  "用 Passkey 登录。没有密码，也就没有可以被撞库或钓走的东西。": "Connectez-vous avec une Passkey. Pas de mot de passe, donc rien à réutiliser ni à hameçonner.",
+  "使用 Passkey 登录": "Se connecter avec une Passkey",
+  "开发模式": "Mode développement",
+  "开发模式下可以用启动日志里的令牌直接登录。主机全部是模拟的。": "En mode développement, vous pouvez vous connecter directement avec le jeton du journal de démarrage. Tous les hôtes sont simulés.",
+  "启动令牌": "Jeton de démarrage",
+  "用令牌登录": "Se connecter avec le jeton",
+  "每一步变更都经过风险判定和人的批准": "chaque modification passe par une évaluation des risques et une approbation humaine",
+  "使用 {name} 登录": "Se connecter avec {name}",
+  "这个账号不在允许登录的列表里。请让所有者在“设置 → 安全 → 单点登录”里加上它。": "Ce compte ne figure pas dans la liste des comptes autorisés. Demandez au propriétaire de l'ajouter dans Paramètres → Sécurité → Authentification unique.",
+  "登录流程已过期或无效，请重新登录。": "La tentative de connexion a expiré ou n'est pas valide. Veuillez vous reconnecter.",
+  "身份提供方拒绝了这次登录。": "Le fournisseur d'identité a refusé cette connexion.",
+  "没有启用单点登录。": "L'authentification unique n'est pas activée.",
+  "暂时连不上身份提供方，请稍后再试。": "Impossible de joindre le fournisseur d'identité pour le moment. Réessayez plus tard.",
+  "还没有完成初始化：先用 Passkey 注册所有者。": "L'initialisation n'est pas terminée : enregistrez d'abord le propriétaire avec une Passkey.",
+  "单点登录失败，详情记在审计里。": "Échec de l'authentification unique ; les détails sont consignés dans l'audit.",
+  "跟随浏览器": "Langue du navigateur",
+};
+
+export default dict;

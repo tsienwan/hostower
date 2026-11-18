@@ -1,0 +1,9 @@
+apiVersion: hostower/v1
+kind: Snippet
+name: disk-usage
+title: 查看磁盘占用
+description: 列出各挂载点的使用率。只读，自动执行。
+version: 1.0.0
+level: L0
+selector: "*"
+command: df -h

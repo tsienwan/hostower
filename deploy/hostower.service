@@ -1,0 +1,37 @@
+# 示例：用 systemd 直接运行二进制。这种方式下主机列表里默认有一台 local（Hostower 所在的这台机器）。
+#
+#   useradd --system --create-home --home-dir /var/lib/hostower --shell /bin/bash hostower
+#   usermod -aG docker hostower          # 只有需要管这台机器上的容器时才加；docker 组等同 root
+#   install -m 0755 hostower /usr/local/bin/hostower
+#   sudo -u hostower sh -c 'umask 077; hostower keygen > /var/lib/hostower/master_key'
+#   cp hostower.service /etc/systemd/system/ && systemctl enable --now hostower
+#   journalctl -u hostower               # 第一次启动时这里有初始化令牌
+#
+# 默认只监听本机。对外提供访问时必须声明 TLS 由谁终结，见 README 的“暴露方式”。
+[Unit]
+Description=Hostower
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=hostower
+Group=hostower
+WorkingDirectory=/var/lib/hostower
+Environment=HOSTOWER_DATA=/var/lib/hostower/data
+Environment=HOSTOWER_CONFIG=/var/lib/hostower/config
+Environment=HOSTOWER_MASTER_KEY_FILE=/var/lib/hostower/master_key
+# 监听地址、访问地址、TLS 证书、会话时长都在页面的“设置 → 面板”里改（默认只监听 127.0.0.1:18443）。
+# 也可以在这里用环境变量写死，但环境变量优先于页面上的设置：写了之后页面上改的要等去掉它、重启后才生效。
+# 例如放在反向代理或隧道之后时：
+# Environment=HOSTOWER_TLS=proxy
+# Environment=HOSTOWER_PUBLIC_URL=https://hostower.example.com
+ExecStart=/usr/local/bin/hostower serve
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+// Deutsches Wörterbuch: pages/Login.tsx – Anmeldung und Ersteinrichtung.
+const dict: Record<string, string> = {
+  "保存恢复码": "Wiederherstellungscode sichern",
+  "Passkey 全部丢失时，这是唯一的找回方式。它只显示这一次，请存进密码管理器或打印出来。": "Wenn alle Passkeys verloren gehen, ist dies der einzige Weg zurück. Er wird nur dieses eine Mal angezeigt – speichern Sie ihn in einem Passwortmanager oder drucken Sie ihn aus.",
+  "我已经把恢复码保存到安全的地方": "Ich habe den Wiederherstellungscode sicher aufbewahrt",
+  "进入塔台": "Zum Tower",
+  "建议登录后在“设置”里再注册一把备用 Passkey。": "Nach der Anmeldung empfehlen wir, in den Einstellungen einen Ersatz-Passkey zu registrieren.",
+  "初始化 Hostower": "Hostower einrichten",
+  "注册所有者的 Passkey。初始化令牌在塔台的启动日志里，用过即失效。": "Registrieren Sie den Passkey des Eigentümers. Das Einrichtungstoken steht im Startprotokoll des Towers und verfällt nach der Verwendung.",
+  "初始化令牌": "Einrichtungstoken",
+  "从启动日志复制": "Aus dem Startprotokoll kopieren",
+  "所有者名称": "Name des Eigentümers",
+  "注册 Passkey 并完成初始化": "Passkey registrieren und Einrichtung abschließen",
+  "登录 Hostower": "Bei Hostower anmelden",
+  "用 Passkey 登录。没有密码，也就没有可以被撞库或钓走的东西。": "Melden Sie sich mit einem Passkey an. Ohne Passwort gibt es nichts, was durch Credential Stuffing oder Phishing erbeutet werden könnte.",
+  "使用 Passkey 登录": "Mit Passkey anmelden",
+  "开发模式": "Entwicklungsmodus",
+  "开发模式下可以用启动日志里的令牌直接登录。主机全部是模拟的。": "Im Entwicklungsmodus können Sie sich direkt mit dem Token aus dem Startprotokoll anmelden. Alle Hosts sind simuliert.",
+  "启动令牌": "Start-Token",
+  "用令牌登录": "Mit Token anmelden",
+  "每一步变更都经过风险判定和人的批准": "jede Änderung durchläuft Risikobewertung und menschliche Genehmigung",
+  "使用 {name} 登录": "Mit {name} anmelden",
+  "这个账号不在允许登录的列表里。请让所有者在“设置 → 安全 → 单点登录”里加上它。": "Dieses Konto steht nicht auf der Liste der zugelassenen Konten. Bitten Sie den Eigentümer, es unter Einstellungen → Sicherheit → Single Sign-on hinzuzufügen.",
+  "登录流程已过期或无效，请重新登录。": "Der Anmeldevorgang ist abgelaufen oder ungültig. Bitte melden Sie sich erneut an.",
+  "身份提供方拒绝了这次登录。": "Der Identitätsanbieter hat diese Anmeldung abgelehnt.",
+  "没有启用单点登录。": "Single Sign-on ist nicht aktiviert.",
+  "暂时连不上身份提供方，请稍后再试。": "Der Identitätsanbieter ist derzeit nicht erreichbar. Bitte versuchen Sie es später erneut.",
+  "还没有完成初始化：先用 Passkey 注册所有者。": "Die Einrichtung ist noch nicht abgeschlossen: Registrieren Sie zuerst den Eigentümer mit einem Passkey.",
+  "单点登录失败，详情记在审计里。": "Single Sign-on fehlgeschlagen; Details stehen im Audit.",
+  "跟随浏览器": "Browsersprache",
+};
+
+export default dict;

@@ -1,0 +1,15 @@
+# 规则包只能加严：它只在等级高于内置判定时生效，无法放宽任何规则。
+apiVersion: hostower/v1
+kind: RulePack
+name: redis
+rules:
+  - id: config-set
+    command: redis-cli
+    args: '(?i)\bconfig\s+set\b'
+    level: L2
+    reason: 运行时修改 Redis 配置
+  - id: shutdown
+    command: redis-cli
+    args: '(?i)\bshutdown\b'
+    level: L2
+    reason: 关闭 Redis

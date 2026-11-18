@@ -1,0 +1,30 @@
+// de 词典：防火墙和站点的服务端文字。
+const dict: Record<string, string> = {
+  "在 {a} 上启用防火墙 {b}（放行 {c}）": "Firewall {b} auf {a} einschalten ({c} freigeben)",
+  "在 {a} 的防火墙上放行 {b}": "{b} in der Firewall von {a} freigeben",
+  "在 {a} 的防火墙上关闭 {b}": "{b} in der Firewall von {a} schließen",
+  "在 {a} 上添加站点 {b} → 127.0.0.1:{c}": "Site {b} → 127.0.0.1:{c} auf {a} hinzufügen",
+  "在 {a} 上撤下站点 {b}": "Site {b} auf {a} entfernen",
+  "在 {a} 上安装 Caddy": "Caddy auf {a} installieren",
+  "协议只能是 tcp 或 udp": "Protokoll muss tcp oder udp sein",
+  "ufw 和 firewalld 同时启用了：请先在主机上停掉其中一个，Hostower 不会同时管两个": "ufw und firewalld sind beide aktiv: zuerst eine auf dem Host stoppen; Hostower verwaltet nicht beide",
+  "登录账号不是 root，也没有 sudo：改不了防火墙": "Das Login-Konto ist nicht root und hat kein sudo: Firewall nicht änderbar",
+  "这台主机已经在用 {a} 了": "Dieser Host nutzt bereits {a}",
+  "只在 Debian / Ubuntu 上一键安装 ufw": "ufw wird nur auf Debian / Ubuntu per Klick installiert",
+  "只在 RHEL / Rocky / Alma / Fedora 上一键安装 firewalld": "firewalld wird nur auf RHEL / Rocky / Alma / Fedora per Klick installiert",
+  "这台主机的系统不支持一键安装防火墙，请在主机上自己安装 ufw 或 firewalld": "Ein-Klick-Installation nicht unterstützt; ufw oder firewalld selbst installieren",
+  "这台主机还没有启用防火墙：先安装并启用": "Auf diesem Host ist noch keine Firewall aktiv: zuerst installieren und einschalten",
+  "没有选端口": "Kein Port gewählt",
+  "{a} 是 SSH 或面板在用的端口，关掉会把你锁在外面": "{a} wird von SSH oder dem Panel genutzt; Schließen würde Sie aussperren",
+  "地址不合法": "Ungültige Adresse",
+  "地址要是域名（例如 app.example.com，可以带端口），或者 IP:端口": "Die Adresse muss eine Domain (z. B. app.example.com, optional mit Port) oder IP:Port sein",
+  "转发到的端口要在 1 到 65535 之间": "Der Zielport muss zwischen 1 und 65535 liegen",
+  "这台主机还没有装 Caddy": "Caddy ist auf diesem Host noch nicht installiert",
+  "登录账号不是 root，也没有 sudo：改不了 Caddy 的配置": "Das Login-Konto ist nicht root und hat kein sudo: Caddy-Konfiguration nicht änderbar",
+  "没有这个站点（只能删 Hostower 添加的站点）": "Keine solche Site (nur von Hostower angelegte lassen sich entfernen)",
+  "Caddy 已经装好了": "Caddy ist bereits installiert",
+  "登录账号不是 root，也没有 sudo：装不了 Caddy": "Das Login-Konto ist nicht root und hat kein sudo: Caddy nicht installierbar",
+  "这台主机的系统不支持一键安装 Caddy，请按 Caddy 官网的说明安装": "Ein-Klick-Installation von Caddy nicht unterstützt; Anleitung auf der Caddy-Website folgen",
+};
+
+export default dict;

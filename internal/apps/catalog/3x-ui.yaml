@@ -1,0 +1,23 @@
+apiVersion: hostower/v1
+kind: App
+name: 3x-ui
+version: 3.11.0-1
+title: 3x-ui
+category: 网络
+icon: network
+summary: Xray 的网页管理面板。
+description: 使用宿主机网络（容器直接监听主机的端口），所以安装是高危操作。面板端口和入站端口都在面板里配置，注意不要和主机上已有的服务冲突。
+type: compose
+compose: |
+  services:
+    3x-ui:
+      image: ghcr.io/mhsanaei/3x-ui:v3.11.0
+      restart: unless-stopped
+      network_mode: host
+      tty: true
+      environment:
+        XRAY_VMESS_AEAD_FORCED: "false"
+      volumes:
+        - ./db:/etc/x-ui
+        - ./cert:/root/cert
+notes: 初始的面板地址和账号见容器日志（docker logs），登录后立刻修改账号、密码和面板路径。

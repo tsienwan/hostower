@@ -1,0 +1,18 @@
+apiVersion: hostower/v1
+kind: Snippet
+name: compose-update
+title: 更新 Compose 服务
+description: 在主机自己的 compose 目录里拉取新镜像并重建容器。目录来自主机变量 compose_root。
+version: 1.0.0
+level: L1
+selector: "tag:docker"
+params:
+  - name: service
+    title: 服务（留空表示全部）
+    type: string
+    pattern: "[a-z0-9_-]*"
+command: cd {{ .host.vars.compose_root }} && docker compose pull {{ .service }} && docker compose up -d {{ .service }}
+strategy:
+  concurrency: 2
+  canary: true
+  stopOnError: true

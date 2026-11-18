@@ -1,0 +1,31 @@
+apiVersion: hostower/v1
+kind: App
+name: uptime-kuma
+version: 2-1
+title: Uptime Kuma
+category: 监控
+icon: activity
+summary: 自托管的网站和服务可用性监控。
+description: 用网页配置 HTTP、TCP、Ping、DNS 等监控项，支持多种通知渠道。数据保存在实例目录下的 data 里。
+type: compose
+params:
+  - name: bind
+    title: 监听地址
+    type: enum
+    options: ["127.0.0.1", "0.0.0.0"]
+    default: 127.0.0.1
+    hint: 127.0.0.1 只能在主机本机访问（配合反向代理或 SSH 隧道）；0.0.0.0 对外开放。
+  - name: port
+    title: 端口
+    type: port
+    default: "3001"
+compose: |
+  services:
+    kuma:
+      image: louislam/uptime-kuma:2
+      restart: unless-stopped
+      ports: ["{{ .bind }}:{{ .port }}:3001"]
+      volumes: ["./data:/app/data"]
+upgrade:
+  note: 从 1.x 升级到 2.x 时，第一次启动会自动迁移数据库，数据多时要几分钟，期间页面打不开；升级前建议先备份实例目录下的 data。
+notes: 打开 http://<主机地址>:{{ .port }}，第一次访问时创建管理员账号。

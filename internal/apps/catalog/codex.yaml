@@ -1,0 +1,20 @@
+apiVersion: hostower/v1
+kind: App
+name: codex
+version: 0.169.0
+title: Codex CLI
+category: AI 工具
+icon: bot
+summary: OpenAI 的命令行编程助手。
+description: 装进登录账号自己的目录（~/.hostower/npm），不用 sudo；系统里的 Node.js 不够新时自动装一份校验过的 Node.js。
+type: npm
+npm:
+  package: "@openai/codex"
+  version: 0.169.0
+  bins: [codex]
+  node: 18
+configure:
+  kind: codex
+  login: ~/.local/bin/codex login --device-auth
+  loginHint: 终端里会打印一个链接和一次性代码：在你自己的浏览器里打开链接、登录 ChatGPT、输入代码。账号所在的工作区要允许设备码登录。
+notes: 在“已安装”里点“配置”填 API Key 或选供应商；用 ChatGPT 订阅就点“订阅登录”。然后在主机的终端里运行 codex。
