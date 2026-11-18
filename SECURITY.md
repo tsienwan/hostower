@@ -1,5 +1,7 @@
 # 安全策略
 
+**简体中文** | [English](SECURITY.en.md)
+
 Hostower 管着主机的钥匙，安全问题请**私下**报告，不要开公开的 issue。
 
 ## 报告渠道

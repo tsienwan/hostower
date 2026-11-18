@@ -1,5 +1,7 @@
 # Hostower
 
+**简体中文** | [English](README.en.md)
+
 **自托管的多主机运维灯塔。** 一个人或一个小团队在一处看清所有主机、对它们下达操作；每一步变更都经过确定性的风险判定和人的批准，并留下可校验的审计。
 
 名字是 host + tower：灯塔照得见海面上的每一条船，并为它们指引方向。
@@ -131,6 +133,7 @@ go build -o bin/hostower ./cmd/hostower
 | [docs/design.md](docs/design.md) | 设计：架构、安全内核、指标采样、各功能模块 |
 | [docs/threat-model.md](docs/threat-model.md) | 威胁模型：信任边界、威胁与对策、部署方式的取舍 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更记录 |
+| [README.en.md](README.en.md) 等 `*.en.md` | README、常见问题、变更记录、贡献指南、安全策略、商标说明的英文版 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南：开发环境、提交前检查、约定 |
 | [AGENTS.md](AGENTS.md) | 项目规范：内核硬规则、兼容、仓库卫生、多语言、版本（对人和 AI 编码助手都适用） |
 | [SECURITY.md](SECURITY.md) | 如何私下报告安全问题 |

@@ -80,10 +80,11 @@
 - 前端 React + TypeScript，样式写在 `web/src/styles.css` 的设计变量上；颜色只表达状态和风险等级，状态不只靠颜色表达。
 - 模块路径是 `github.com/tsienwan/hostower`；包都放在 `internal/` 下，命令行入口在 `cmd/`，开发工具在 `tools/`。
 - 文档里不写开发计划和未来规划，只写已经实现的行为；用户会遇到的问题写进 `docs/faq.md`。
+- README、常见问题、变更记录、贡献指南、安全策略、商标说明各有中英两份（`*.en.md` 是英文版），改一份就要同步改另一份；`AGENTS.md` 和设计文档只有中文。
 
 ## 版本与提交
 
 - 版本号遵循语义化版本（`vX.Y.Z`），从 `v0.1.0` 开始。正式版本由打 `v*` 标签触发 `.github/workflows/release.yml` 构建和签名。
-- 每次发布在 `CHANGELOG.md` 顶部加一节，写用户能感知到的变化；`web/package.json` 的 `version` 和文档里提到的当前版本要同步改。
+- 每次发布在 `CHANGELOG.md` 和 `CHANGELOG.en.md` 顶部各加一节，写用户能感知到的变化；`web/package.json` 的 `version` 和文档里提到的当前版本要同步改。
 - 程序的版本号只在构建时用 `-ldflags "-X main.version=…"` 注入，代码里不要写死版本号。
 - 一个提交只做一件事，说明写清楚“为什么”。安全问题按 `SECURITY.md` 私下报告，不要开公开 issue。

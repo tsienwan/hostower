@@ -1,5 +1,7 @@
 # 变更记录
 
+**简体中文** | [English](CHANGELOG.en.md)
+
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。每个版本按“用户能感知到的变化”分组记录，最新的在最上面。
 
 ## v0.1.0

@@ -1,5 +1,7 @@
 # 贡献指南
 
+**简体中文** | [English](CONTRIBUTING.en.md)
+
 谢谢你愿意参与。动手之前请读 [AGENTS.md](AGENTS.md)：里面是内核的硬规则，对人和对 AI 助手都适用。
 
 ## 许可
@@ -31,7 +33,7 @@ cd web && npm run build
 ## 版本与发布
 
 - 版本号遵循语义化版本，从 `v0.1.0` 开始。
-- 发布前在 [CHANGELOG.md](CHANGELOG.md) 顶部加一节，并把 `web/package.json`、`deploy/` 里的镜像标签和文档里提到的当前版本一起改掉。
+- 发布前在 [CHANGELOG.md](CHANGELOG.md) 和 [CHANGELOG.en.md](CHANGELOG.en.md) 顶部各加一节，并把 `web/package.json`、`deploy/` 里的镜像标签和文档里提到的当前版本一起改掉。
 - 打一个 `vX.Y.Z` 标签，[发布流程](.github/workflows/release.yml)会构建、签名并推送镜像。
   第一次发布前用 `go run ./tools/relsign gen` 生成一对发布密钥：公钥放进仓库变量 `HOSTOWER_UPDATE_KEY`，私钥放进机密 `HOSTOWER_RELEASE_KEY`。
 
@@ -41,4 +43,5 @@ cd web && npm run build
 - **安全内核不接受扩展点**：判级取最高、L3、审批状态机、审计写入不加开关和钩子。
 - **仓库里不放真实环境的任何信息**：示例只用保留网段和 `example.com`。
 - 一个改动只做一件事；说明里写清楚“为什么”，而不只是“改了什么”。
+- README、常见问题等说明文件有中英两份（`*.en.md` 是英文版），改一份就要同步改另一份。
 - 安全问题不要开公开 issue，见 [SECURITY.md](SECURITY.md)。

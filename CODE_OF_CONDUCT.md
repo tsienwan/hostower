@@ -1,5 +1,7 @@
 # 行为准则
 
+**简体中文** | [English](CODE_OF_CONDUCT.en.md)
+
 本项目采用 [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)。
 
 简单说：对事不对人，尊重不同的经验和观点，不接受骚扰和人身攻击。
