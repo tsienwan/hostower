@@ -151,6 +151,9 @@ export function connect() {
     ws = null;
     set({ live: false });
     if (stopped) return;
+    // WebSocket 被拒时浏览器不给状态码：会话过期（默认 12 小时）的话这里只会一直“正在重连”。
+    // 发一个普通请求问一下；返回 401 时 api() 会通知页面回到登录界面，也就不用再重连了。
+    refreshHosts().catch(() => {});
     retry = Math.min(retry + 1, 6);
     setTimeout(connect, 500 * 2 ** retry);
   };

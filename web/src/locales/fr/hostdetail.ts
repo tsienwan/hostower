@@ -81,6 +81,7 @@ const dict: Record<string, string> = {
   "内存里最近的采样，重启后清空": "Échantillons récents conservés en mémoire ; effacés au redémarrage",
   "加载中…": "Chargement…",
   "这个范围里还没有足够的历史：塔台每分钟存一个点，运行一会儿就有了": "Pas encore assez d'historique sur cette période : la tour enregistre un point par minute, cela se remplira bientôt",
+  "历史数据刷新失败，稍后自动重试：{error}": "Impossible d'actualiser l'historique, nouvel essai sous peu : {error}",
   "每个点是 15 分钟或更长时间的平均值": "Chaque point est une moyenne sur 15 minutes ou plus",
   "每个点是 1 分钟或更长时间的平均值": "Chaque point est une moyenne sur 1 minute ou plus",
 

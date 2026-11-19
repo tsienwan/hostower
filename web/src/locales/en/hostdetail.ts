@@ -81,6 +81,7 @@ const dict: Record<string, string> = {
   "内存里最近的采样，重启后清空": "Recent samples kept in memory; cleared on restart",
   "加载中…": "Loading…",
   "这个范围里还没有足够的历史：塔台每分钟存一个点，运行一会儿就有了": "Not enough history in this range yet: the tower stores one point per minute, so it will fill in shortly",
+  "历史数据刷新失败，稍后自动重试：{error}": "Could not refresh history, retrying shortly: {error}",
   "每个点是 15 分钟或更长时间的平均值": "Each point is an average over 15 minutes or more",
   "每个点是 1 分钟或更长时间的平均值": "Each point is an average over 1 minute or more",
 

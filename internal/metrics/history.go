@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -180,15 +181,10 @@ func (s *Sampler) flush() {
 	s.pending = nil
 	s.mu.Unlock()
 	if len(rows) > 0 {
-		tx, err := s.db.Begin()
-		if err != nil {
-			return
+		// 写不进去时只丢这一批，但要留下日志：否则页面上只会看到“还没有足够的历史”，查不出原因。
+		if err := s.write(rows); err != nil {
+			slog.Warn("指标历史写入失败，这一批点丢弃", "points", len(rows), "err", err)
 		}
-		for _, r := range rows {
-			tx.Exec(`INSERT OR REPLACE INTO metrics (host, res, ts, cpu, mem, disk, load, swap, rx, tx, cache, load5, load15, dr, dw, temp) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-				r.host, r.res, r.s.TS/1000, r.s.CPU, r.s.Mem, r.s.Disk, r.s.Load, r.s.Swap, r.s.Rx, r.s.Tx, r.s.Cache, r.s.Load5, r.s.Load15, r.s.DR, r.s.DW, r.s.Temp)
-		}
-		tx.Commit()
 	}
 	s.mu.Lock()
 	due := time.Since(s.pruned) > time.Hour
@@ -202,6 +198,22 @@ func (s *Sampler) flush() {
 			s.db.Exec("DELETE FROM metrics WHERE res = ? AND ts < ?", t.res, time.Now().Add(-t.keep).Unix())
 		}
 	}
+}
+
+// write 在一个事务里写入一批点。
+func (s *Sampler) write(rows []row) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, r := range rows {
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO metrics (host, res, ts, cpu, mem, disk, load, swap, rx, tx, cache, load5, load15, dr, dw, temp) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			r.host, r.res, r.s.TS/1000, r.s.CPU, r.s.Mem, r.s.Disk, r.s.Load, r.s.Swap, r.s.Rx, r.s.Tx, r.s.Cache, r.s.Load5, r.s.Load15, r.s.DR, r.s.DW, r.s.Temp); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // Ranges 是页面上可选的时间范围。

@@ -47,6 +47,7 @@ export function HostDetail() {
   // 时间范围：实时用内存里的最近采样；其余从落盘的历史里取，每分钟刷新一次。
   const [range, setRange] = useState(() => localStorage.getItem("hostower.range") ?? "1h");
   const [past, setPast] = useState<Sample[] | null>(null);
+  const [pastErr, setPastErr] = useState("");
   // 保留时长决定能选哪些范围、每个点是几分钟的平均。
   const [keep, setKeep] = useState<Retention>(() => cached<Retention>("retention") ?? { fineDays: 1, coarseDays: 35 });
   useEffect(() => { api.retention().then((r) => setKeep(remember("retention", r.retention))).catch(() => {}); }, []);
@@ -55,10 +56,19 @@ export function HostDetail() {
     if (range === "live") return;
     let on = true;
     setPast(null);
-    const load = () => api.hostMetrics(name, range).then((r) => on && setPast(r.samples)).catch(() => on && setPast([]));
+    setPastErr("");
+    // 刷新失败（网络断了、SSH 隧道掉了、电脑休眠过）时保留已经画出来的数据，只提示加载失败，
+    // 不要把图表清空成“还没有足够的历史”。
+    const load = () => api.hostMetrics(name, range)
+      .then((r) => { if (on) { setPast(r.samples); setPastErr(""); } })
+      .catch((e) => { if (on) { setPast((p) => p ?? []); setPastErr(e instanceof Error ? e.message : String(e)); } });
     load();
     const timer = setInterval(load, 60_000);
-    return () => { on = false; clearInterval(timer); };
+    // 页面在后台时浏览器会推迟定时器；切回来时立刻补一次。
+    const onShow = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onShow);
+    window.addEventListener("online", load);
+    return () => { on = false; clearInterval(timer); document.removeEventListener("visibilitychange", onShow); window.removeEventListener("online", load); };
   }, [name, range]);
 
   const remove = async () => {
@@ -142,7 +152,7 @@ export function HostDetail() {
                   {ranges.filter((r) => r.days <= keep.coarseDays).map((r) => <button key={r.key} className={"tag" + (range === r.key ? " on" : "")} onClick={() => setRange(r.key)}>{t(r.label)}</button>)}
                 </div>
                 <span className="muted" style={{ fontSize: 12.5 }}>
-                  {range === "live" ? t("内存里最近的采样，重启后清空") : past === null ? t("加载中…") : past.length < 2 ? t("这个范围里还没有足够的历史：塔台每分钟存一个点，运行一会儿就有了") : (ranges.find((r) => r.key === range)?.days ?? 0) > keep.fineDays ? t("每个点是 15 分钟或更长时间的平均值") : t("每个点是 1 分钟或更长时间的平均值")}
+                  {range === "live" ? t("内存里最近的采样，重启后清空") : past === null ? t("加载中…") : pastErr ? t("历史数据刷新失败，稍后自动重试：{error}", { error: pastErr }) : past.length < 2 ? t("这个范围里还没有足够的历史：塔台每分钟存一个点，运行一会儿就有了") : (ranges.find((r) => r.key === range)?.days ?? 0) > keep.fineDays ? t("每个点是 15 分钟或更长时间的平均值") : t("每个点是 1 分钟或更长时间的平均值")}
                 </span>
               </div>
 
