@@ -1027,11 +1027,14 @@ button.tag:hover { background: color-mix(in srgb, var(--text) 10%, transparent);
 .tab { padding: 6px 16px; border-radius: 8px; font-weight: 500; font-size: 13.5px; }
 .tab::after { display: none; }
 .tab.active { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
-/* 深色下选中项用半透明的浅色叠在底色上，再加一圈细描边：比实心灰块轻，和卡片的蓝灰色调一致。 */
+/* 深色下仿 macOS 的分段控件：中性灰的轨道，选中的滑块比轨道亮一档，顶边一道细高光加轻阴影，
+   不带色相，放在蓝灰色的页面上也不突兀。 */
+:root[data-theme="dark"] .tabs, :root[data-theme="dark"] .seg { background: rgba(118, 118, 128, 0.2); }
 :root[data-theme="dark"] .tab.active, :root[data-theme="dark"] .seg button.on {
-  background: color-mix(in srgb, var(--accent) 10%, rgba(255, 255, 255, 0.09));
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.13));
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.18), 0 0 0 0.5px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.25);
 }
+.tab, .seg button { transition: color 0.2s, background-color 0.2s, box-shadow 0.2s; }
 
 /* 提示条、弹窗、菜单、抽屉 */
 .note { border: 0; border-radius: 12px; background: color-mix(in srgb, var(--text) 5%, transparent); }
