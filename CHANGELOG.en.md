@@ -4,6 +4,17 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.1.2
+
+### New
+
+- The Network tab of a host can manage Nginx and Caddy reverse-proxy sites: three HTTPS modes, certificate list and renewal, and access and error logs; the configuration is validated before it is written.
+- The same tab installs and configures Fail2ban: enable SSH protection, set ban time and retry count, and view and unban blocked IPs. Because Fail2ban controls the firewall, every change other than viewing needs approval with on-the-spot verification in the web UI.
+
+### Improvements
+
+- "Listening ports" is now a table grouped by source: one row for host processes and one per container. Container ports that bypass the firewall are flagged once, with the advice to bind them to 127.0.0.1.
+
 ## v0.1.1
 
 ### Fixes

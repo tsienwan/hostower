@@ -7,13 +7,13 @@
 #   - 不接受这个代价时，用 compose.yaml（默认镜像），把宿主机当作一台普通的 SSH 主机加进来。
 #
 # 主密钥：不配置也能用，第一次启动会在 ./data/master_key 自动生成。想和数据分开保管时，
-# 先生成一把（docker run --rm ghcr.io/tsienwan/hostower:0.1.1-host keygen > master_key），再打开下面带 master_key 的三行；
+# 先生成一把（docker run --rm ghcr.io/tsienwan/hostower:0.1.2-host keygen > master_key），再打开下面带 master_key 的三行；
 # 已经在用自动生成的那把时，把 ./data/master_key 移出来当作 ./master_key，不要重新生成。
 #
 # TLS 由谁终结的说明和 compose.yaml 相同（见 README.zh-CN.md 的“暴露方式”，英文版是 README.md 的 “Exposure”）。
 services:
   hostower:
-    image: ghcr.io/tsienwan/hostower:0.1.1-host
+    image: ghcr.io/tsienwan/hostower:0.1.2-host
     restart: unless-stopped
     privileged: true
     pid: host
