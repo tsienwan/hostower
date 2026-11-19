@@ -505,6 +505,9 @@ type Record struct {
 
 func instanceDir(inst string) string { return "~/.hostower/apps/" + inst }
 
+// purgeHelperImage 是删除实例目录时借用的临时容器镜像（只在当前账号和 sudo 都删不掉时才用）。
+const purgeHelperImage = "busybox:1.37"
+
 // PlanInstall 渲染安装命令。values 是 Values 校验过的参数，secrets 是“参数名 → 应用密钥名”，
 // version 只对命令行工具有效（空表示清单里的默认版本）。
 func (a *App) PlanInstall(instance string, values, secrets map[string]string, version string) (*Install, error) {
@@ -722,8 +725,12 @@ func PlanAction(rec Record, pkg, action string) (string, error) {
 		case ActUninstall:
 			return "cd " + dir + " && docker compose" + p + " down && mv -f app.json removed.json", nil
 		case ActPurge:
-			// 容器写出来的数据常常属于 root：当前账号删不掉时用 sudo（同样是 L2）。
-			return "cd " + dir + " && docker compose" + p + " down -v && cd && { rm -rf " + dir + " 2>/dev/null || sudo -n rm -rf " + dir + "; }", nil
+			// 容器写出来的数据常常属于 root：当前账号删不掉时先试 sudo；sudo 也用不了时
+			// （没配 sudo，或者塔台的服务设置了 NoNewPrivileges），借一个临时容器把目录里的东西删掉。
+			// 能跑 docker compose 就能跑 docker，所以最后这一步总能成功。整条命令仍是 L2。
+			abs := `"$HOME/.hostower/apps/` + rec.Instance + `:/d"`
+			return "cd " + dir + " && docker compose" + p + " down -v && cd && { rm -rf " + dir + " 2>/dev/null || sudo -n rm -rf " + dir + " 2>/dev/null || " +
+				"{ docker run --rm -v " + abs + " " + purgeHelperImage + " sh -c 'rm -rf /d/* /d/.[!.]* /d/..?*' && rm -rf " + dir + "; }; }", nil
 		}
 	case TypeNpm:
 		if action != ActUninstall || !npmPkgRe.MatchString(pkg) {
