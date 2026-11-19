@@ -4,6 +4,24 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.1.3
+
+### New
+
+- Monthly traffic quota per host: set the allowance (GB/TB), billing mode (outbound only, inbound only, sum, or the larger of the two), monthly reset day and an optional single interface, and calibrate against the provider's panel. The host page shows usage this cycle, days left, projected end-of-cycle usage and daily/monthly bar charts; the overview shows a progress bar and a traffic ranking.
+- Traffic alerts: one notification through the existing channels when usage reaches a set percentage, and one when the current pace is projected to exceed the quota; each fires at most once per level per cycle.
+- New read-only chat bot command `/traffic`.
+
+### Improvements
+
+- Network rates and monthly traffic count only uplink interfaces: traffic on tunnels, bridges, VLAN sub-interfaces and bond members is no longer counted twice.
+- In the dark theme, tabs and segmented buttons now look like a macOS segmented control.
+
+### Fixes
+
+- When the service running Hostower forbids privilege escalation (systemd NoNewPrivileges), removing an app together with its data failed because files written by the container could not be deleted; a temporary container now deletes them.
+- After a page sat idle for a long time, the browser could reuse a connection the network had silently dropped, leaving parts of the page blank; read-only requests now retry once on a network error.
+
 ## v0.1.2
 
 ### New

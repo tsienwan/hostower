@@ -11,7 +11,7 @@
 # 再运行一次就是升级：换成新版本的 compose 文件（旧的留一份 .bak），data/ 原样保留。
 #
 # 用法：install.sh [版本] [--host] [--dir 目录] [--url 对外地址]
-#   版本       比如 v0.1.2；不写就装最新的正式版本
+#   版本       比如 v0.1.3；不写就装最新的正式版本
 #   --host     装宿主机版：还会把这台机器作为内置的 local 主机来管理（特权容器，等于这台机器上的 root）
 #   --dir      安装目录，默认 /opt/hostower
 #   --url      对外访问地址（放在反向代理之后时），比如 https://hostower.example.com
