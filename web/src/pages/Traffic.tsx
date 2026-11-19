@@ -1,6 +1,6 @@
 // 月流量：主机页的流量卡片（本周期用量、按天 / 按月的柱状图、配额设置），总览上的小进度条和流量排行。
 // 数据都来自采样时已经记下的网卡计数器，这里不会去主机上执行任何东西。
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, Settings2, TriangleAlert } from "lucide-react";
 import { api, type DayTraffic, type HostTraffic, type Quota, type QuotaMode, type QuotaStatus, type TrafficView } from "../api";
@@ -144,20 +144,35 @@ function fillDays(days: DayTraffic[], start: string, end: string): Bar[] {
 function TrafficBars({ bars, fmt, empty }: { bars: Bar[]; fmt: (v: number) => string; empty: string }) {
   const t = useT();
   const [hover, setHover] = useState(-1);
+  // 按容器的实际宽度画（不拉伸）：文字和柱子的圆角才不会变形。
+  const box = useRef<HTMLDivElement>(null);
+  const [W, setW] = useState(720);
   const max = Math.max(0, ...bars.map((b) => Math.max(b.in, b.out)));
-  if (max <= 0) return <div className="empty sm"><span>{empty}</span></div>;
-  const W = 720, H = 140, pad = 18, slot = W / bars.length, bw = Math.max(1, Math.min(14, slot * 0.36));
+  const has = max > 0;
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => setW(Math.max(160, Math.round(el.clientWidth)));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [has]); // 从“没有数据”变成有图时换了一个元素，要重新挂上
+  const H = 140, pad = 18, slot = W / Math.max(1, bars.length), bw = Math.max(1, Math.min(14, slot * 0.36));
+  // 日期标签每个至少留 28 像素，放不下就隔几个标一个。
+  const every = Math.max(1, Math.ceil(bars.length / Math.max(1, Math.floor(W / 28))));
   const y = (v: number) => H - pad - (v / max) * (H - pad - 8);
   const h = hover >= 0 ? bars[hover] : null;
+  if (max <= 0) return <div ref={box} className="empty sm"><span>{empty}</span></div>;
   return (
-    <div className="traffic-chart">
+    <div className="traffic-chart" ref={box}>
       <div className="legend">
         <span><svg width="10" height="10" aria-hidden><rect width="10" height="10" rx="2" fill="var(--accent)" /></svg>{t("入站")}</span>
         <span><svg width="10" height="10" aria-hidden><rect width="10" height="10" rx="2" fill="var(--accent-2)" /></svg>{t("出站")}</span>
         <span className="grow" />
         {h ? <span><span className="muted">{h.title}</span><b>↓ {fmt(h.in)}</b><b>↑ {fmt(h.out)}</b></span> : <span className="muted">{t("最高 {v}", { v: fmt(max) })}</span>}
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label={t("流量图")} onMouseLeave={() => setHover(-1)}>
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label={t("流量图")} onMouseLeave={() => setHover(-1)}>
         <line x1="0" x2={W} y1={H - pad} y2={H - pad} stroke="var(--border)" />
         {bars.map((b, i) => {
           const cx = slot * i + slot / 2;
@@ -169,8 +184,8 @@ function TrafficBars({ bars, fmt, empty }: { bars: Bar[]; fmt: (v: number) => st
                 <rect x={cx - bw - 1} y={y(b.in)} width={bw} height={Math.max(0, H - pad - y(b.in))} rx="2" fill="var(--accent)" />
                 <rect x={cx + 1} y={y(b.out)} width={bw} height={Math.max(0, H - pad - y(b.out))} rx="2" fill="var(--accent-2)" />
               </>}
-              {(bars.length <= 16 || i % Math.ceil(bars.length / 16) === 0) && (
-                <text x={cx} y={H - 4} textAnchor="middle" fontSize="10" fill="var(--text-3)">{b.label}</text>
+              {i % every === 0 && (
+                <text x={cx} y={H - 4} textAnchor="middle" fontSize="11" fill="var(--text-3)" style={{ fontVariantNumeric: "tabular-nums" }}>{b.label}</text>
               )}
             </g>
           );
