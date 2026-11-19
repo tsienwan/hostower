@@ -18,6 +18,7 @@ import (
 	"github.com/tsienwan/hostower/internal/kernel"
 	"github.com/tsienwan/hostower/internal/kernel/audit"
 	"github.com/tsienwan/hostower/internal/kernel/risk"
+	"github.com/tsienwan/hostower/internal/metrics"
 	"github.com/tsienwan/hostower/internal/notify"
 )
 
@@ -227,6 +228,7 @@ func (b *chatBot) session(ctx context.Context, channel string) error {
 			{Command: "status", Description: i18n.T(lang, "主机和审批概况")},
 			{Command: "pending", Description: i18n.T(lang, "等待批准的请求")},
 			{Command: "failed", Description: i18n.T(lang, "最近失败的执行")},
+			{Command: "traffic", Description: i18n.T(lang, "本周期的流量用量")},
 			{Command: "run", Description: i18n.T(lang, "提交命令：/run 主机 命令")},
 			{Command: "pause", Description: i18n.T(lang, "紧急暂停全部执行")},
 			{Command: "help", Description: i18n.T(lang, "帮助")},
@@ -408,6 +410,8 @@ func (b *chatBot) handle(ctx context.Context, t chatTransport, channel string, u
 		reply(b.pending(lang))
 	case "/failed":
 		reply(b.failed(lang))
+	case "/traffic":
+		reply(b.traffic(ctx, lang))
 	case "/run":
 		reply(b.run(ctx, a, args, lang))
 	case "/pause":
@@ -427,7 +431,57 @@ func (b *chatBot) handle(ctx context.Context, t chatTransport, channel string, u
 }
 
 func helpText(lang string) string {
-	return i18n.T(lang, "可以用的命令：\n/status 主机和审批概况\n/pending 等待批准的请求\n/failed 最近失败的执行\n/run 主机[,主机] 命令 —— 提交命令（只读的直接执行，其他的要到网页上批准）\n/pause 紧急暂停全部执行（恢复只能在网页上）\n/unbind 解除绑定\n\n这里不能批准请求、不能恢复执行、不能改设置。")
+	return i18n.T(lang, "可以用的命令：\n/status 主机和审批概况\n/pending 等待批准的请求\n/failed 最近失败的执行\n/traffic 本周期的流量用量\n/run 主机[,主机] 命令 —— 提交命令（只读的直接执行，其他的要到网页上批准）\n/pause 紧急暂停全部执行（恢复只能在网页上）\n/unbind 解除绑定\n\n这里不能批准请求、不能恢复执行、不能改设置。")
+}
+
+// traffic 列出各主机本周期的流量：设了配额的显示用量、百分比、剩余天数和预计用量，按百分比排在前面；没设的按本月用量排。
+func (b *chatBot) traffic(ctx context.Context, lang string) string {
+	if b.s.Sampler == nil {
+		return i18n.T(lang, "还没有流量数据。")
+	}
+	var names []string
+	for _, h := range b.s.Kernel.Inventory().Hosts() {
+		names = append(names, h.Name)
+	}
+	list, err := b.s.Sampler.TrafficRanking(ctx, names)
+	if err != nil {
+		return i18n.T(lang, "读取流量失败：") + err.Error()
+	}
+	sort.SliceStable(list, func(i, j int) bool {
+		a, c := list[i].Quota, list[j].Quota
+		if (a != nil) != (c != nil) {
+			return a != nil
+		}
+		if a != nil {
+			return a.Pct > c.Pct
+		}
+		return list[i].In+list[i].Out > list[j].In+list[j].Out
+	})
+	var lines []string
+	for _, t := range list {
+		if q := t.Quota; q != nil {
+			qq := metrics.Quota{Unit: q.Unit, Base: q.Base}
+			line := i18n.T(lang, "{host}：{used} / {limit}（{pct}%），还剩 {days} 天", "host", t.Host, "used", qq.FormatBytes(q.Used),
+				"limit", qq.FormatBytes(q.Limit), "pct", fmt.Sprintf("%.1f", q.Pct), "days", fmt.Sprintf("%.1f", q.DaysLeft))
+			if q.Projected > 0 {
+				line += i18n.T(lang, "，预计 {v}", "v", qq.FormatBytes(q.Projected))
+				if q.Projected > q.Limit {
+					line += " ⚠"
+				}
+			}
+			lines = append(lines, line)
+		} else if t.In+t.Out > 0 {
+			qq := metrics.Quota{Unit: "GB", Base: 1000}
+			lines = append(lines, i18n.T(lang, "{host}：本月 ↓{in} ↑{out}", "host", t.Host, "in", qq.FormatBytes(t.In), "out", qq.FormatBytes(t.Out)))
+		}
+		if len(lines) >= 20 {
+			break
+		}
+	}
+	if len(lines) == 0 {
+		return i18n.T(lang, "还没有流量数据。")
+	}
+	return i18n.T(lang, "本周期流量：") + "\n" + strings.Join(lines, "\n")
 }
 
 func (b *chatBot) link(path string) string {

@@ -20,6 +20,8 @@ const eventNames: Record<string, [string, string]> = {
   "request.rejected": ["禁止的操作被拒绝", "有人或 AI 提交了 L3 操作"],
   "host.offline": ["主机离线", "连不上超过 2 分钟"],
   "host.online": ["主机恢复在线", "离线通知发出后又连上了"],
+  "traffic.quota": ["流量到达告警线", "本周期流量到达配额的告警百分比，每档每周期一次"],
+  "traffic.forecast": ["预计超出流量额度", "按当前速度到周期末会超出配额，每周期一次"],
   "auth.failed": ["登录失败", "Passkey 登录、二次验证、初始化失败，聊天账号配对码输错"],
   "terminal.opened": ["打开终端", "有人打开了交互终端"],
   "system.paused": ["紧急开关", "暂停、恢复执行，吊销所有会话"],

@@ -87,8 +87,10 @@ type Status struct {
 	TopProcs []ProcStat `json:"topProcs,omitempty"`
 	// Hardware 是 CPU 型号、整机型号、磁盘这些几乎不变的信息；连上主机后才有。
 	Hardware *Hardware `json:"hardware,omitempty"`
-	Latest   *Sample   `json:"latest,omitempty"`
-	History  []Sample  `json:"history,omitempty"`
+	// Quota 是本周期的流量用量；没有设流量配额时为空。
+	Quota   *QuotaStatus `json:"quota,omitempty"`
+	Latest  *Sample      `json:"latest,omitempty"`
+	History []Sample     `json:"history,omitempty"`
 }
 
 const historyLen = 90
@@ -128,6 +130,7 @@ type Sampler struct {
 	pruned   time.Time
 	// retention 是历史的保留时长（受 mu 保护）。
 	retention Retention
+	tr        trafficState // 月流量（受 mu 保护）
 }
 
 // NewSampler 创建采样器。interval 是向页面推送和落盘的节奏；每台主机的采样间隔由脚本决定。
@@ -135,7 +138,9 @@ func NewSampler(k *kernel.Kernel, interval time.Duration, db *sql.DB) *Sampler {
 	if interval <= 0 || interval > executor.StreamProbeInterval {
 		interval = executor.StreamProbeInterval
 	}
-	return &Sampler{k: k, interval: interval, hosts: map[string]*hostState{}, db: db, retention: loadRetention(db)}
+	s := &Sampler{k: k, interval: interval, hosts: map[string]*hostState{}, db: db, retention: loadRetention(db), tr: newTraffic()}
+	s.loadTraffic()
+	return s
 }
 
 // Run 给清单里的每台主机维持一条采样连接，直到 ctx 结束。清单变了（新增、删除主机）会跟着调整。
@@ -169,6 +174,7 @@ func (s *Sampler) Run(ctx context.Context) {
 				delete(running, name)
 				s.mu.Lock()
 				delete(s.hosts, name)
+				s.forgetCountersLocked(name)
 				s.mu.Unlock()
 			}
 		}
@@ -496,15 +502,25 @@ func (s *Sampler) record(name, out string, err error) {
 		st.status.NCPU = n
 	}
 	var rx, tx float64
+	ifaces := map[string]ifaceCounter{}
 	for _, line := range strings.Split(get(8), "\n") {
-		name, rest, ok := strings.Cut(line, ":")
+		iface, rest, ok := strings.Cut(line, ":")
+		iface = strings.TrimSpace(iface)
 		f := strings.Fields(rest)
-		if !ok || len(f) < 9 || VirtualIface(strings.TrimSpace(name)) {
+		if !ok || len(f) < 9 || VirtualIface(iface) {
 			continue
 		}
 		a, _ := strconv.ParseFloat(f[0], 64)
 		b, _ := strconv.ParseFloat(f[8], 64)
-		rx, tx = rx+a, tx+b
+		ifaces[iface] = ifaceCounter{RX: a, TX: b}
+	}
+	// 速率和月流量同一个口径：只算出口网卡，隧道、网桥、VLAN、绑定成员上的同一份流量不重复算（见 uplink.go）。
+	for n := range UplinkIfaces(ifaceNames(ifaces)) {
+		rx, tx = rx+ifaces[n].RX, tx+ifaces[n].TX
+	}
+	// 月流量按网卡的累计计数器记账（见 traffic.go），不靠速率积分：断线、面板重启期间的流量也能补上。
+	if len(ifaces) > 0 && up > 0 {
+		s.meterLocked(name, ifaces, up, now)
 	}
 	if dt := elapsed; dt > 0 && rx >= st.rx && tx >= st.tx {
 		sm.Rx, sm.Tx = (rx-st.rx)/dt, (tx-st.tx)/dt
@@ -713,8 +729,10 @@ func (s *Sampler) All(withHistory bool) map[string]Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := make(map[string]Status, len(s.hosts))
+	now := time.Now()
 	for name, st := range s.hosts {
 		c := st.status
+		c.Quota = s.quotaStatusLocked(name, now)
 		if st.status.Latest != nil {
 			l := *st.status.Latest
 			c.Latest = &l

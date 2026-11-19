@@ -9,6 +9,7 @@ import { HostForm } from "../HostForm";
 import { SpeedtestDialog } from "./Speedtest";
 import { ContainerDetailDialog } from "./Containers";
 import { NetworkPanel } from "./Network";
+import { TrafficCard } from "./Traffic";
 import { BinaryPreview, TextPreview, previewKind, textKinds, type PreviewKind } from "../preview";
 import { Empty, LevelBadge, Pager, SortTh, Sparkline, StateBadge, TrendChart, Usage, ago, bytes, stamp, rate, uptime, usePaged, useSort, useSteadyOrder, type Series } from "../ui";
 import { lang, ts, useT } from "../i18n";
@@ -162,11 +163,13 @@ export function HostDetail() {
                   value={l ? pct(l.mem) : "—"} samples={hist} series={sMem} format={pct} max={100} />
                 <MetricCard title={t("负载")} desc={st.ncpu ? t("超过 {n}（核数）说明在排队", { n: st.ncpu }) : t("运行和等待中的进程数")} value={l ? l.load.toFixed(2) : "—"} samples={hist} series={sLoad} format={num2} />
                 <MetricCard title={t("磁盘读写")} desc={t("所有磁盘合计的吞吐")} value={l ? rate(l.dr + l.dw) : "—"} samples={hist} series={sDisk} format={rate} />
-                <MetricCard title={t("网络")} desc={t("所有网卡合计（不含回环）")} value={l ? rate(l.rx + l.tx) : "—"} samples={hist} series={sNet} format={rate} />
+                <MetricCard title={t("网络")} desc={t("出口网卡合计（隧道、网桥不重复计算）")} value={l ? rate(l.rx + l.tx) : "—"} samples={hist} series={sNet} format={rate} />
                 {hist.some((x) => x.temp > 0)
                   ? <MetricCard title={t("温度")} desc={t("各传感器里最高的一个")} value={l ? `${l.temp.toFixed(0)} °C` : "—"} samples={hist} series={sTemp} format={deg} />
                   : <MetricCard title={t("根分区")} desc={l && st.diskKB ? t("已用 {used} / {total}", { used: bytes(st.diskKB * 1024 * l.disk / 100), total: bytes(st.diskKB * 1024) }) : t("占用")} value={l ? pct(l.disk) : "—"} samples={hist} series={sRoot} format={pct} max={100} />}
               </div>
+
+              <TrafficCard host={host.name} status={st.quota} />
 
               {/* 分区通常只有几行，排成多列；容器占用是一张多列的表，单独占一整行，容器名不用截断。 */}
               <div className="card">

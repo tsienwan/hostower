@@ -24,6 +24,8 @@ var Events = []Event{
 	{"request.rejected", "security", true},
 	{"host.offline", "host", true},
 	{"host.online", "host", true},
+	{"traffic.quota", "host", true},
+	{"traffic.forecast", "host", true},
 	{"auth.failed", "security", true},
 	{"terminal.opened", "security", false},
 	{"system.paused", "security", true},

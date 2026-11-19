@@ -8,6 +8,7 @@ import { CountUp } from "../fx";
 import { cached, remember } from "../cache";
 import { HostForm } from "../HostForm";
 import { Tip } from "../controls";
+import { QuotaMini, TrafficRanking } from "./Traffic";
 import { ts, useT } from "../i18n";
 
 const tone = (v?: number) => (v === undefined ? "" : v >= 90 ? "crit" : v >= 75 ? "warn" : "");
@@ -207,6 +208,7 @@ export function Overview() {
                                   <span><span className="muted">↓ </span>{rate(l?.rx)}</span>
                                   <span><span className="muted">↑ </span>{rate(l?.tx)}</span>
                                 </div>
+                                {st.quota && <QuotaMini q={st.quota} />}
                               </td>
                             </>
                           )}
@@ -218,6 +220,7 @@ export function Overview() {
               </div>
             )}
           </div>
+          <TrafficRanking />
         </div>
       </div>
     </>

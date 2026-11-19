@@ -186,6 +186,7 @@ func (s *Sampler) flush() {
 			slog.Warn("指标历史写入失败，这一批点丢弃", "points", len(rows), "err", err)
 		}
 	}
+	s.flushTraffic(false)
 	s.mu.Lock()
 	due := time.Since(s.pruned) > time.Hour
 	if due {
@@ -197,6 +198,7 @@ func (s *Sampler) flush() {
 		for _, t := range tiers {
 			s.db.Exec("DELETE FROM metrics WHERE res = ? AND ts < ?", t.res, time.Now().Add(-t.keep).Unix())
 		}
+		s.db.Exec("DELETE FROM traffic_daily WHERE day < ?", time.Now().AddDate(0, 0, -trafficKeepDays).Format(dayLayout))
 	}
 }
 

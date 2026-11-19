@@ -9,6 +9,7 @@ Les problèmes les plus courants et quelques conseils pour connecter des hôtes,
 - [Docker et applications conteneurisées](#docker-et-applications-conteneurisées)
 - [Sites, certificats et Fail2ban](#sites-certificats-et-fail2ban)
 - [Collecteur avancé](#collecteur-avancé)
+- [Quotas de trafic](#quotas-de-trafic)
 - [Mettre à jour Hostower](#mettre-à-jour-hostower)
 
 ---
@@ -238,6 +239,29 @@ Fail2ban modifie les règles du pare-feu : l'installer, changer ses réglages et
 ### Combien de temps avant que la page tienne compte d'un collecteur installé ?
 
 Une fois la demande approuvée et exécutée avec succès, Hostower reconnecte immédiatement l'échantillonnage de l'hôte, si bien que **Collecteur avancé &lt;version&gt;** et le classement des processus apparaissent généralement en quelques secondes. Pendant l'attente, le bouton affiche **En attente d'approbation**, puis **Installation…**, puis **Changement du mode de collecte…**, pour éviter une double soumission. La désinstallation fonctionne de la même façon.
+
+---
+
+## Quotas de trafic
+
+### Le trafic mensuel du panneau ne correspond pas à celui de l'hébergeur
+
+Les chiffres de la carte « Trafic » de la page d'hôte et du « Classement du trafic » de la vue d'ensemble viennent des compteurs cumulés de chaque interface, comptés ainsi :
+
+- **Seules les interfaces de sortie comptent.** Les tunnels (WireGuard, OpenVPN, Tailscale), les ponts (`br0`, `vmbr0`), les sous-interfaces VLAN (`eth0.100`) et les membres d'agrégat portent le même trafic et ne sont pas comptés deux fois ; les interfaces virtuelles comme `lo`, `docker0` et `veth…` sont exclues. Pour facturer sur une seule interface, choisissez-la dans « Interface comptée » sous « Définir un quota ».
+- **Les jours suivent le fuseau horaire de la machine qui exécute le panneau.** Si l'hébergeur facture dans un autre fuseau, le premier et le dernier jour de la période peuvent différer de quelques heures de trafic.
+- **Le trafic pendant une déconnexion ou un redémarrage du panneau est rattrapé** ; lors d'un redémarrage de l'hôte, les quelques secondes entre le dernier relevé et le redémarrage sont perdues.
+- **Le trafic consommé avant le raccordement au panneau ne peut pas être mesuré.** Saisissez dans « Définir un quota » la consommation de la période affichée par l'hébergeur et la période s'y aligne. Le calibrage ne vaut que pour la période en cours et expire avec elle ; changer le mode de facturation, l'interface ou le jour de remise à zéro l'efface aussi.
+
+La facture de l'hébergeur fait foi.
+
+### Les débits réseau sont plus bas après la mise à jour
+
+Les débits réseau suivent désormais la même règle que le trafic mensuel et ne comptent que les interfaces de sortie. Auparavant, le trafic des tunnels et des ponts s'ajoutait à celui de l'interface physique : le même trafic était compté deux fois et les chiffres étaient trop élevés. L'historique enregistré avant la mise à jour garde l'ancienne règle.
+
+### Je n'ai pas reçu d'alerte de trafic
+
+Quand un seuil d'alerte (80 %, 95 % et 100 % par défaut) est atteint, ou que le quota sera dépassé au rythme actuel, une notification part vers les canaux abonnés à « Seuil d'alerte de trafic atteint » et « Dépassement du quota de trafic prévu » ; chaque seuil n'est envoyé qu'une fois par période. Les canaux existants sont cochés automatiquement lors de la mise à jour ; si vous les avez décochés, recochez-les dans « Paramètres → Notifications et bot ». La prévision attend au moins une journée complète de données dans la période.
 
 ---
 

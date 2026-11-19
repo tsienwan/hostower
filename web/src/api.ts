@@ -17,6 +17,8 @@ export interface HostStatus {
   agent?: string; topProcs?: ProcStat[];
   /** CPU 型号、整机型号、磁盘：连上主机后才有，每 6 小时更新。 */
   hardware?: Hardware;
+  /** 本周期的流量用量；没有设流量配额时没有。 */
+  quota?: QuotaStatus;
   latest?: Sample; history?: Sample[];
 }
 
@@ -242,6 +244,10 @@ export const api = {
   hosts: () => call<{ hosts: Host[]; groups: Group[] }>("GET", "/hosts"),
   openTerminal: (host: string) => call<Req>("POST", "/terminal", { host }),
   hostMetrics: (name: string, range: string) => call<{ samples: Sample[] }>("GET", `/hosts/${encodeURIComponent(name)}/metrics` + q({ range })),
+  hostTraffic: (name: string) => call<TrafficView>("GET", `/hosts/${encodeURIComponent(name)}/traffic`),
+  setHostTraffic: (name: string, b: { quota: Quota; used?: number; clearAdjust?: boolean }) => call<{ quota: Quota }>("PUT", `/hosts/${encodeURIComponent(name)}/traffic`, b),
+  deleteHostTraffic: (name: string) => call("DELETE", `/hosts/${encodeURIComponent(name)}/traffic`),
+  trafficRanking: () => call<{ hosts: HostTraffic[] }>("GET", "/traffic"),
   createHost: (b: HostBody) => call("POST", "/hosts", b),
   updateHost: (b: HostBody) => call("PUT", "/hosts/" + encodeURIComponent(b.name), b),
   deleteHost: (name: string) => call("DELETE", "/hosts/" + encodeURIComponent(name)),
@@ -433,6 +439,24 @@ export type ChatBot = {
 };
 
 /** 指标历史的保留时长（天）。 */
+export type QuotaMode = "out" | "in" | "sum" | "max";
+/** 一台主机的月流量配额。adjust 是校准差额（字节），只对 adjustStart 开始的周期有效。 */
+export interface Quota {
+  v?: number; limit: number; unit: "GB" | "TB"; base: 1000 | 1024; mode: QuotaMode; resetDay: number; iface: string; thresholds: number[];
+  adjust?: number; adjustStart?: string;
+}
+/** 本周期的用量。字节；start 含、end 不含。projected 为 0 表示数据还不够。 */
+export interface QuotaStatus {
+  limit: number; used: number; in: number; out: number; pct: number; projected: number; window: number; start: string; end: string; daysLeft: number;
+  mode: QuotaMode; unit: "GB" | "TB"; base: 1000 | 1024; adjusted: boolean; thresholds: number[];
+}
+export interface DayTraffic { day: string; in: number; out: number }
+export interface PeriodTraffic { start: string; end: string; in: number; out: number }
+export interface TrafficView {
+  quota: Quota | null; status?: QuotaStatus | null; days: DayTraffic[]; periods: PeriodTraffic[]; start: string; end: string;
+  ifaces: string[]; modes: QuotaMode[]; defaultThresholds: number[];
+}
+export interface HostTraffic { host: string; start: string; end: string; in: number; out: number; quota?: QuotaStatus }
 export interface Retention { fineDays: number; coarseDays: number }
 export interface RetentionView { retention: Retention; fine: number[]; coarse: number[]; stored: number }
 

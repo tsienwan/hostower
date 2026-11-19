@@ -243,17 +243,25 @@ func parseCPU(s string) (total, idle float64) {
 	return
 }
 
-// parseNet 把除回环以外所有网卡的收发字节加起来。
+// parseNet 把出口网卡（口径见 metrics.UplinkIfaces）的收发字节加起来。
 func parseNet(s string) (rx, tx float64) {
+	type ctr struct{ rx, tx float64 }
+	all := map[string]ctr{}
+	var names []string
 	for _, line := range strings.Split(s, "\n") {
 		name, rest, ok := strings.Cut(line, ":")
+		name = strings.TrimSpace(name)
 		f := strings.Fields(rest)
-		if !ok || len(f) < 9 || metrics.VirtualIface(strings.TrimSpace(name)) {
+		if !ok || len(f) < 9 || metrics.VirtualIface(name) {
 			continue
 		}
 		a, _ := strconv.ParseFloat(f[0], 64)
 		b, _ := strconv.ParseFloat(f[8], 64)
-		rx, tx = rx+a, tx+b
+		all[name] = ctr{a, b}
+		names = append(names, name)
+	}
+	for n := range metrics.UplinkIfaces(names) {
+		rx, tx = rx+all[n].rx, tx+all[n].tx
 	}
 	return
 }

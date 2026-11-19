@@ -167,7 +167,7 @@ const dict: Record<string, string> = {
   "磁盘读写": "Disk I/O",
   "所有磁盘合计的吞吐": "Throughput across all disks",
   "网络": "Network",
-  "所有网卡合计（不含回环）": "All interfaces combined (excluding loopback)",
+  "出口网卡合计（隧道、网桥不重复计算）": "Uplink interfaces combined (tunnels and bridges not double-counted)",
   "温度": "Temperature",
   "各传感器里最高的一个": "Highest of all sensors",
   "根分区": "Root filesystem",

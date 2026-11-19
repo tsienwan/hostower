@@ -9,6 +9,7 @@ Die häufigsten Probleme und Tipps beim Anbinden von Hosts, beim Installieren vo
 - [Docker und Container-Apps](#docker-und-container-apps)
 - [Sites, Zertifikate und Fail2ban](#sites-zertifikate-und-fail2ban)
 - [Erweiterter Collector](#erweiterter-collector)
+- [Traffic-Kontingente](#traffic-kontingente)
 - [Hostower aktualisieren](#hostower-aktualisieren)
 
 ---
@@ -238,6 +239,29 @@ Fail2ban ändert Firewall-Regeln, daher sind Installation, Änderungen an den Ei
 ### Wie lange dauert es, bis die Seite einen installierten Collector anzeigt?
 
 Sobald die Anfrage genehmigt und erfolgreich ausgeführt wurde, verbindet Hostower die Messwerterfassung des Hosts sofort neu, sodass **Erweiterter Collector &lt;Version&gt;** und die Prozessrangliste meist innerhalb von Sekunden erscheinen. Während des Wartens zeigt die Schaltfläche **Wartet auf Genehmigung**, dann **Wird installiert…** und dann **Erfassungsmodus wird umgestellt…**, sodass sie nicht doppelt abgeschickt werden kann. Die Deinstallation funktioniert genauso.
+
+---
+
+## Traffic-Kontingente
+
+### Der Monats-Traffic im Panel weicht vom Anbieter-Panel ab
+
+Die Zahlen auf der Karte „Traffic“ der Host-Seite und in der „Traffic-Rangliste“ der Übersicht stammen aus den kumulierten Zählern der Schnittstellen und werden so gezählt:
+
+- **Nur Uplink-Schnittstellen zählen.** Tunnel wie WireGuard, OpenVPN und Tailscale, Bridges wie `br0` und `vmbr0`, VLAN-Unterschnittstellen wie `eth0.100` und Bond-Mitglieder tragen denselben Traffic und werden nicht doppelt gezählt; virtuelle Schnittstellen wie `lo`, `docker0` und `veth…` sind ausgenommen. Soll nur eine Schnittstelle abgerechnet werden, wählen Sie sie unter „Kontingent festlegen“ bei „Gezählte Schnittstelle“.
+- **Tage richten sich nach der Zeitzone des Rechners, auf dem das Panel läuft.** Rechnet der Anbieter in einer anderen Zeitzone ab, können erster und letzter Tag eines Zeitraums um einige Stunden Traffic abweichen.
+- **Traffic während einer Verbindungsunterbrechung oder eines Neustarts des Panels wird nachgeholt**; startet der Host neu, fehlen die wenigen Sekunden zwischen der letzten Messung und dem Neustart.
+- **Traffic vor der Anbindung an das Panel lässt sich nicht messen.** Tragen Sie unter „Kontingent festlegen“ den vom Anbieter angezeigten Verbrauch dieses Zeitraums ein, dann wird der Zeitraum daran ausgerichtet. Die Angleichung gilt nur für den aktuellen Zeitraum und läuft mit ihm ab; eine Änderung von Abrechnungsart, Schnittstelle oder Rücksetztag löscht sie ebenfalls.
+
+Maßgeblich ist die Rechnung des Anbieters.
+
+### Nach dem Update sind die Netzwerkraten niedriger
+
+Netzwerkraten folgen jetzt derselben Regel wie der Monats-Traffic und zählen nur Uplink-Schnittstellen. Vorher kam der Traffic von Tunneln und Bridges zu dem der physischen Schnittstelle hinzu, derselbe Traffic wurde also doppelt gezählt und die Werte waren zu hoch. Vor dem Update gespeicherte Verläufe nutzen weiterhin die alte Regel.
+
+### Ich habe keine Traffic-Warnung erhalten
+
+Wird eine Warnschwelle (standardmäßig 80 %, 95 % und 100 %) erreicht oder wird das Kontingent beim aktuellen Tempo voraussichtlich überschritten, geht eine Benachrichtigung an die Kanäle, die „Traffic-Warnschwelle erreicht“ und „Traffic-Kontingent wird voraussichtlich überschritten“ abonniert haben; jede Stufe wird pro Zeitraum nur einmal gesendet. Bestehende Kanäle bekommen beim Update beide Häkchen; falls Sie sie entfernt haben, setzen Sie sie unter „Einstellungen → Benachrichtigungen & Bot“ erneut. Die Prognose braucht mindestens einen vollen Tag Daten im Zeitraum.
 
 ---
 

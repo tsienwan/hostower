@@ -167,7 +167,7 @@ const dict: Record<string, string> = {
   "磁盘读写": "Datenträger-E/A",
   "所有磁盘合计的吞吐": "Durchsatz aller Datenträger",
   "网络": "Netzwerk",
-  "所有网卡合计（不含回环）": "Alle Schnittstellen zusammen (ohne Loopback)",
+  "出口网卡合计（隧道、网桥不重复计算）": "Uplink-Schnittstellen zusammen (Tunnel und Bridges nicht doppelt gezählt)",
   "温度": "Temperatur",
   "各传感器里最高的一个": "Höchster Wert aller Sensoren",
   "根分区": "Root-Dateisystem",

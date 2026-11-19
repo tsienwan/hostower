@@ -228,7 +228,7 @@ func (s *Sampler) hardwareIfDue(ctx context.Context, name string) {
 }
 
 // virtualPrefixes 是容器和虚拟网络在主机上建的网卡：容器的流量会先经过 veth、再经过网桥、最后走物理网卡，
-// 把它们也加进来，同一份流量会被算两三遍。整机的网络速率只算物理网卡（和 VPN 这类隧道）。
+// 把它们也加进来，同一份流量会被算两三遍。隧道、网桥这类会重复计数的网卡另外在 uplink.go 里排除。
 var virtualPrefixes = []string{"veth", "docker", "br-", "virbr", "cni", "flannel", "cali", "vxlan", "kube-", "weave", "lxcbr", "lxc", "tunl", "cilium", "podman", "vnet"}
 
 // VirtualIface 报告一个网卡名是不是回环或容器、虚拟网络建的网卡。

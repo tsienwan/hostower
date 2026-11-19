@@ -172,6 +172,10 @@ func (s *Server) Handler() http.Handler {
 
 	priv("GET /api/v1/hosts", s.hosts)
 	priv("GET /api/v1/hosts/{name}/metrics", s.hostMetrics)
+	priv("GET /api/v1/hosts/{name}/traffic", s.hostTraffic)
+	priv("PUT /api/v1/hosts/{name}/traffic", s.setHostTraffic)
+	priv("DELETE /api/v1/hosts/{name}/traffic", s.deleteHostTraffic)
+	priv("GET /api/v1/traffic", s.trafficRanking)
 	priv("POST /api/v1/hosts", s.createHost)
 	priv("PUT /api/v1/hosts/{name}", s.updateHost)
 	priv("DELETE /api/v1/hosts/{name}", s.deleteHost)

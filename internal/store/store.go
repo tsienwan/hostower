@@ -188,6 +188,42 @@ ALTER TABLE speedtests ADD COLUMN server TEXT NOT NULL DEFAULT '';
 ALTER TABLE speedtests ADD COLUMN threads TEXT NOT NULL DEFAULT '';
 ALTER TABLE speedtests ADD COLUMN ip TEXT NOT NULL DEFAULT '';
 `,
+	// v15：月流量。按“主机 × 日期（面板时区）× 网卡”记字节数；另存每块网卡上次见到的累计计数器和主机开机时长，
+	// 面板重启或断线之后接着算。配额设置是 JSON（带 "v" 版本号）；已经发过的流量告警按周期记下，每档只发一次。
+	// 两个新的流量通知默认订阅，已有的通知渠道也加上。
+	`
+CREATE TABLE traffic_daily (
+	host  TEXT NOT NULL,
+	day   TEXT NOT NULL,
+	iface TEXT NOT NULL,
+	rx    REAL NOT NULL DEFAULT 0,
+	tx    REAL NOT NULL DEFAULT 0,
+	PRIMARY KEY (host, day, iface)
+) WITHOUT ROWID;
+CREATE TABLE traffic_counters (
+	host  TEXT    NOT NULL,
+	iface TEXT    NOT NULL,
+	up    REAL    NOT NULL,
+	ts    INTEGER NOT NULL,
+	rx    REAL    NOT NULL,
+	tx    REAL    NOT NULL,
+	PRIMARY KEY (host, iface)
+) WITHOUT ROWID;
+CREATE TABLE traffic_quotas (
+	host       TEXT PRIMARY KEY,
+	body       TEXT NOT NULL,
+	updated_at TEXT NOT NULL
+);
+CREATE TABLE traffic_alerts (
+	host   TEXT    NOT NULL,
+	period TEXT    NOT NULL,
+	level  TEXT    NOT NULL,
+	ts     INTEGER NOT NULL,
+	PRIMARY KEY (host, period, level)
+) WITHOUT ROWID;
+UPDATE notify_channels SET body = json_insert(json_insert(body, '$.events[#]', 'traffic.quota'), '$.events[#]', 'traffic.forecast')
+WHERE json_type(body, '$.events') = 'array';
+`,
 }
 
 // SchemaVersion 是当前代码认识的结构版本。

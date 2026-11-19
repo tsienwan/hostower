@@ -1541,3 +1541,14 @@ button.tag:hover { background: color-mix(in srgb, var(--text) 10%, transparent);
 /* 容器表的名字那一格：徽章多时换到下一行，不挤掉名字、不压到旁边的列 */
 .cell-2 > span.ctr-name-row { gap: 4px 6px; min-width: 0; flex-wrap: wrap; white-space: normal; }
 .ctr-name-row .badge { flex: none; }
+
+/* 月流量 */
+.quota-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; }
+.quota-pct { font-size: 15px; font-weight: 620; font-variant-numeric: tabular-nums; }
+.quota-pct.warn, .quota-facts b.warn { color: var(--warn); }
+.quota-pct.crit { color: var(--crit); }
+.quota-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.quota-facts b { color: var(--text); font-weight: 560; margin-left: 4px; }
+.quota-mini { min-width: 96px; margin-top: 4px; }
+.traffic-chart { display: flex; flex-direction: column; gap: 6px; }
+.traffic-chart svg { display: block; }

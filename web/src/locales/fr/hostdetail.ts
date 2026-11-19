@@ -167,7 +167,7 @@ const dict: Record<string, string> = {
   "磁盘读写": "E/S disque",
   "所有磁盘合计的吞吐": "Débit cumulé de tous les disques",
   "网络": "Réseau",
-  "所有网卡合计（不含回环）": "Toutes les interfaces cumulées (hors boucle locale)",
+  "出口网卡合计（隧道、网桥不重复计算）": "Interfaces de sortie cumulées (tunnels et ponts non comptés deux fois)",
   "温度": "Température",
   "各传感器里最高的一个": "La plus élevée de tous les capteurs",
   "根分区": "Système de fichiers racine",

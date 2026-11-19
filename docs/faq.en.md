@@ -9,6 +9,7 @@ The most common problems and tips when connecting hosts, installing Docker and i
 - [Docker and container apps](#docker-and-container-apps)
 - [Sites, certificates and Fail2ban](#sites-certificates-and-fail2ban)
 - [Enhanced collector](#enhanced-collector)
+- [Traffic quotas](#traffic-quotas)
 - [Updating Hostower](#updating-hostower)
 
 ---
@@ -238,6 +239,29 @@ Fail2ban changes firewall rules, so installing it, changing its settings and unb
 ### How long until the page reflects an installed collector?
 
 Once the request is approved and succeeds, Hostower immediately reconnects the host's sampling, so **Enhanced collector &lt;version&gt;** and the process ranking usually appear within seconds. While waiting, the button shows **Awaiting approval**, then **Installing…**, then **Switching collection mode…**, so it can't be submitted twice. Uninstalling works the same way.
+
+---
+
+## Traffic quotas
+
+### Monthly traffic in the panel doesn't match the provider's panel
+
+The figures on the host page's "Traffic" card and in the overview's "Traffic ranking" come from each interface's cumulative counters, counted like this:
+
+- **Only uplink interfaces count.** Tunnels such as WireGuard, OpenVPN and Tailscale, bridges such as `br0` and `vmbr0`, VLAN sub-interfaces such as `eth0.100`, and bond members carry the same traffic and are not counted twice; virtual interfaces such as `lo`, `docker0` and `veth…` are excluded. To bill by a single interface, choose it under "Interface counted" in "Set quota".
+- **Days follow the time zone of the machine running the panel.** If your provider bills in another time zone, the first and last day of a period can differ by a few hours of traffic.
+- **Traffic while the panel was disconnected or restarting is caught up**; when a host reboots, the few seconds between the last sample and the reboot are lost.
+- **Traffic used before the host was connected can't be measured.** Enter the usage your provider shows for this period in "Set quota" and the period is aligned to it. Calibration only applies to the current period and expires with it; changing the billing mode, interface or reset day also clears it.
+
+Your provider's bill is authoritative.
+
+### Network rates are lower after upgrading
+
+Network rates now use the same rule as monthly traffic and only count uplink interfaces. Before, traffic on tunnels and bridges was added on top of the physical interface, so the same traffic was counted twice and the numbers were too high. History stored before the upgrade still uses the old rule.
+
+### I didn't get a traffic alert
+
+When an alert percentage (80%, 95% and 100% by default) is reached, or the quota is projected to be exceeded at the current rate, a notification goes to channels subscribed to "Traffic alert level reached" and "Projected to exceed traffic quota"; each level is sent once per period. Existing channels get both ticked on upgrade; if you unticked them, tick them again under "Settings → Notifications & bot". The projection needs at least a full day of data in the period.
 
 ---
 
