@@ -4,6 +4,14 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.1.1
+
+### Fixes
+
+- When the sign-in session expires, the page no longer sits on "Reconnecting…": a dropped live connection now checks the session and returns to the sign-in page if it has expired.
+- If refreshing a host's history charts fails (network drop, SSH tunnel closed, expired session), the charts are no longer wiped to "Not enough history"; the data already shown stays and the reason is displayed, and the history is fetched again as soon as the tab is visible or the network is back.
+- Failures to write metric history to the database are now logged instead of being dropped silently.
+
 ## v0.1.0
 
 The first release.

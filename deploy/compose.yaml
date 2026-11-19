@@ -2,7 +2,7 @@
 #
 # 主密钥（加密凭据用）：不配置也能用，第一次启动会在 ./data/master_key 自动生成。
 # 想和数据分开保管（公网部署推荐），先生成一把，再打开下面带 master_key 的三行：
-#   docker run --rm ghcr.io/tsienwan/hostower:0.1.0 keygen > master_key
+#   docker run --rm ghcr.io/tsienwan/hostower:0.1.1 keygen > master_key
 # 已经在用自动生成的那把时，把 ./data/master_key 移出来当作 ./master_key，不要重新生成。
 #
 # 塔台在容器里监听所有网卡，所以必须声明 TLS 由谁终结（见 README.zh-CN.md 的“暴露方式”，英文版是 README.md 的 “Exposure”）：
@@ -11,7 +11,7 @@
 #   - 塔台自己终结 TLS：去掉 HOSTOWER_TLS，改用 HOSTOWER_TLS_CERT / HOSTOWER_TLS_KEY。
 services:
   hostower:
-    image: ghcr.io/tsienwan/hostower:0.1.0
+    image: ghcr.io/tsienwan/hostower:0.1.1
     restart: unless-stopped
     user: "65532:65532"
     read_only: true
