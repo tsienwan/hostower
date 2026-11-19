@@ -4,6 +4,12 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.1.4
+
+### Fixes
+
+- After installing or starting Fail2ban from the Network tab, the final status check could fail with "Failed to access socket path" and mark the operation as failed even though it had succeeded; it now waits until Fail2ban responds before checking.
+
 ## v0.1.3
 
 ### New

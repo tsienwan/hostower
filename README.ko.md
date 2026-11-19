@@ -6,7 +6,7 @@
 
 이름은 host + tower입니다. 등대는 바다 위의 모든 배를 비추고 그 배들에 방향을 알려 줍니다.
 
-현재 버전: **v0.1.3**(변경 기록은 [CHANGELOG.en.md](CHANGELOG.en.md) 참고). 외부 보안 검토를 통과하기 전까지는 내부망에서만 사용하거나, 사용자 인증을 수행하는 리버스 프록시 뒤에 두고 사용하는 것을 권장합니다.
+현재 버전: **v0.1.4**(변경 기록은 [CHANGELOG.en.md](CHANGELOG.en.md) 참고). 외부 보안 검토를 통과하기 전까지는 내부망에서만 사용하거나, 사용자 인증을 수행하는 리버스 프록시 뒤에 두고 사용하는 것을 권장합니다.
 
 ## 작동 방식
 
@@ -63,10 +63,10 @@ Docker와 Docker Compose v2가 설치된 Linux 서버에서 root(또는 sudo 가
 bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
 ```
 
-특정 버전을 설치하려면 태그(예: `v0.1.3`)를 붙입니다.
+특정 버전을 설치하려면 태그(예: `v0.1.4`)를 붙입니다.
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.3
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.4
 ```
 
 호스트 모드 이미지(실행 중인 머신도 관리하며 특권 컨테이너로 실행)를 설치하려면 `--host`를 붙입니다.
@@ -97,10 +97,10 @@ bash install.sh
 
 | 이미지 | 용도 |
 | --- | --- |
-| `ghcr.io/tsienwan/hostower:0.1.3` | 기본 이미지: root가 아니고 루트 파일 시스템은 읽기 전용이며 셸이 없습니다. SSH로 호스트를 관리합니다(실행 중인 머신 자체도 일반 SSH 호스트로 추가). 권장합니다. |
-| `ghcr.io/tsienwan/hostower:0.1.3-host` | 호스트 모드 이미지: 실행 중인 머신도 내장 `local` 호스트로 관리합니다. 특권 컨테이너로 실행되며 그 머신에서의 명령은 root로 실행됩니다. |
+| `ghcr.io/tsienwan/hostower:0.1.4` | 기본 이미지: root가 아니고 루트 파일 시스템은 읽기 전용이며 셸이 없습니다. SSH로 호스트를 관리합니다(실행 중인 머신 자체도 일반 SSH 호스트로 추가). 권장합니다. |
+| `ghcr.io/tsienwan/hostower:0.1.4-host` | 호스트 모드 이미지: 실행 중인 머신도 내장 `local` 호스트로 관리합니다. 특권 컨테이너로 실행되며 그 머신에서의 명령은 root로 실행됩니다. |
 
-`0`과 `latest`(호스트 모드는 `0-host`와 `latest-host`)는 항상 최신 릴리스를 가리킵니다. 운영 환경에서는 `0.1.3`처럼 정확한 버전을 고정하세요.
+`0`과 `latest`(호스트 모드는 `0-host`와 `latest-host`)는 항상 최신 릴리스를 가리킵니다. 운영 환경에서는 `0.1.4`처럼 정확한 버전을 고정하세요.
 
 ### 1. 시작
 

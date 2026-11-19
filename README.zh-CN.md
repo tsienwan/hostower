@@ -6,7 +6,7 @@
 
 名字是 host + tower：灯塔照得见海面上的每一条船，并为它们指引方向。
 
-当前版本：**v0.1.3**（变更记录见 [CHANGELOG.md](CHANGELOG.md)）。在通过外部安全评审之前，建议只在内网或放在会验证身份的反向代理之后使用。
+当前版本：**v0.1.4**（变更记录见 [CHANGELOG.md](CHANGELOG.md)）。在通过外部安全评审之前，建议只在内网或放在会验证身份的反向代理之后使用。
 
 ## 它怎么工作
 
@@ -63,10 +63,10 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
 ```
 
-要安装指定版本，在后面加上版本标签（比如 `v0.1.3`）：
+要安装指定版本，在后面加上版本标签（比如 `v0.1.4`）：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.3
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.4
 ```
 
 要安装宿主机版（还会管理所在的这台机器，以特权容器运行），加上 `--host`：
@@ -97,10 +97,10 @@ bash install.sh
 
 | 镜像 | 用途 |
 | --- | --- |
-| `ghcr.io/tsienwan/hostower:0.1.3` | 默认镜像：非 root、根文件系统只读、没有 shell，通过 SSH 管理主机（要管所在的这台机器，就把它当作普通 SSH 主机加进来）。推荐。 |
-| `ghcr.io/tsienwan/hostower:0.1.3-host` | 宿主机版：还会把所在的机器作为内置的 `local` 主机来管理。以特权容器运行，在这台机器上执行的命令是 root 身份。 |
+| `ghcr.io/tsienwan/hostower:0.1.4` | 默认镜像：非 root、根文件系统只读、没有 shell，通过 SSH 管理主机（要管所在的这台机器，就把它当作普通 SSH 主机加进来）。推荐。 |
+| `ghcr.io/tsienwan/hostower:0.1.4-host` | 宿主机版：还会把所在的机器作为内置的 `local` 主机来管理。以特权容器运行，在这台机器上执行的命令是 root 身份。 |
 
-`0` 和 `latest`（宿主机版是 `0-host` 和 `latest-host`）始终指向最新版本；生产环境请固定具体版本，比如 `0.1.3`。
+`0` 和 `latest`（宿主机版是 `0-host` 和 `latest-host`）始终指向最新版本；生产环境请固定具体版本，比如 `0.1.4`。
 
 ### 1. 启动
 
