@@ -140,7 +140,7 @@ func metadataOnly(c *command) bool {
 	return false
 }
 
-var criticalUnitRe = regexp.MustCompile(`^(ssh|sshd|firewalld|ufw|nftables|iptables|netfilter-persistent|networking|network|NetworkManager|systemd-networkd|systemd-resolved)(\.service|\.socket)?$`)
+var criticalUnitRe = regexp.MustCompile(`^(ssh|sshd|firewalld|ufw|nftables|iptables|netfilter-persistent|fail2ban|networking|network|NetworkManager|systemd-networkd|systemd-resolved)(\.service|\.socket)?$`)
 
 var destructiveSQLRe = regexp.MustCompile(`(?i)\b(drop\s+(table|database|schema|index|user)|truncate|delete\s+from|flushall|flushdb|dropdatabase)\b`)
 
@@ -268,6 +268,20 @@ func builtin(e *Engine, v *Verdict, c *command, depth int) (Level, string, strin
 		return L1, "builtin.change", "变更服务状态"
 	case "docker", "podman", "nerdctl":
 		return ruleDocker(c)
+	case "fail2ban-client":
+		// Fail2ban 管着防火墙的封禁规则：除了查看，改设置、封禁解封、重载、启停都按改防火墙算。
+		if set("status ping version get banned")[c.sub()] {
+			return L0, "builtin.read", "只读"
+		}
+		return L2, "firewall.change", "修改 Fail2ban 的封禁规则或服务（它管着防火墙）"
+	case "certbot":
+		switch c.sub() {
+		case "certificates":
+			return L0, "builtin.read", "只读"
+		case "delete", "revoke":
+			return L2, "data.delete", "删除或吊销证书"
+		}
+		return L1, "builtin.change", "申请或续期证书"
 	case "apt", "apt-get", "dnf", "yum", "apk", "zypper", "snap", "flatpak":
 		s := c.sub()
 		if set("list show search policy info depends rdepends madison showpkg check-update repolist provides version changelog")[s] {

@@ -1,8 +1,9 @@
-// Package netcfg 管主机的“网络入口”：防火墙（ufw / firewalld）放行端口，以及用 Caddy 做反向代理（域名 + 自动 HTTPS）。
+// Package netcfg 管主机的“网络入口”：防火墙（ufw / firewalld）放行端口；用 Caddy 或 Nginx 建站点
+// （反向代理、静态目录、跳转，HTTPS 证书自动申请和续期）；用 Fail2ban 挡暴力破解。
 //
 // 这里不碰主机：只生成一段只读的检测脚本、解析它的输出，再把要做的改动渲染成命令。
-// 命令交给网关走 kernel.SubmitCommand：判级、审批、执行、审计。改防火墙在判级里是 L2（会影响远程访问），
-// 写 Caddy 站点配置是 L1，检测是 L0。
+// 命令交给网关走 kernel.SubmitCommand：判级、审批、执行、审计。改防火墙和 Fail2ban 在判级里是 L2（会影响远程访问），
+// 写站点配置、申请证书是 L1，检测是 L0。
 //
 // 两条底线：
 //   - 不把自己锁在外面：启用防火墙前先放行 SSH 端口（和你勾选的其他端口）；SSH 端口不能被关掉。
@@ -27,13 +28,11 @@ const SitesDir = "/etc/caddy/sites.d"
 // Caddyfile 是 Caddy 的主配置。
 const Caddyfile = "/etc/caddy/Caddyfile"
 
-const siteMarker = "# hostower-site "
-
 // DetectCommand 是只读的检测脚本：系统、防火墙、Caddy、对外监听的端口、Docker 发布的端口。必须是 L0（测试里锁住）。
 const DetectCommand = `echo '== os'; cat /etc/os-release 2>/dev/null; ` +
 	`echo '== uid'; id -u; ` +
 	`echo '== nnp'; grep -s '^NoNewPrivs:' /proc/self/status; ` +
-	`echo '== has'; for c in ufw firewall-cmd firewall-offline-cmd nft iptables caddy docker apt-get dnf yum sudo; do command -v "$c" >/dev/null 2>&1 && echo "$c"; done; ` +
+	`echo '== has'; for c in ufw firewall-cmd firewall-offline-cmd nft iptables caddy nginx certbot fail2ban-client docker apt-get dnf yum sudo; do command -v "$c" >/dev/null 2>&1 && echo "$c"; done; ` +
 	`echo '== ufw'; ufw status 2>/dev/null || sudo -n ufw status 2>/dev/null; ` +
 	`echo '== firewalld'; systemctl is-active firewalld 2>/dev/null; ` +
 	`echo '== firewalld-ports'; firewall-cmd --list-ports 2>/dev/null || sudo -n firewall-cmd --list-ports 2>/dev/null; ` +
@@ -41,6 +40,15 @@ const DetectCommand = `echo '== os'; cat /etc/os-release 2>/dev/null; ` +
 	`echo '== caddy'; systemctl is-active caddy 2>/dev/null; ` +
 	`echo '== caddy-import'; grep -s '^import ` + SitesDir + `/' ` + Caddyfile + `; ` +
 	`echo '== sites'; grep -hs '^# hostower-site ' ` + SitesDir + `/*.caddy; ` +
+	`echo '== nginx'; systemctl is-active nginx 2>/dev/null; ` +
+	`echo '== nginx-sites'; grep -hs '^# hostower-site ' ` + NginxDir + `/hostower-*.conf; ` +
+	`echo '== certs'; if command -v certbot >/dev/null 2>&1; then certbot certificates 2>/dev/null || sudo -n certbot certificates 2>/dev/null; fi; ` +
+	`echo '== renew'; systemctl is-active certbot.timer snap.certbot.renew.timer 2>/dev/null; ls /etc/cron.d/certbot 2>/dev/null; ` +
+	`echo '== f2b'; systemctl is-active fail2ban 2>/dev/null; ` +
+	`echo '== f2b-jails'; if command -v fail2ban-client >/dev/null 2>&1; then for j in $({ fail2ban-client status 2>/dev/null || sudo -n fail2ban-client status 2>/dev/null; } | sed -n 's/.*Jail list:[[:space:]]*//p' | tr ',' ' '); do echo "-- $j"; fail2ban-client status "$j" 2>/dev/null || sudo -n fail2ban-client status "$j" 2>/dev/null; done; fi; ` +
+	`echo '== f2b-conf'; grep -hs '^# hostower-f2b ' ` + F2BFile + `; ` +
+	`echo '== authlog'; ls /var/log/auth.log /var/log/secure 2>/dev/null; ` +
+	`echo '== client'; echo "${SSH_CONNECTION%% *}"; ` +
 	`echo '== sshd'; grep -is '^[[:space:]]*port[[:space:]]' /etc/ssh/sshd_config; ` +
 	`echo '== listen'; ss -Htln 2>/dev/null; ` +
 	`echo '== docker'; docker ps --format '{{.Names}}	{{.Ports}}' 2>/dev/null; ` +
@@ -78,12 +86,6 @@ type DockerPort struct {
 	Proto     string `json:"proto"`
 }
 
-// Site 是一个 Hostower 管理的 Caddy 站点。
-type Site struct {
-	Address  string `json:"address"`
-	Upstream string `json:"upstream"`
-}
-
 // Status 是检测结果。
 type Status struct {
 	OS     string `json:"os"`     // 例如 Ubuntu 24.04.1 LTS
@@ -111,10 +113,24 @@ type Status struct {
 		Imported    bool `json:"imported"`    // 主配置里已经有 import sites.d
 		Installable bool `json:"installable"` // 系统的软件源里有 Caddy（Debian/Ubuntu、Fedora 等）
 	} `json:"caddy"`
-	Sites   []Site       `json:"sites"`
-	SSHPort int          `json:"sshPort"`
-	Listen  []Listen     `json:"listen"`
-	Docker  []DockerPort `json:"docker"`
+	Nginx struct {
+		Installed   bool `json:"installed"`
+		Active      bool `json:"active"`
+		Installable bool `json:"installable"`
+	} `json:"nginx"`
+	Certbot struct {
+		Installed bool `json:"installed"`
+		// AutoRenew 表示 certbot 的定时续期在跑（systemd 定时器或 cron）。
+		AutoRenew bool `json:"autoRenew"`
+	} `json:"certbot"`
+	Certs    []Cert   `json:"certs"`
+	Fail2ban Fail2ban `json:"fail2ban"`
+	// ClientIP 是这台主机看到的 Hostower 的来源地址（SSH_CONNECTION 的第一段）；本机执行时为空。
+	ClientIP string       `json:"clientIp"`
+	Sites    []Site       `json:"sites"`
+	SSHPort  int          `json:"sshPort"`
+	Listen   []Listen     `json:"listen"`
+	Docker   []DockerPort `json:"docker"`
 }
 
 var (
@@ -125,7 +141,7 @@ var (
 // Parse 解析检测脚本的输出。sshPort 是 Hostower 连这台主机用的 SSH 端口（不知道时传 0，就用 sshd_config 里的）。
 func Parse(out string, sshPort int) Status {
 	var st Status
-	st.Sites, st.Listen, st.Docker, st.Firewall.Rules = []Site{}, []Listen{}, []DockerPort{}, []string{}
+	st.Sites, st.Listen, st.Docker, st.Firewall.Rules, st.Certs = []Site{}, []Listen{}, []DockerPort{}, []string{}, []Cert{}
 	sec := map[string][]string{}
 	cur := ""
 	for _, line := range strings.Split(strings.ReplaceAll(out, "\r", ""), "\n") {
@@ -207,11 +223,29 @@ func Parse(out string, sshPort int) Status {
 	st.Caddy.Active = len(sec["caddy"]) > 0 && strings.TrimSpace(sec["caddy"][0]) == "active"
 	st.Caddy.Imported = len(sec["caddy-import"]) > 0
 	st.Caddy.Installable = fw.Recommended != "" // 和防火墙一样：apt / dnf 的发行版
-	for _, l := range sec["sites"] {
-		if rest, ok := strings.CutPrefix(strings.TrimSpace(l), siteMarker); ok {
-			if f := strings.Fields(rest); len(f) == 2 {
-				st.Sites = append(st.Sites, Site{Address: f[0], Upstream: f[1]})
+	st.Nginx.Installed = has["nginx"]
+	st.Nginx.Active = len(sec["nginx"]) > 0 && strings.TrimSpace(sec["nginx"][0]) == "active"
+	st.Nginx.Installable = st.Caddy.Installable
+	for _, server := range []string{"caddy", "nginx"} {
+		key := map[string]string{"caddy": "sites", "nginx": "nginx-sites"}[server]
+		for _, l := range sec[key] {
+			if site, ok := parseSite(server, l); ok {
+				st.Sites = append(st.Sites, site)
 			}
+		}
+	}
+	st.Certbot.Installed = has["certbot"]
+	for _, l := range sec["renew"] {
+		if l = strings.TrimSpace(l); l == "active" || l == "/etc/cron.d/certbot" {
+			st.Certbot.AutoRenew = true
+		}
+	}
+	st.Certs = parseCerts(sec["certs"])
+	st.Fail2ban = parseFail2ban(has["fail2ban-client"], sec)
+	st.Fail2ban.Installable = st.Caddy.Installable
+	if len(sec["client"]) > 0 {
+		if ip := net.ParseIP(strings.TrimSpace(sec["client"][0])); ip != nil {
+			st.ClientIP = ip.String()
 		}
 	}
 	st.SSHPort = sshPort
@@ -397,125 +431,4 @@ func mergePorts(a, b []Port) []Port {
 		}
 	}
 	return out
-}
-
-// ---------- Caddy 站点 ----------
-
-var (
-	domainRe = regexp.MustCompile(`^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(:[0-9]{1,5})?$`)
-	ipPortRe = regexp.MustCompile(`^[0-9]{1,3}(\.[0-9]{1,3}){3}:[0-9]{1,5}$`)
-)
-
-// ValidAddress 校验站点地址：域名（可带端口；Caddy 自动申请证书），或者 IP:端口（用 Caddy 自签的证书）。
-func ValidAddress(addr string) (ip bool, err error) {
-	addr = strings.ToLower(addr)
-	switch {
-	case ipPortRe.MatchString(addr):
-		host, port, _ := net.SplitHostPort(addr)
-		n, _ := strconv.Atoi(port)
-		if net.ParseIP(host) == nil || n < 1 || n > 65535 {
-			return false, errors.New("地址不合法")
-		}
-		return true, nil
-	case domainRe.MatchString(addr):
-		if _, port, err := net.SplitHostPort(addr); err == nil {
-			if n, _ := strconv.Atoi(port); n < 1 || n > 65535 {
-				return false, errors.New("端口要在 1 到 65535 之间")
-			}
-		}
-		return false, nil
-	}
-	return false, errors.New("地址要是域名（例如 app.example.com，可以带端口），或者 IP:端口")
-}
-
-func siteFile(addr string) string {
-	return SitesDir + "/" + strings.ReplaceAll(strings.ToLower(addr), ":", "_") + ".caddy"
-}
-
-// pipeRoot 把标准输入交给一条以 root 身份运行的命令（同 asRoot）。
-func pipeRoot(input, cmd string) string {
-	return input + " | " + asRoot(cmd)
-}
-
-// SiteAddCommand 渲染“添加站点”：写一个站点文件，确保主配置 import 了站点目录，校验通过才重载 Caddy；校验不过就撤下这个站点。
-func SiteAddCommand(st Status, addr string, port int) (string, error) {
-	addr = strings.ToLower(strings.TrimSpace(addr))
-	ip, err := ValidAddress(addr)
-	if err != nil {
-		return "", err
-	}
-	if port < 1 || port > 65535 {
-		return "", errors.New("转发到的端口要在 1 到 65535 之间")
-	}
-	if !st.Caddy.Installed {
-		return "", errors.New("这台主机还没有装 Caddy")
-	}
-	if !st.CanRoot() {
-		return "", st.rootErr("改不了 Caddy 的配置")
-	}
-	upstream := "127.0.0.1:" + strconv.Itoa(port)
-	lines := []string{siteMarker + addr + " " + upstream, addr + " {"}
-	if ip {
-		lines = append(lines, "\ttls internal")
-	}
-	lines = append(lines, "\treverse_proxy "+upstream, "}")
-	file := siteFile(addr)
-	var printf strings.Builder
-	printf.WriteString("printf '%s\\n'")
-	for _, l := range lines {
-		printf.WriteString(" " + snippet.Quote(l))
-	}
-	var b strings.Builder
-	b.WriteString(step("mkdir -p "+SitesDir, "创建 "+SitesDir+" 失败"))
-	b.WriteString(`grep -qs '^import ` + SitesDir + `/' ` + Caddyfile + ` || { ` +
-		pipeRoot(`printf '\n%s\n' 'import `+SitesDir+`/*.caddy'`, "tee -a "+Caddyfile+" >/dev/null") +
-		`; } || { echo 'hostower: 改不了 ` + Caddyfile + `'; exit 1; }; `)
-	b.WriteString("{ " + pipeRoot(printf.String(), "tee "+file+" >/dev/null") + "; } || { echo 'hostower: 写站点配置失败'; exit 1; }; ")
-	b.WriteString("{ " + asRoot("caddy validate --config "+Caddyfile+" --adapter caddyfile") + "; } || { " +
-		asRoot("mv -f "+file+" "+file+".rejected") + "; echo 'hostower: Caddy 配置校验没通过，已撤下这个站点（地址重复或者写法不对）'; exit 1; }; ")
-	b.WriteString(step("systemctl reload caddy", "重载 Caddy 失败"))
-	b.WriteString(`echo ` + snippet.Quote("hostower: 站点 "+addr+" → "+upstream+" 已生效"))
-	return b.String(), nil
-}
-
-// SiteRemoveCommand 渲染“删除站点”：把站点文件挪成 .removed（不删，想恢复改回名字就行），再重载 Caddy。
-func SiteRemoveCommand(st Status, addr string) (string, error) {
-	addr = strings.ToLower(strings.TrimSpace(addr))
-	if _, err := ValidAddress(addr); err != nil {
-		return "", err
-	}
-	found := false
-	for _, s := range st.Sites {
-		if s.Address == addr {
-			found = true
-		}
-	}
-	if !found {
-		return "", errors.New("没有这个站点（只能删 Hostower 添加的站点）")
-	}
-	file := siteFile(addr)
-	return step("mv -f "+file+" "+file+".removed", "撤下站点失败") + step("systemctl reload caddy", "重载 Caddy 失败") +
-		`echo ` + snippet.Quote("hostower: 站点 "+addr+" 已撤下"), nil
-}
-
-// CaddyInstallCommand 渲染“安装 Caddy”：用系统软件源（Debian/Ubuntu、Fedora 等有现成的包），装好后开机自启。
-func CaddyInstallCommand(st Status) (string, error) {
-	if st.Caddy.Installed {
-		return "", errors.New("Caddy 已经装好了")
-	}
-	if !st.CanRoot() {
-		return "", st.rootErr("装不了 Caddy")
-	}
-	var b strings.Builder
-	switch st.Family {
-	case "debian":
-		b.WriteString(step("apt-get install -y -q caddy", "安装 Caddy 失败：系统软件源里可能没有它，请按 Caddy 官网的说明添加它的软件源后再装"))
-	case "rhel":
-		b.WriteString(step("dnf install -y -q caddy", "安装 Caddy 失败：RHEL 系通常要先启用 EPEL 或 Caddy 的 COPR 源"))
-	default:
-		return "", errors.New("这台主机的系统不支持一键安装 Caddy，请按 Caddy 官网的说明安装")
-	}
-	b.WriteString(step("systemctl enable --now caddy", "启动 Caddy 失败"))
-	b.WriteString(`echo 'hostower: Caddy 已安装并启动'`)
-	return b.String(), nil
 }

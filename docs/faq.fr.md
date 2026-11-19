@@ -7,6 +7,7 @@ Les problèmes les plus courants et quelques conseils pour connecter des hôtes,
 - [Connexion des hôtes](#connexion-des-hôtes)
 - [sudo](#sudo)
 - [Docker et applications conteneurisées](#docker-et-applications-conteneurisées)
+- [Sites, certificats et Fail2ban](#sites-certificats-et-fail2ban)
 - [Collecteur avancé](#collecteur-avancé)
 - [Mettre à jour Hostower](#mettre-à-jour-hostower)
 
@@ -189,6 +190,46 @@ La page Conteneurs lit la liste des étiquettes depuis le registre :
 
 - S'il existe une version plus récente dans la même version majeure, elle affiche **Nouvelle version vX** ; la mise à jour passe à la nouvelle étiquette et recrée le conteneur avec les mêmes paramètres.
 - Une version majeure plus récente est seulement signalée, jamais appliquée automatiquement : les mises à niveau majeures peuvent contenir des changements incompatibles, lisez donc d'abord les notes de version.
+
+---
+
+## Sites, certificats et Fail2ban
+
+### Caddy ou Nginx ?
+
+Sur la page « Réseau » de l'hôte, les deux s'installent en un clic (depuis les dépôts du système) et permettent les trois types de site : proxy inverse, répertoire statique et redirection.
+
+- **Caddy** obtient et renouvelle automatiquement les certificats HTTPS : c'est le moins de travail. Choisissez-le sauf raison contraire.
+- **Nginx** convient si vous connaissez Nginx ou si l'hôte a déjà une configuration Nginx. Les certificats peuvent venir de Let's Encrypt automatiquement (Hostower installe certbot au passage, et certbot renouvelle selon son propre calendrier), ou de certificats déjà présents sur l'hôte.
+
+Les deux utilisent les ports 80 et 443 : Hostower n'en installe qu'un par hôte. Il ne gère que les fichiers qu'il écrit (`/etc/caddy/sites.d/`, `/etc/nginx/conf.d/hostower-*.conf`) ; la configuration existante de l'hôte reste intacte.
+
+### L'obtention d'un certificat Let's Encrypt a échoué
+
+En cas d'échec, le site est servi en HTTP en attendant, sans toucher aux autres sites. Causes fréquentes :
+
+- Le domaine ne pointe pas encore vers cet hôte (ou le changement DNS n'est pas encore propagé).
+- Le port 80 n'est pas joignable de l'extérieur : le pare-feu de l'hôte et le groupe de sécurité du fournisseur cloud doivent tous deux autoriser 80 et 443.
+- Un autre programme utilise déjà le port 80.
+- Trop de demandes pour le même domaine en peu de temps ont atteint les limites de Let's Encrypt (au plus 5 certificats par semaine pour un même ensemble de domaines).
+
+Une fois le problème réglé, retirez le site puis ajoutez-le de nouveau.
+
+### Le port 443 est déjà utilisé par 3x-ui (Xray)
+
+Deux programmes ne peuvent pas écouter sur le même port. Déplacez l'entrée Xray sur un autre port, ou donnez au site une adresse avec port (par ex. `app.example.com:8443`) ; dans ce cas Nginx ne peut utiliser qu'un certificat existant, tandis que Caddy peut toujours en obtenir un automatiquement.
+
+### Fail2ban peut-il me bannir, moi ou Hostower ?
+
+La liste blanche contient toujours les adresses de bouclage et l'adresse depuis laquelle Hostower se connecte ; Hostower se connecte par clé et ne laisse donc aucun échec. Si votre IP publique change, ajoutez à la liste blanche les réseaux que vous utilisez habituellement.
+
+Si vous êtes banni malgré tout : cliquez sur débannir à côté de l'IP dans la page « Réseau », ou connectez-vous depuis une autre adresse ou la console du fournisseur cloud et exécutez :
+
+```bash
+sudo fail2ban-client set sshd unbanip 203.0.113.7
+```
+
+Fail2ban modifie les règles du pare-feu : l'installer, changer ses réglages et débannir sont des opérations à haut risque (L2), approuvables uniquement sur le web avec une nouvelle vérification d'identité.
 
 ---
 

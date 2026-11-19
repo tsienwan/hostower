@@ -60,7 +60,7 @@ func TestParse(t *testing.T) {
 	if st.Firewall.Tool != "ufw" || st.Firewall.Recommended != "ufw" || len(st.Firewall.Rules) != 2 {
 		t.Errorf("防火墙识别不对：%+v", st.Firewall)
 	}
-	if !st.Caddy.Installed || !st.Caddy.Active || !st.Caddy.Imported || len(st.Sites) != 1 || st.Sites[0].Upstream != "127.0.0.1:3001" {
+	if !st.Caddy.Installed || !st.Caddy.Active || !st.Caddy.Imported || len(st.Sites) != 1 || st.Sites[0].Target != "127.0.0.1:3001" || st.Sites[0].TLS != "auto" || st.Sites[0].Kind != "proxy" {
 		t.Errorf("Caddy 识别不对：%+v %+v", st.Caddy, st.Sites)
 	}
 	if st.SSHPort != 2222 {
@@ -143,11 +143,11 @@ func TestLevels(t *testing.T) {
 func TestSites(t *testing.T) {
 	e := risk.New()
 	st := Parse(ubuntuOut, 22)
-	cmd, err := SiteAddCommand(st, "App.Example.com", 3001)
+	cmd, _, err := SiteAddCommand(st, SiteRequest{Address: "App.Example.com", Port: 3001})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range []string{"/etc/caddy/sites.d/app.example.com.caddy", "reverse_proxy 127.0.0.1:3001", "caddy validate", "systemctl reload caddy", ".rejected", "# hostower-site app.example.com 127.0.0.1:3001"} {
+	for _, s := range []string{"/etc/caddy/sites.d/app.example.com.caddy", "reverse_proxy 127.0.0.1:3001", "caddy validate", "systemctl reload caddy", ".rejected", "# hostower-site app.example.com 127.0.0.1:3001 kind=proxy tls=auto"} {
 		if !strings.Contains(cmd, s) {
 			t.Errorf("添加站点的命令里缺少 %q：\n%s", s, cmd)
 		}
@@ -155,14 +155,17 @@ func TestSites(t *testing.T) {
 	if got := e.Classify(cmd).Level; got != risk.L1 {
 		t.Errorf("添加站点应是 L1，得到 %s：%+v", got, e.Classify(cmd).Findings)
 	}
-	cmd, err = SiteAddCommand(st, "198.51.100.7:8443", 9443)
+	cmd, _, err = SiteAddCommand(st, SiteRequest{Address: "198.51.100.7:8443", Port: 9443})
 	if err != nil || !strings.Contains(cmd, "tls internal") || !strings.Contains(cmd, "198.51.100.7_8443.caddy") {
 		t.Errorf("IP 地址的站点应用自签证书：%v\n%s", err, cmd)
 	}
 	for _, bad := range []string{"a.example.com { }", "example.com; reboot", "../etc/passwd", "198.51.100.7", "-x.example.com", "example.com:99999", "*.example.com"} {
-		if _, err := SiteAddCommand(st, bad, 3001); err == nil {
+		if _, _, err := SiteAddCommand(st, SiteRequest{Address: bad, Port: 3001}); err == nil {
 			t.Errorf("不合法的地址 %q 应被拒绝", bad)
 		}
+	}
+	if _, _, err := SiteAddCommand(st, SiteRequest{Address: "kuma.example.com", Port: 3001}); err == nil {
+		t.Error("地址重复应被拒绝")
 	}
 	rm, err := SiteRemoveCommand(st, "kuma.example.com")
 	if err != nil || !strings.Contains(rm, ".removed") || e.Classify(rm).Level != risk.L1 {
@@ -173,7 +176,7 @@ func TestSites(t *testing.T) {
 	}
 	noCaddy := st
 	noCaddy.Caddy.Installed = false
-	if _, err := SiteAddCommand(noCaddy, "app.example.com", 3001); err == nil {
+	if _, _, err := SiteAddCommand(noCaddy, SiteRequest{Address: "app.example.com", Port: 3001}); err == nil {
 		t.Error("没有 Caddy 时应提示先安装")
 	}
 	inst, err := CaddyInstallCommand(noCaddy)

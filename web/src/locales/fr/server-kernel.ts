@@ -167,6 +167,9 @@ const dict: Record<string, string> = {
   "不支持的时间范围 \"{a}\"": "Période non prise en charge « {a} »",
   "只有人可以重新连接主机": "Seule une personne peut reconnecter un hôte",
   "这台主机不需要重新连接": "Cet hôte n’a pas besoin d’être reconnecté",
+  "修改 Fail2ban 的封禁规则或服务（它管着防火墙）": "Modifie les règles de bannissement ou le service Fail2ban (il pilote le pare-feu)",
+  "删除或吊销证书": "Supprime ou révoque un certificat",
+  "申请或续期证书": "Obtient ou renouvelle des certificats",
 };
 
 export default dict;

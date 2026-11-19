@@ -406,3 +406,52 @@ L0 if command -v docker >/dev/null 2>&1; then echo docker; fi; if docker compose
 # 安装 Docker（apps.DockerInstallCommand）：加 Docker 官方软件源、装软件包、启动服务，变更，L1
 L1 sudo -n env DEBIAN_FRONTEND=noninteractive apt-get update -q && sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y -q ca-certificates curl && sudo -n install -m 0755 -d /etc/apt/keyrings && sudo -n curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && sudo -n chmod a+r /etc/apt/keyrings/docker.asc && echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable' | sudo -n tee /etc/apt/sources.list.d/docker.list >/dev/null && sudo -n env DEBIAN_FRONTEND=noninteractive apt-get update -q && sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && sudo -n systemctl enable --now docker && docker compose version
 L1 curl -fsSL https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo && dnf install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && systemctl enable --now docker && docker compose version
+
+# ---- Fail2ban（它管着防火墙的封禁规则）：查看是 L0，其余都是 L2 ----
+L0 fail2ban-client status
+L0 sudo -n fail2ban-client status sshd
+L0 fail2ban-client ping
+L0 fail2ban-client version
+L0 fail2ban-client get sshd bantime
+L0 fail2ban-client banned
+L0 for j in $(sudo -n fail2ban-client status 2>/dev/null | sed -n 's/.*Jail list:[[:space:]]*//p' | tr ',' ' '); do echo "-- $j"; sudo -n fail2ban-client status "$j" 2>/dev/null; done
+L2 fail2ban-client set sshd unbanip 203.0.113.5
+L2 sudo -n fail2ban-client set sshd unbanip 203.0.113.5
+L2 fail2ban-client set sshd banip 203.0.113.5
+L2 fail2ban-client unban --all
+L2 fail2ban-client reload
+L2 fail2ban-client stop
+L2 fail2ban-client -t
+L2 systemctl restart fail2ban
+L2 systemctl enable --now fail2ban
+L2 systemctl stop fail2ban.service
+L2 service fail2ban restart
+L0 systemctl is-active fail2ban
+L0 cat /etc/fail2ban/jail.d/hostower.local
+L2 tee /etc/fail2ban/jail.d/hostower.local
+L2 echo '[sshd]' > /etc/fail2ban/jail.local
+L2 sed -i 's/maxretry = 5/maxretry = 3/' /etc/fail2ban/jail.local
+L2 cp jail.local /etc/fail2ban/jail.local
+L2 mv -f /etc/fail2ban/jail.d/hostower.local.bak /etc/fail2ban/jail.d/hostower.local
+L2 apt-get install -y -q fail2ban && systemctl enable fail2ban && systemctl restart fail2ban
+
+# ---- Nginx / Caddy：校验配置、重载服务、写站点文件都是变更 ----
+L1 nginx -t
+L1 nginx -s reload
+L1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+L1 caddy reload --config /etc/caddy/Caddyfile
+L1 tee /etc/nginx/conf.d/hostower-app.example.com.conf
+L1 systemctl reload nginx
+L0 tail -n 200 /var/log/nginx/hostower-app.example.com.access.log
+L0 sudo -n tail -n 200 /var/log/nginx/hostower-app.example.com.error.log
+
+# ---- certbot：列证书是只读；申请、续期是变更；删除和吊销是高危 ----
+L0 certbot certificates
+L0 sudo -n certbot certificates
+L1 certbot certonly --webroot -w /var/www/hostower-acme -d app.example.com --non-interactive --agree-tos --register-unsafely-without-email --keep-until-expiring --deploy-hook 'systemctl reload nginx'
+L1 certbot renew --dry-run
+L1 certbot renew
+L1 certbot --version
+L2 certbot delete --cert-name app.example.com
+L2 certbot revoke --cert-name app.example.com
+L3 cat /etc/letsencrypt/live/app.example.com/privkey.pem

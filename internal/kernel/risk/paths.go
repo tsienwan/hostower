@@ -29,6 +29,7 @@ var criticalConfigRes = compileAll(
 	`^/etc/fstab$`,
 	`^/etc/hosts\.(allow|deny)$`,
 	`^/etc/(nftables|iptables|ufw|firewalld)(\.conf)?(/|$)`,
+	`^/etc/fail2ban(/|$)`,
 	`^/etc/security(/|$)`,
 	`^/boot(/|$)`,
 	`(^|/)\.ssh/authorized_keys2?$`,

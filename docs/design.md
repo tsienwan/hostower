@@ -158,14 +158,16 @@ Snippet 是参数化的操作模板：
 - 升级说明：清单的 `upgrade.note` 在更新入口提示（比如先备份）；`upgrade.blockFrom` 列出不能原地升级的旧版本（比如 PostgreSQL 17 → 18 数据目录不兼容），这些实例不提供一键更新，改设置和自动发起更新也会跳过。
 - 自动发起更新（所有者打开，默认关闭）：每 6 小时检查一次，发现新版本就以“应用自动更新”（系统身份，不能批准）提交更新请求，照常等人批准。同一实例的同一版本只发起一次：等批准时不重复，被拒绝后不再提，过期或失败的隔一天再提。不做无人值守的自动更新：L1 以上的请求总要有人批准。
 
-### 4.6 网络入口（防火墙、反向代理）
+### 4.6 网络入口（防火墙、站点、证书、Fail2ban）
 
-主机详情的“网络”页（`internal/netcfg`）：一段只读的检测脚本（L0）看系统、防火墙、Caddy、对外监听的端口和 Docker 发布的端口；改动都渲染成命令走审批。
+主机详情的“网络”页（`internal/netcfg`）：一段只读的检测脚本（L0）看系统、防火墙、Caddy / Nginx 和它们的站点、certbot 的证书、Fail2ban 的状态和被封的 IP、对外监听的端口和 Docker 发布的端口；改动都渲染成命令走审批。
 
 - 防火墙用主机上已经在用的那个（ufw 或 firewalld），都没有时按系统推荐一键安装（Debian/Ubuntu 用 ufw，RHEL 系用 firewalld）；两个同时启用时不动手，只提示。改防火墙是 L2。
 - 不把自己锁在外面：启用前先放行 SSH 端口（和面板对外的端口、勾选的正在监听的端口），最后才启用，任何一步失败都不启用；SSH 和面板的端口不能关。
 - 需要 root 的命令写成“是 root 就直接运行，否则 sudo -n”两个完整分支，判级引擎看得到实际要做什么（不用变量拼命令名）。
-- 反向代理用 Caddy：每个站点一个文件放在 `/etc/caddy/sites.d`，主配置里加一行 import；写完先 `caddy validate`，通过才重载，不通过自动撤下。删除是改名成 `.removed`。写站点是 L1。
+- 站点用 Caddy 或 Nginx（系统软件源安装，每台主机只装一个，两个都要 80/443）。站点有反向代理（转发到 127.0.0.1 的端口）、静态目录（只能在 /var/www、/srv、/opt、/home 下，不能是隐藏目录）、跳转三种。每个站点一个文件（Caddy 在 `/etc/caddy/sites.d`，主配置里加一行 import；Nginx 是 `/etc/nginx/conf.d/hostower-*.conf`），第一行是标记，检测脚本只读标记，所以只列出 Hostower 加的站点。文件内容用带引号的 heredoc 写进命令里，审批摘要覆盖写入的全部内容；写完先 `caddy validate` / `nginx -t`，通过才重载，不通过把文件改名成 `.rejected` 撤下。删除是改名成 `.removed`。写站点是 L1。
+- HTTPS：Caddy 自动申请；Nginx 用 certbot 的 webroot 方式申请 Let's Encrypt 证书（先写 HTTP 站点让 80 端口能验证，拿到证书再换成 HTTPS 配置；不让 certbot 改 Hostower 写的文件），续期靠 certbot 自带的定时任务，续期后重载 Nginx。也可以填主机上已有证书的路径（只写进配置，不读私钥）。证书列表来自 `certbot certificates`（L0），续期是 L1，删除和吊销证书是 L2（页面不提供）。
+- Fail2ban 装在宿主机上，只写 `/etc/fail2ban/jail.d/hostower.local`。它管着防火墙的封禁规则，所以 `/etc/fail2ban` 算关键配置，`fail2ban-client` 除了查看（status、get 等）都是 L2，fail2ban 服务的启停也是 L2：安装、改设置、解封都要在网页上批准。不把自己封掉：白名单固定有回环地址和 Hostower 的来源地址（`SSH_CONNECTION`）；安装时先写配置再装包，服务第一次启动就带着白名单；改设置先备份，`fail2ban-client -t` 不通过就换回去。
 - Docker 直接发布到所有地址的端口会绕过 ufw 和 firewalld：页面列出来提醒改绑 127.0.0.1。云服务商的安全组在主机之外，管不到。
 
 ## 五、安全内核

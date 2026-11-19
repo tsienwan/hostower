@@ -7,6 +7,7 @@ The most common problems and tips when connecting hosts, installing Docker and i
 - [Connecting hosts](#connecting-hosts)
 - [sudo](#sudo)
 - [Docker and container apps](#docker-and-container-apps)
+- [Sites, certificates and Fail2ban](#sites-certificates-and-fail2ban)
 - [Enhanced collector](#enhanced-collector)
 - [Updating Hostower](#updating-hostower)
 
@@ -189,6 +190,46 @@ The Containers page reads the tag list from the registry:
 
 - If there is a newer version within the same major version, it shows **New version vX**; updating switches to the new tag and recreates the container with the same settings.
 - A newer major version is only mentioned, never applied automatically: major upgrades may contain breaking changes, so read the release notes first.
+
+---
+
+## Sites, certificates and Fail2ban
+
+### Caddy or Nginx?
+
+On the host's “Network” page both can be installed in one click (from the system repositories), and both can serve the three kinds of site: reverse proxy, static directory and redirect.
+
+- **Caddy** obtains and renews HTTPS certificates automatically and is the least work. Pick it unless you have a reason not to.
+- **Nginx** suits you if you know Nginx or the host already has Nginx configuration. Certificates can come from Let's Encrypt automatically (Hostower installs certbot along the way, and certbot renews on its own schedule), or you can point to certificates already on the host.
+
+Both need ports 80 and 443, so Hostower installs only one per host. It only manages the files it writes (`/etc/caddy/sites.d/`, `/etc/nginx/conf.d/hostower-*.conf`); existing configuration on the host is left alone.
+
+### Getting a Let's Encrypt certificate failed
+
+When it fails, the site is served over HTTP for now and other sites are unaffected. Common causes:
+
+- The domain does not resolve to this host yet (or the DNS change has not propagated).
+- Port 80 is not reachable from outside: both the host firewall and the cloud provider's security group must allow 80 and 443.
+- Another program is already using port 80.
+- Too many requests for the same domain in a short time hit Let's Encrypt's limits (at most 5 certificates per week for the same set of domains).
+
+Once fixed, remove the site and add it again.
+
+### Port 443 is already used by 3x-ui (Xray)
+
+Two programs cannot listen on the same port. Either move the Xray inbound to another port, or give the site an address with a port (e.g. `app.example.com:8443`); in that case Nginx can only use an existing certificate, while Caddy can still obtain one automatically.
+
+### Can Fail2ban ban me or Hostower?
+
+The allowlist always contains the loopback addresses and the address Hostower connects from, and Hostower logs in with a key, so it leaves no failed attempts. If your own public IP changes, add the networks you usually come from to the allowlist.
+
+If you get banned anyway: click unban next to the IP on the “Network” page, or log in from another address or the cloud provider's console and run:
+
+```bash
+sudo fail2ban-client set sshd unbanip 203.0.113.7
+```
+
+Fail2ban changes firewall rules, so installing it, changing its settings and unbanning are high-risk operations (L2): they can only be approved on the web, with a fresh identity check.
 
 ---
 

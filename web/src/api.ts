@@ -301,7 +301,10 @@ export const api = {
   appAction: (b: AppActionBody) => call<AppPlanResult>("POST", "/apps/action", b),
   hostNetwork: (host: string) => call<NetworkView>("GET", `/hosts/${encodeURIComponent(host)}/network`),
   hostFirewall: (host: string, b: { action: "setup" | "allow" | "remove"; tool?: string; ports: NetPort[]; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/firewall`, b),
-  hostSites: (host: string, b: { action: "add" | "remove" | "install-caddy"; address?: string; port?: number; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/sites`, b),
+  hostSites: (host: string, b: { action: "add" | "remove" | "install-caddy" | "install-nginx"; preview?: boolean } & Partial<SiteForm>) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/sites`, b),
+  hostCerts: (host: string, b: { action: "dry-run" | "renew" | "force"; name?: string; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/certs`, b),
+  hostFail2ban: (host: string, b: { action: "install" | "config" | "unban"; config?: F2BConfig; jail?: string; ip?: string; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/fail2ban`, b),
+  hostNetLog: (host: string, q: { kind: "access" | "error" | "fail2ban"; server?: string; address?: string }) => call<{ text: string }>("GET", `/hosts/${encodeURIComponent(host)}/netlog?${new URLSearchParams(Object.entries(q).filter((e): e is [string, string] => !!e[1]))}`),
   appConfigure: (b: { host: string; instance: string; params?: Record<string, string>; secrets?: Record<string, string>; ai?: AIConfig; preview?: boolean }) => call<AppPlanResult>("POST", "/apps/configure", b),
   appAuto: () => call<AppAutoStatus>("GET", "/apps/autoupdate"),
   setAppAuto: (enabled: boolean) => call<AppAutoStatus>("PUT", "/apps/autoupdate", { enabled }),
@@ -504,12 +507,29 @@ export interface AppPlanResult {
 
 // ---------- 主机的网络入口 ----------
 export interface NetPort { port: number; proto: "tcp" | "udp" }
+export type SiteServer = "caddy" | "nginx";
+export type SiteKind = "proxy" | "static" | "redirect";
+export type SiteTLS = "auto" | "internal" | "le" | "custom" | "http";
+export interface NetSite { server: SiteServer; address: string; kind: SiteKind; target: string; tls: SiteTLS; maxBody?: number; hsts?: boolean; keepHttp?: boolean; perm?: boolean }
+/** “添加站点”的表单，和服务端的 netcfg.SiteRequest 对应。 */
+export interface SiteForm {
+  server: SiteServer; address: string; kind: SiteKind; port: number; dir: string; url: string; tls: SiteTLS;
+  email: string; agree: boolean; cert: string; key: string; maxBody: number; hsts: boolean; keepHttp: boolean; perm: boolean;
+}
+export interface NetCert { name: string; domains: string[]; expiry: string; days: number; valid: boolean }
+export interface F2BJail { name: string; failed: number; totalFailed: number; banned: number; totalBanned: number; ips: string[] }
+export interface F2BConfig { bantime: number; findtime: number; maxretry: number; ignore: string[]; jails: string[] }
 export interface NetworkView {
   status: {
     os: string; family: string; root: boolean; sudo: boolean; noNewPrivs: boolean; sshPort: number;
     firewall: { tool: "" | "ufw" | "firewalld" | "conflict"; recommended: string; ufwInstalled: boolean; ufwActive: boolean; firewalldInstalled: boolean; firewalldActive: boolean; rules: string[]; unknown: boolean };
     caddy: { installed: boolean; active: boolean; imported: boolean; installable: boolean };
-    sites: { address: string; upstream: string }[];
+    nginx: { installed: boolean; active: boolean; installable: boolean };
+    certbot: { installed: boolean; autoRenew: boolean };
+    certs: NetCert[];
+    fail2ban: { installed: boolean; active: boolean; installable: boolean; unknown: boolean; jails: F2BJail[]; config: F2BConfig | null; authLog: boolean };
+    clientIp: string;
+    sites: NetSite[];
     listen: { port: number; addr: string }[];
     docker: { container: string; port: number; proto: string }[];
   };
