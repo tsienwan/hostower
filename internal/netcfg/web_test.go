@@ -307,6 +307,10 @@ func TestFail2ban(t *testing.T) {
 	if got := e.Classify(inst).Level; got != risk.L2 {
 		t.Errorf("安装 Fail2ban 应是 L2，得到 %s", got)
 	}
+	// 重启后要等它能应答再查状态，否则会报“Failed to access socket path”。
+	if iWait, iStatus := strings.Index(inst, "fail2ban-client ping"), strings.LastIndex(inst, "fail2ban-client status"); iWait < iStart || iStatus < iWait {
+		t.Errorf("启动后没有先等 Fail2ban 就绪再查状态：\n%s", inst)
+	}
 	noNginx := Parse(strings.Replace(debianOut, "nginx\n", "", 1), 22)
 	if _, err := F2BCommand(noNginx, F2BRequest{Action: "config", Config: F2BConfig{BanTime: 600, FindTime: 600, MaxRetry: 5, Jails: []string{"nginx-botsearch"}}}); err == nil {
 		t.Error("没装 Nginx 时开不了 Web 防护")

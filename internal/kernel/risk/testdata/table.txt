@@ -458,3 +458,7 @@ L3 cat /etc/letsencrypt/live/app.example.com/privkey.pem
 
 # ---- 应用连数据一起删（apps.PlanAction 的 purge）：容器写出的 root 文件当前账号删不掉、sudo 又被禁止提权时，借一个临时容器删，整条仍是 L2 ----
 L2 cd ~/.hostower/apps/uptime-kuma && docker compose -p uptime-kuma down -v && cd && { rm -rf ~/.hostower/apps/uptime-kuma 2>/dev/null || sudo -n rm -rf ~/.hostower/apps/uptime-kuma 2>/dev/null || { docker run --rm -v "$HOME/.hostower/apps/uptime-kuma:/d" busybox:1.37 sh -c 'rm -rf /d/* /d/.[!.]* /d/..?*' && rm -rf ~/.hostower/apps/uptime-kuma; }; }
+
+# ---- Fail2ban 启动或重载后等它能应答再查状态（netcfg.f2bWait）：等待本身只读，整条随前面的操作仍是 L2 ----
+L0 i=0; until { if [ "$(id -u)" = 0 ]; then fail2ban-client ping; else sudo -n fail2ban-client ping; fi; } >/dev/null 2>&1; do i=$((i+1)); if [ $i -ge 30 ]; then echo 'hostower: Fail2ban 启动后 30 秒内没有就绪，用 systemctl status fail2ban 查看原因'; exit 1; fi; sleep 1; done; if [ "$(id -u)" = 0 ]; then fail2ban-client status; else sudo -n fail2ban-client status; fi
+L2 { if [ "$(id -u)" = 0 ]; then systemctl restart fail2ban; else sudo -n systemctl restart fail2ban; fi; } || { echo 'hostower: 启动 Fail2ban 失败'; exit 1; }; i=0; until { if [ "$(id -u)" = 0 ]; then fail2ban-client ping; else sudo -n fail2ban-client ping; fi; } >/dev/null 2>&1; do i=$((i+1)); if [ $i -ge 30 ]; then echo 'hostower: Fail2ban 启动后 30 秒内没有就绪'; exit 1; fi; sleep 1; done; if [ "$(id -u)" = 0 ]; then fail2ban-client status; else sudo -n fail2ban-client status; fi

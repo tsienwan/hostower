@@ -250,6 +250,10 @@ type F2BRequest struct {
 
 var jailNameRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
+// f2bWait 等 Fail2ban 能应答（控制套接字建好）再往下走，最多 30 秒。
+var f2bWait = "i=0; until { " + asRoot("fail2ban-client ping") + "; } >/dev/null 2>&1; do i=$((i+1)); " +
+	"if [ $i -ge 30 ]; then echo 'hostower: Fail2ban 启动后 30 秒内没有就绪，用 systemctl status fail2ban 查看原因'; exit 1; fi; sleep 1; done; "
+
 // F2BCommand 渲染 Fail2ban 操作。
 func F2BCommand(st Status, req F2BRequest) (string, error) {
 	f := st.Fail2ban
@@ -305,6 +309,9 @@ func F2BCommand(st Status, req F2BRequest) (string, error) {
 				b.WriteString(step("systemctl restart fail2ban", "启动 Fail2ban 失败"))
 			}
 		}
+		// systemctl restart 返回时 Fail2ban 往往还在加载 jail，控制套接字还没建好，
+		// 马上查状态会报“Failed to access socket path”。等它能应答（最多 30 秒）再查。
+		b.WriteString(f2bWait)
 		b.WriteString(asRoot("fail2ban-client status"))
 		return b.String(), nil
 	case "unban":
