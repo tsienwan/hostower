@@ -4,6 +4,13 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.1.5
+
+### Fixes
+
+- After the page sat idle for a long time (computer asleep, network dropped for a while) it could stay on "Reconnecting" and stack up "Cannot reach the tower" toasts; it now reconnects as soon as the network comes back or the tab becomes visible, returns to the sign-in page if the session has expired, and no longer repeats the same toast.
+- On a host's page, the network and disk I/O cards' headline number, legend and min/avg/max did not agree: the legend now shows the latest sample like the headline, and min/avg/max are computed on the combined total (previously only inbound or read).
+
 ## v0.1.4
 
 ### Fixes
