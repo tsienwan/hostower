@@ -11,7 +11,7 @@ import { ContainerDetailDialog } from "./Containers";
 import { NetworkPanel } from "./Network";
 import { TrafficCard } from "./Traffic";
 import { BinaryPreview, TextPreview, previewKind, textKinds, type PreviewKind } from "../preview";
-import { Empty, LevelBadge, Pager, SortTh, Sparkline, StateBadge, TrendChart, Usage, ago, bytes, stamp, rate, uptime, usePaged, useSort, useSteadyOrder, type Series } from "../ui";
+import { Empty, LevelBadge, Pager, poll, SortTh, Sparkline, StateBadge, TrendChart, Usage, ago, bytes, stamp, rate, uptime, usePaged, useSort, useSteadyOrder, type Series } from "../ui";
 import { lang, ts, useT } from "../i18n";
 
 // days 是这个范围覆盖多少天：超过 15 分钟级数据的保留时长的范围不显示。
@@ -67,12 +67,8 @@ export function HostDetail() {
       .then((r) => { if (on) { setPast(r.samples); setPastErr(""); } })
       .catch((e) => { if (on) { setPast((p) => p ?? []); setPastErr(e instanceof Error ? e.message : String(e)); } });
     load();
-    const timer = setInterval(load, 60_000);
-    // 页面在后台时浏览器会推迟定时器；切回来时立刻补一次。
-    const onShow = () => { if (document.visibilityState === "visible") load(); };
-    document.addEventListener("visibilitychange", onShow);
-    window.addEventListener("online", load);
-    return () => { on = false; clearInterval(timer); document.removeEventListener("visibilitychange", onShow); window.removeEventListener("online", load); };
+    const stop = poll(load, 60_000);
+    return () => { on = false; stop(); };
   }, [name, range]);
 
   const remove = async () => {

@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Activity, Settings2, TriangleAlert } from "lucide-react";
 import { api, type DayTraffic, type HostTraffic, type Quota, type QuotaMode, type QuotaStatus, type TrafficView } from "../api";
 import { fail, toast, useStore } from "../store";
-import { Modal, SortTh, bytes, pctText, useSort } from "../ui";
+import { Modal, SortTh, bytes, pctText, poll, useSort } from "../ui";
 import { Select } from "../controls";
 import { askConfirm } from "../dialogs";
 import { useT } from "../i18n";
@@ -60,8 +60,8 @@ export function TrafficCard({ host, status }: { host: string; status?: QuotaStat
     let on = true;
     const load = () => api.hostTraffic(host).then((v) => { if (on) { setView(v); setErr(""); } }).catch((e) => on && setErr(String(e?.message ?? e)));
     load();
-    const timer = setInterval(load, 60_000);
-    return () => { on = false; clearInterval(timer); };
+    const stop = poll(load, 60_000);
+    return () => { on = false; stop(); };
   }, [host, tick]);
   useEffect(() => { try { localStorage.setItem("hostower.traffic.view", mode); } catch { /* 存不了就算了 */ } }, [mode]);
 
@@ -300,8 +300,8 @@ export function TrafficRanking() {
     let on = true;
     const load = () => api.trafficRanking().then((r) => on && setList(r.hosts)).catch(() => {});
     load();
-    const timer = setInterval(load, 60_000);
-    return () => { on = false; clearInterval(timer); };
+    const stop = poll(load, 60_000);
+    return () => { on = false; stop(); };
   }, []);
   const rows = useMemo(() => (list ?? []).filter((h) => h.in + h.out > 0 || h.quota), [list]);
   const sorter = useSort(rows, { name: (h) => h.host.toLowerCase(), in: (h) => h.in, out: (h) => h.out, total: (h) => h.in + h.out, pct: (h) => h.quota?.pct ?? -1 });
