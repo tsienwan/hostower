@@ -120,6 +120,8 @@ export function connect() {
     // 断线期间可能漏了事件，重连后整体刷新一次。
     refreshHosts().catch(() => {});
     refreshRequests().catch(() => {});
+    // 实时连接通了说明塔台又能连上：让各个定时刷新的卡片立即补一次，清掉断网期间的报错（见 ui.tsx 的 poll）。
+    window.dispatchEvent(new Event("hostower:reconnected"));
   };
   sock.onmessage = (m) => {
     let ev: { type: string; data: unknown };

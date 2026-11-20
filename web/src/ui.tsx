@@ -384,7 +384,7 @@ export function SortTh<T>({ s, k, desc, children, className, style }: { s: Sorte
 }
 
 /**
- * 定时刷新：每 ms 毫秒调一次 load，另外在切回页面、网络恢复时立即补一次——
+ * 定时刷新：每 ms 毫秒调一次 load，另外在切回页面、网络恢复、实时连接重新连上时立即补一次——
  * 页面在后台时浏览器会推迟定时器，电脑睡眠唤醒后要等一个周期才会刷新，期间出错的提示会一直挂着。
  * 返回清理函数，直接交给 useEffect。
  */
@@ -393,5 +393,11 @@ export function poll(load: () => void, ms: number): () => void {
   const onShow = () => { if (document.visibilityState === "visible") load(); };
   document.addEventListener("visibilitychange", onShow);
   window.addEventListener("online", load);
-  return () => { clearInterval(timer); document.removeEventListener("visibilitychange", onShow); window.removeEventListener("online", load); };
+  window.addEventListener("hostower:reconnected", load);
+  return () => {
+    clearInterval(timer);
+    document.removeEventListener("visibilitychange", onShow);
+    window.removeEventListener("online", load);
+    window.removeEventListener("hostower:reconnected", load);
+  };
 }
