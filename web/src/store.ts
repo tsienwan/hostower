@@ -55,6 +55,8 @@ export function seedOutput(req: Req) {
 
 let toastId = 0;
 export function toast(text: string, kind: "ok" | "err" = "ok") {
+  // 同一条提示已经在显示：不再叠一条（断网时每个请求都会报“无法连接塔台”）。
+  if (state.toasts.some((t) => t.text === text && t.kind === kind)) return;
   const id = ++toastId;
   set({ toasts: [...state.toasts, { id, kind, text }] });
   setTimeout(() => set({ toasts: state.toasts.filter((t) => t.id !== id) }), kind === "err" ? 6000 : 3500);
@@ -92,6 +94,19 @@ export const setPaused = (paused: boolean) => set({ paused });
 let ws: WebSocket | null = null;
 let retry = 0;
 let stopped = true;
+let timer: ReturnType<typeof setTimeout> | undefined;
+
+// 电脑睡眠唤醒、网络恢复、切回这个页面时：不等退避的定时器，马上重连一次。
+function reconnectNow() {
+  if (stopped || ws || (typeof document !== "undefined" && document.hidden)) return;
+  clearTimeout(timer);
+  retry = 0;
+  connect();
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("online", reconnectNow);
+  document.addEventListener("visibilitychange", reconnectNow);
+}
 
 export function connect() {
   stopped = false;
@@ -155,13 +170,14 @@ export function connect() {
     // 发一个普通请求问一下；返回 401 时 api() 会通知页面回到登录界面，也就不用再重连了。
     refreshHosts().catch(() => {});
     retry = Math.min(retry + 1, 6);
-    setTimeout(connect, 500 * 2 ** retry);
+    timer = setTimeout(connect, 500 * 2 ** retry);
   };
 }
 
 export function disconnect() {
   clearCache(); // 退出登录：上一个会话看过的数据不留在内存里
   stopped = true;
+  clearTimeout(timer);
   ws?.close();
   ws = null;
 }
