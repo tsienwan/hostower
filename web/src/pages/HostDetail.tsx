@@ -29,6 +29,9 @@ const sMem: Series[] = [{ pick: (s) => s.mem, label: "已用" }, { pick: (s) => 
 const sLoad: Series[] = [{ pick: (s) => s.load, label: "1 分钟" }, { pick: (s) => s.load15 ?? 0, label: "15 分钟" }];
 const sDisk: Series[] = [{ pick: (s) => s.dr ?? 0, label: "读" }, { pick: (s) => s.dw ?? 0, label: "写" }];
 const sNet: Series[] = [{ pick: (s) => s.rx, label: "入站" }, { pick: (s) => s.tx, label: "出站" }];
+// 卡片右上角的大数字是两条线的合计；下面的最低、平均、最高也按合计算，三处才对得上。
+const netTotal = (s: Sample) => s.rx + s.tx;
+const diskTotal = (s: Sample) => (s.dr ?? 0) + (s.dw ?? 0);
 const sTemp: Series[] = [{ pick: (s) => s.temp ?? 0 }];
 const sRoot: Series[] = [{ pick: (s) => s.disk }];
 
@@ -160,10 +163,10 @@ export function HostDetail() {
               <div className="metric-grid">
                 <MetricCard title="CPU" desc={st.ncpu ? t("{n} 核的平均利用率", { n: st.ncpu }) : t("平均利用率")} value={l ? pct(l.cpu) : "—"} samples={hist} series={sCPU} format={pct} max={100} />
                 <MetricCard title={t("内存")} desc={l && st.memKB ? t("已用 {used} / {total}", { used: bytes(st.memKB * 1024 * l.mem / 100), total: bytes(st.memKB * 1024) }) + (st.swapKB ? t("，交换分区 {n}%", { n: (l.swap ?? 0).toFixed(0) }) : "") : t("已用与缓存")}
-                  value={l ? pct(l.mem) : "—"} samples={hist} series={sMem} format={pct} max={100} />
-                <MetricCard title={t("负载")} desc={st.ncpu ? t("超过 {n}（核数）说明在排队", { n: st.ncpu }) : t("运行和等待中的进程数")} value={l ? l.load.toFixed(2) : "—"} samples={hist} series={sLoad} format={num2} />
-                <MetricCard title={t("磁盘读写")} desc={t("所有磁盘合计的吞吐")} value={l ? rate(l.dr + l.dw) : "—"} samples={hist} series={sDisk} format={rate} />
-                <MetricCard title={t("网络")} desc={t("出口网卡合计（隧道、网桥不重复计算）")} value={l ? rate(l.rx + l.tx) : "—"} samples={hist} series={sNet} format={rate} />
+                  value={l ? pct(l.mem) : "—"} now={l} samples={hist} series={sMem} format={pct} max={100} />
+                <MetricCard title={t("负载")} desc={st.ncpu ? t("超过 {n}（核数）说明在排队", { n: st.ncpu }) : t("运行和等待中的进程数")} value={l ? l.load.toFixed(2) : "—"} now={l} samples={hist} series={sLoad} format={num2} />
+                <MetricCard title={t("磁盘读写")} desc={t("所有磁盘合计的吞吐")} value={l ? rate(diskTotal(l)) : "—"} now={l} samples={hist} series={sDisk} stat={diskTotal} format={rate} />
+                <MetricCard title={t("网络")} desc={t("出口网卡合计（隧道、网桥不重复计算）")} value={l ? rate(netTotal(l)) : "—"} now={l} samples={hist} series={sNet} stat={netTotal} format={rate} />
                 {hist.some((x) => x.temp > 0)
                   ? <MetricCard title={t("温度")} desc={t("各传感器里最高的一个")} value={l ? `${l.temp.toFixed(0)} °C` : "—"} samples={hist} series={sTemp} format={deg} />
                   : <MetricCard title={t("根分区")} desc={l && st.diskKB ? t("已用 {used} / {total}", { used: bytes(st.diskKB * 1024 * l.disk / 100), total: bytes(st.diskKB * 1024) }) : t("占用")} value={l ? pct(l.disk) : "—"} samples={hist} series={sRoot} format={pct} max={100} />}
@@ -721,15 +724,22 @@ function MetricValue({ text }: { text: string }) {
 }
 
 /** 一张指标卡：标题和一行说明、当前值、带刻度的趋势图，以及这段时间里的最低、平均、最高。 */
-function MetricCard({ title, desc, value, samples, series, format, max }: {
-  title: string; desc: string; value: string; samples: Sample[]; series: Series[]; format: (n: number) => string; max?: number;
+function MetricCard({ title, desc, value, now, samples, series, stat, format, max }: {
+  title: string; desc: string; value: string;
+  /** 最新一次采样：大数字和图例都显示它，两处才对得上（图上的点是一段时间的平均，会比它滞后）。 */
+  now?: Sample;
+  samples: Sample[]; series: Series[];
+  /** 最低、平均、最高按什么算；默认是第一条线。 */
+  stat?: (s: Sample) => number;
+  format: (n: number) => string; max?: number;
 }) {
   const t = useT();
   const language = lang();
   // 序列名在模块级的表里是中文原文，这里换成当前语言再交给图表。
   const shown = useMemo(() => series.map((sr) => (sr.label ? { ...sr, label: t(sr.label) } : sr)), [series, language, t]);
-  const vals = samples.map(series[0].pick);
+  const vals = samples.map(stat ?? series[0].pick);
   const last = samples[samples.length - 1];
+  const cur = now ?? last;
   const mins = samples.length > 1 ? Math.max(1, Math.round((last.ts - samples[0].ts) / 60000)) : 0;
   const span = mins >= 2880 ? t("{n} 天", { n: Math.round(mins / 1440) }) : mins >= 120 ? t("{n} 小时", { n: Math.round(mins / 60) }) : t("{n} 分钟", { n: mins });
   return (
@@ -746,7 +756,7 @@ function MetricCard({ title, desc, value, samples, series, format, max }: {
           {shown.length > 1 && shown.map((sr, i) => (
             <span key={i}>
               <svg width="16" height="6" aria-hidden><line x1="0" x2="16" y1="3" y2="3" stroke={i ? "var(--accent-2)" : "var(--accent)"} strokeWidth="2" strokeDasharray={i ? "5 4" : undefined} /></svg>
-              {sr.label}{last && <b>{format(sr.pick(last))}</b>}
+              {sr.label}{cur && <b>{format(sr.pick(cur))}</b>}
             </span>
           ))}
         </div>
