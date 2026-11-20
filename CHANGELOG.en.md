@@ -4,6 +4,12 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.1.6
+
+### Fixes
+
+- After a network drop or the computer sleeping, a host's traffic card could keep showing "Could not read traffic: Cannot reach the tower" for a long time; the traffic card, traffic ranking, this-machine card and metric history now reload as soon as the tab becomes visible or the network comes back.
+
 ## v0.1.5
 
 ### Fixes

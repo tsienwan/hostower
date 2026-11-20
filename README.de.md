@@ -6,7 +6,7 @@
 
 Der Name setzt sich aus host + tower zusammen: Ein Leuchtturm sieht jedes Schiff auf dem Wasser und weist ihm den Weg.
 
-Aktuelle Version: **v0.1.5** (siehe [CHANGELOG.en.md](CHANGELOG.en.md)). Solange keine externe Sicherheitsprüfung abgeschlossen ist, betreiben Sie Hostower in einem privaten Netzwerk oder hinter einem Reverse-Proxy, der Benutzer authentifiziert.
+Aktuelle Version: **v0.1.6** (siehe [CHANGELOG.en.md](CHANGELOG.en.md)). Solange keine externe Sicherheitsprüfung abgeschlossen ist, betreiben Sie Hostower in einem privaten Netzwerk oder hinter einem Reverse-Proxy, der Benutzer authentifiziert.
 
 ## So funktioniert es
 
@@ -63,10 +63,10 @@ Auf einem Linux-Server mit Docker und Docker Compose v2 als root (oder mit einem
 bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
 ```
 
-Für eine bestimmte Version hängen Sie deren Tag an (zum Beispiel `v0.1.5`):
+Für eine bestimmte Version hängen Sie deren Tag an (zum Beispiel `v0.1.6`):
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.5
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.6
 ```
 
 Für das Host-Modus-Image (verwaltet auch die eigene Maschine, läuft privilegiert) fügen Sie `--host` hinzu:
@@ -97,10 +97,10 @@ Offizielle Images werden in der GitHub Container Registry für linux/amd64 und l
 
 | Image | Verwendung |
 | --- | --- |
-| `ghcr.io/tsienwan/hostower:0.1.5` | Standard-Image: ohne root, schreibgeschütztes Root-Dateisystem, keine Shell. Verwaltet Hosts per SSH (auch die eigene Maschine, als gewöhnlicher SSH-Host hinzugefügt). Empfohlen. |
-| `ghcr.io/tsienwan/hostower:0.1.5-host` | Host-Modus-Image: verwaltet zusätzlich die eigene Maschine als eingebauten Host `local`. Läuft privilegiert – Befehle auf dieser Maschine laufen als root. |
+| `ghcr.io/tsienwan/hostower:0.1.6` | Standard-Image: ohne root, schreibgeschütztes Root-Dateisystem, keine Shell. Verwaltet Hosts per SSH (auch die eigene Maschine, als gewöhnlicher SSH-Host hinzugefügt). Empfohlen. |
+| `ghcr.io/tsienwan/hostower:0.1.6-host` | Host-Modus-Image: verwaltet zusätzlich die eigene Maschine als eingebauten Host `local`. Läuft privilegiert – Befehle auf dieser Maschine laufen als root. |
 
-`0` und `latest` (bzw. `0-host` und `latest-host`) zeigen immer auf die neueste Version; legen Sie in Produktion eine genaue Version wie `0.1.5` fest.
+`0` und `latest` (bzw. `0-host` und `latest-host`) zeigen immer auf die neueste Version; legen Sie in Produktion eine genaue Version wie `0.1.6` fest.
 
 ### 1. Starten
 
