@@ -4,6 +4,12 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.1.7
+
+### Fixes
+
+- With the page left open, after the network dropped and came back the traffic card and metric history could keep showing "Cannot reach the tower" for up to a minute; they now reload as soon as the live connection is restored.
+
 ## v0.1.6
 
 ### Fixes

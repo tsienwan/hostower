@@ -6,7 +6,7 @@
 
 名前は host + tower です。灯台は海上のすべての船を照らし、進む方向を示します。
 
-現在のバージョン：**v0.1.6**（変更履歴は [CHANGELOG.en.md](CHANGELOG.en.md) を参照）。外部のセキュリティレビューを通過するまでは、社内ネットワーク内か、本人確認を行うリバースプロキシの背後でのみ使用することをおすすめします。
+現在のバージョン：**v0.1.7**（変更履歴は [CHANGELOG.en.md](CHANGELOG.en.md) を参照）。外部のセキュリティレビューを通過するまでは、社内ネットワーク内か、本人確認を行うリバースプロキシの背後でのみ使用することをおすすめします。
 
 ## 仕組み
 
@@ -63,10 +63,10 @@ Docker と Docker Compose v2 が入った Linux サーバーで、root（また�
 bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
 ```
 
-特定のバージョンを入れるには、タグ（例：`v0.1.6`）を付けます。
+特定のバージョンを入れるには、タグ（例：`v0.1.7`）を付けます。
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.6
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.1.7
 ```
 
 ホストモード版（動作中のマシンも管理し、特権コンテナーとして動作）を入れるには `--host` を付けます。
@@ -97,10 +97,10 @@ bash install.sh
 
 | イメージ | 用途 |
 | --- | --- |
-| `ghcr.io/tsienwan/hostower:0.1.6` | 既定イメージ：非 root、ルートファイルシステムは読み取り専用、シェルなし。SSH でホストを管理します（動作中のマシン自体も、通常の SSH ホストとして追加します）。推奨。 |
-| `ghcr.io/tsienwan/hostower:0.1.6-host` | ホストモード版：動作中のマシンも組み込みの `local` ホストとして管理します。特権コンテナーとして動作し、そのマシンでのコマンドは root で実行されます。 |
+| `ghcr.io/tsienwan/hostower:0.1.7` | 既定イメージ：非 root、ルートファイルシステムは読み取り専用、シェルなし。SSH でホストを管理します（動作中のマシン自体も、通常の SSH ホストとして追加します）。推奨。 |
+| `ghcr.io/tsienwan/hostower:0.1.7-host` | ホストモード版：動作中のマシンも組み込みの `local` ホストとして管理します。特権コンテナーとして動作し、そのマシンでのコマンドは root で実行されます。 |
 
-`0` と `latest`（ホストモード版は `0-host` と `latest-host`）は常に最新リリースを指します。本番環境では `0.1.6` のように具体的なバージョンを固定してください。
+`0` と `latest`（ホストモード版は `0-host` と `latest-host`）は常に最新リリースを指します。本番環境では `0.1.7` のように具体的なバージョンを固定してください。
 
 ### 1. 起動
 
