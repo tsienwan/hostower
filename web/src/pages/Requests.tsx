@@ -209,7 +209,7 @@ export function RequestDetail() {
                   <div className="row wrap" style={{ gap: 4 }}>
                     <span className="muted" style={{ fontSize: 12 }}>{t("目标 {n} 台：", { n: r.targets.length })}</span>
                     {r.targets.map((tg) => (
-                      <Link key={tg.host} to={`/hosts/${tg.host}`} className="tag mono" title={tg.sensitivity === "high" ? t("高敏感主机") : undefined}>
+                      <Link key={tg.host} to={`/hosts/${encodeURIComponent(tg.host)}`} className="tag mono" title={tg.sensitivity === "high" ? t("高敏感主机") : undefined}>
                         {tg.sensitivity === "high" && <ShieldAlert size={11} style={{ color: "var(--serious)", marginRight: 4 }} />}{tg.host}
                       </Link>
                     ))}
@@ -366,7 +366,7 @@ function InstallProgress({ id, target }: { id: string; target: Target }) {
   const failed = target.state === "failed" || target.state === "error";
   const finished = target.state === "ok";
   const waiting = !finished && !failed && target.state !== "running";
-  const st = installStage(text);
+  const st = useMemo(() => installStage(text), [text]);
   const last = installSteps.length - 1;
   const step = finished ? last : st.step;
   const pct = finished ? 100 : (step / last) * 100 + (step === 1 && st.layers > 0 ? (st.pulled / st.layers) * (100 / last) * 0.9 : 0);

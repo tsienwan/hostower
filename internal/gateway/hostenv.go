@@ -36,5 +36,5 @@ func (s *Server) hostEnv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	n := hostenv.ParseNet(net)
-	writeJSON(w, 200, map[string]any{"tools": hostenv.ParseTools(tools), "services": n.Services, "sites": n.Sites, "egress": n.Egress, "checkedAt": time.Now().UnixMilli()})
+	writeJSON(w, 200, map[string]any{"tools": hostenv.ParseTools(tools), "services": n.Services, "sites": n.Sites, "egress": n.Egress, "ai": n.AI, "risks": n.Risks, "restricted": hostenv.AIRestricted, "checkedAt": time.Now().UnixMilli()})
 }

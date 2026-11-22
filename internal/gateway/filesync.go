@@ -280,7 +280,10 @@ func (s *Server) fileCollectDownload(w http.ResponseWriter, r *http.Request) {
 	zw := zip.NewWriter(w)
 	defer zw.Close()
 	var skipped []string
-	var written int64
+	// 先按 find 给出的大小挑出要收的文件：总量不超过上限（给不出大小的按 100 MB 估）。
+	type job struct{ host, path string }
+	var jobs []job
+	var planned int64
 	for _, h := range list {
 		if h.Error != "" {
 			skipped = append(skipped, h.Host+"\t"+h.Error)
@@ -290,35 +293,78 @@ func (s *Server) fileCollectDownload(w http.ResponseWriter, r *http.Request) {
 			skipped = append(skipped, h.Host+"\t匹配的文件超过 "+strconv.Itoa(maxCollectFiles)+" 个，只收了前面这些")
 		}
 		for _, f := range h.Files {
-			if r.Context().Err() != nil {
-				return
+			size := f.Size
+			if size < 0 {
+				size = kernel.DownloadLimit
 			}
-			if written >= maxCollectBytes {
+			if planned+size > maxCollectBytes {
 				skipped = append(skipped, h.Host+"\t"+f.Path+"\t总大小超过上限，没有收")
 				continue
 			}
-			data, err := s.Kernel.DownloadFile(r.Context(), a, h.Host, f.Path)
-			if err != nil {
-				reason := err.Error()
-				switch {
-				case errors.Is(err, executor.ErrNotExist):
-					reason = "文件不存在"
-				case errors.Is(err, kernel.ErrTooLarge):
-					reason = "文件超过 100 MB"
+			planned += size
+			jobs = append(jobs, job{h.Host, f.Path})
+		}
+	}
+	// 几台主机同时读，读到的按顺序写进压缩包（zip 只能一个一个写）。每台主机上的文件一个接一个读。
+	type result struct {
+		job
+		data []byte
+		err  error
+	}
+	results := make(chan result, 4)
+	go func() {
+		defer close(results)
+		byHost := map[string][]job{}
+		var order []string
+		for _, j := range jobs {
+			if byHost[j.host] == nil {
+				order = append(order, j.host)
+			}
+			byHost[j.host] = append(byHost[j.host], j)
+		}
+		var wg sync.WaitGroup
+		sem := make(chan struct{}, 4)
+		for _, host := range order {
+			wg.Add(1)
+			go func(js []job) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+				for _, j := range js {
+					if r.Context().Err() != nil {
+						return
+					}
+					data, err := s.Kernel.DownloadFile(r.Context(), a, j.host, j.path)
+					select {
+					case results <- result{j, data, err}:
+					case <-r.Context().Done():
+						return
+					}
 				}
-				skipped = append(skipped, h.Host+"\t"+f.Path+"\t"+reason)
-				continue
+			}(byHost[host])
+		}
+		wg.Wait()
+	}()
+	for res := range results {
+		if res.err != nil {
+			reason := res.err.Error()
+			switch {
+			case errors.Is(res.err, executor.ErrNotExist):
+				reason = "文件不存在"
+			case errors.Is(res.err, kernel.ErrTooLarge):
+				reason = "文件超过 100 MB"
 			}
-			hdr := &zip.FileHeader{Name: h.Host + f.Path, Method: zip.Deflate}
-			hdr.Modified = time.Now()
-			fw, err := zw.CreateHeader(hdr)
-			if err != nil {
-				return
-			}
-			if _, err := fw.Write(data); err != nil {
-				return
-			}
-			written += int64(len(data))
+			skipped = append(skipped, res.host+"\t"+res.path+"\t"+reason)
+			continue
+		}
+		hdr := &zip.FileHeader{Name: res.host + res.path, Method: zip.Deflate}
+		hdr.Modified = time.Now()
+		fw, err := zw.CreateHeader(hdr)
+		if err != nil {
+			return
+		}
+		if _, err := fw.Write(res.data); err != nil {
+			return
 		}
 	}
 	if len(skipped) > 0 {

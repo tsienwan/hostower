@@ -10,7 +10,7 @@ import { Empty, bytes } from "../ui";
 import { ts, useT } from "../i18n";
 
 /** 选主机：全部、按标签筛、逐台勾。 */
-function HostPicker({ picked, onChange }: { picked: string[]; onChange: (v: string[]) => void }) {
+export function HostPicker({ picked, onChange }: { picked: string[]; onChange: (v: string[]) => void }) {
   const t = useT();
   const hosts = useStore((s) => s.hosts);
   const [query, setQuery] = useState("");

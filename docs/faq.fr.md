@@ -199,6 +199,7 @@ Si l'adresse ne s'ouvre pas, vérifiez d'abord si l'adresse d'écoute est `127.0
 
 **Environnement**, sur la page de l'hôte, et **Applications → Environnement** envoient depuis cet hôte une série de requêtes en lecture seule et observent la réponse de chaque service :
 
+- **Région et contrôle des risques des services d'IA** : la région dans laquelle ChatGPT, Claude et Google (d'après la région attribuée par YouTube) placent cet hôte, et si cette région fait partie des zones habituellement desservies ; si la version web de ChatGPT exige une vérification humaine et si la recherche Google considère l'adresse comme du trafic inhabituel ; si la localisation donnée par la base d'informations IP concorde avec la région perçue par les services d'IA (en cas de discordance, l'hôte est souvent traité comme situé dans une région non prise en charge).
 - **API de grands modèles** (OpenAI, Anthropic, Google Gemini, xAI, DeepSeek) : la requête est envoyée sans clé. Une réponse « clé manquante » donne **Disponible** : il suffit de renseigner une clé pour l'appeler. Un refus motivé par le pays ou la région de la sortie donne **Restreint** : utilisez un hôte situé dans une autre région, ou passez par une passerelle telle que LiteLLM ou New API.
 - **Sites web et streaming** (Google, YouTube, Netflix, Disney+, TikTok, Facebook, X, la version web de ChatGPT, etc.) : **Disponible** si le site s'ouvre normalement ; **Restreint** s'il refuse la requête ou renvoie vers une page « service non disponible dans votre région ». Pour YouTube et Netflix, la région attribuée est également affichée ; Netflix est évalué avec un titre qui n'est pas une production originale, et « Productions originales uniquement » signifie que le catalogue de cette région n'est pas ouvert à cette adresse.
 - **Injoignable** : aucune connexion établie en 8 secondes ; le réseau la bloque peut-être, ou l'hôte n'a pas `curl`.
@@ -213,9 +214,21 @@ Les sites web voient l'adresse de sortie de l'hôte. Son type et ses éventuels 
 - **Type** : centre de données, connexion résidentielle, ligne d'entreprise, réseau mobile, etc. Un VPS a en général une adresse de centre de données ; les services de streaming n'y donnent souvent accès qu'aux productions originales, et les connexions par abonnement aux services d'IA déclenchent plus facilement le contrôle des risques.
 - **Marquage proxy** : indique si la base d'informations l'a signalée comme sortie de proxy ou de VPN.
 - **Score de risque** : de 0 à 100 ; plus il est élevé, plus cette adresse ou sa plage réseau compte de signalements d'abus. En dessous de 33, il est considéré comme faible ; au-dessus de 66, comme élevé.
-- S'y ajoutent l'opérateur (ASN), la localisation, la présence d'une sortie IPv6 et le passage éventuel par Cloudflare WARP.
+- S'y ajoutent l'opérateur (ASN), la localisation et le passage éventuel par Cloudflare WARP.
+- IPv4 et IPv6 sont vérifiés et affichés séparément : sur un hôte doté d'IPv6, de nombreux sites passent en priorité par IPv6, et les deux sorties peuvent différer par leur appartenance et leur réputation.
 
 Ces informations sont obtenues par l'hôte lui-même, qui interroge une base publique d'informations IP (proxycheck.io) sur sa propre adresse de sortie ; elles ne sont données qu'à titre indicatif : les conclusions peuvent varier d'une base à l'autre, et le contrôle des risques des sites ne repose pas uniquement sur elles. Si rien n'est trouvé, « Introuvable » s'affiche, sans incidence sur les autres vérifications.
+
+### Qu'est-ce que « Collaboration Agent » ? Les assistants risquent-ils de modifier mes hôtes n'importe comment ?
+
+La page « Collaboration Agent » permet de confier la même tâche (par exemple « vérifier la configuration de nginx et les journaux d'erreurs récents ») à Claude Code, Codex CLI ou Gemini CLI sur plusieurs hôtes ; l'assistant de chaque hôte ne travaille que sur son propre hôte. Une fois l'exécution terminée, vous pouvez comparer côte à côte les conclusions de chaque hôte, puis cliquer sur « Synthèse » pour que l'assistant de l'un des hôtes les compare et les résume.
+
+- Confier une tâche et en faire la synthèse sont deux requêtes : vous voyez d'abord la commande qui sera exécutée sur chaque hôte et son niveau de risque, rien ne s'exécute avant l'approbation, et l'audit enregistre tout comme d'habitude.
+- Lecture seule par défaut : l'assistant peut consulter mais ne rien modifier, et toute demande d'exécuter une commande est refusée. Cocher « Autoriser la modification des fichiers du répertoire de travail » n'autorise que les modifications dans le répertoire de travail (acceptEdits pour Claude Code, le bac à sable workspace-write pour Codex, auto_edit pour Gemini CLI).
+- La page ne propose aucun interrupteur pour contourner les demandes d'autorisation ou le bac à sable ; ce type de commande saisi à la main (par exemple `--dangerously-skip-permissions` ou `--yolo`) est classé à haut risque (L2).
+- L'assistant doit d'abord être installé et configuré (clé d'API ou connexion par abonnement) depuis le catalogue d'applications. Les hôtes où il manque sont signalés.
+
+La carte de collaboration, en haut de la page, montre en direct ce que la tour envoie à chaque hôte (les couleurs distinguent les tâches Agent, la distribution de fichiers, l'installation d'applications et les autres commandes), quel assistant est en train de réfléchir et par quelle instance LiteLLM / New API chaque assistant appelle les modèles. Lorsque l'option système « Réduire les animations » est activée, les animations de la carte s'arrêtent.
 
 ### Comment mesurer le nombre de tokens consommés par chaque outil IA ?
 

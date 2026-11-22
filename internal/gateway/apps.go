@@ -62,8 +62,17 @@ type installedView struct {
 	Guide *apps.GuideView `json:"guide,omitempty"`
 }
 
-// installedOn 在几台主机上并行查询已安装的实例。
+// installedOn 在几台主机上并行查询已安装的实例，并查各实例有没有更新（要访问 npm 和镜像仓库）。
 func (s *Server) installedOn(ctx context.Context, a kernel.Actor, hosts []string) []hostApps {
+	return s.installedOnOpts(ctx, a, hosts, true)
+}
+
+// installedRecords 只读主机上的记录，不查更新：启停、改设置、读初始账号只需要知道装了什么。
+func (s *Server) installedRecords(ctx context.Context, a kernel.Actor, hosts []string) []hostApps {
+	return s.installedOnOpts(ctx, a, hosts, false)
+}
+
+func (s *Server) installedOnOpts(ctx context.Context, a kernel.Actor, hosts []string, checkUpdates bool) []hostApps {
 	out := make([]hostApps, len(hosts))
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 8)
@@ -86,6 +95,10 @@ func (s *Server) installedOn(ctx context.Context, a kernel.Actor, hosts []string
 					v.Known = true
 					// 主机上记的参数不合法时渲染不出来：不显示指南，别的照常。
 					v.Guide, _ = app.GuideFor(x.Record)
+					if !checkUpdates {
+						out[i].Installed = append(out[i].Installed, v)
+						continue
+					}
 					if t := s.appRegistry.Target(ctx, app); apps.Compare(t, x.Version) > 0 {
 						if app.UpgradeBlocked(x.Version) {
 							v.Blocked = t
@@ -140,7 +153,7 @@ func (s *Server) appReveal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a := actor(sessionOf(r))
-	ha := s.installedOn(r.Context(), a, []string{host})[0]
+	ha := s.installedRecords(r.Context(), a, []string{host})[0]
 	if ha.Error != "" {
 		writeErr(w, 400, ha.Error)
 		return
@@ -392,7 +405,7 @@ func (s *Server) planAppAction(ctx context.Context, a kernel.Actor, action, vers
 	}
 	var plan []plannedTarget
 	names := map[string]bool{}
-	for _, ha := range s.installedOn(ctx, a, hosts) {
+	for _, ha := range s.installedRecords(ctx, a, hosts) {
 		if ha.Error != "" {
 			return nil, errors.New(ha.Host + "：" + ha.Error)
 		}
@@ -521,7 +534,7 @@ func (s *Server) appConfigure(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "实例名不合法")
 		return
 	}
-	ha := s.installedOn(r.Context(), actor(sessionOf(r)), []string{in.Host})[0]
+	ha := s.installedRecords(r.Context(), actor(sessionOf(r)), []string{in.Host})[0]
 	if ha.Error != "" {
 		writeErr(w, 400, ha.Host+"："+ha.Error)
 		return

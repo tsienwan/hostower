@@ -482,6 +482,12 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	info := uploadInfo{ID: id, Name: name, Size: n, SHA256: hex.EncodeToString(h.Sum(nil))}
 	meta, _ := json.Marshal(info)
 	os.WriteFile(p+".json", meta, 0o600)
-	s.audit(r, audit.Entry{Type: "upload.stored", Message: "暂存上传的文件 " + name, Detail: map[string]any{"size": n, "sha256": info.SHA256}})
+	if err := s.auditErr(r, audit.Entry{Type: "upload.stored", Message: "暂存上传的文件 " + name, Detail: map[string]any{"size": n, "sha256": info.SHA256}}); err != nil {
+		// 写不进审计就不留这个文件：审计失败时操作必须中止。
+		os.Remove(p)
+		os.Remove(p + ".json")
+		writeErr(w, 500, "写审计失败，没有暂存")
+		return
+	}
 	writeJSON(w, 200, info)
 }

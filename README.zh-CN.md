@@ -32,7 +32,8 @@
 | 主机 | 通过 SSH 管理，主机上零安装；内置本机主机（直接运行二进制或宿主机版镜像时）；页面上新增、编辑、删除主机，断开重连 |
 | 监控 | 每台主机一条 SSH 长连接、5 秒一轮的流式采样：CPU、内存、负载、磁盘读写、网络、分区占用、温度、每个容器的占用；历史落盘，保留时长可调；可选的增强采集程序提供进程排行 |
 | 操作 | 执行命令与流式输出；批量、滚动、预演、遇错停止；参数化 Snippet；交互终端（按高危审批、整段录制）；文件浏览、搜索、预览、编辑、上传、下载；把文件分发到多台主机，按文件名规则从多台主机收集文件 |
-| 容器与应用 | 容器和镜像管理、按镜像部署或更新、镜像仓库登录；应用目录（Docker Compose 应用和 npm 命令行工具，含 OpenList、LiteLLM、Open WebUI、Ollama 等），装好后给出访问地址、初始账号和上手步骤；检测每台主机的出口 IP 类型和风险分、能不能用 OpenAI、Claude、Gemini 等模型接口、Google、YouTube、Netflix 等网站能不能打开和在哪个区、装了哪些 AI 命令行工具；没有 Docker 时可以从页面上发起安装 |
+| 容器与应用 | 容器和镜像管理、按镜像部署或更新、镜像仓库登录；应用目录（Docker Compose 应用和 npm 命令行工具，含 OpenList、LiteLLM、Open WebUI、Ollama 等），装好后给出访问地址、初始账号和上手步骤；检测每台主机的出口 IP（IPv4 和 IPv6 分开）类型和风险分、AI 服务把它当成哪个区和风控信号、能不能用 OpenAI、Claude、Gemini 等模型接口、Google、YouTube、Netflix 等网站能不能打开和在哪个区、装了哪些 AI 命令行工具；没有 Docker 时可以从页面上发起安装 |
+| Agent 协作 | 把同一个任务派给多台主机上的 Claude Code、Codex CLI、Gemini CLI，并排比较结果，再让其中一个汇总；协作图实时显示下发的操作、正在思考的助手和经由网关的模型调用 |
 | 凭据 | SSH 凭据、镜像仓库、应用密钥集中保存，信封加密；任何地方都只出现 `ref:<名称>` |
 | 审计 | 哈希链、数据库触发器防改、JSONL 文件副本、离线校验；可选的归档后清理 |
 | 身份 | Passkey、密码（可加动态码）、OIDC 单点登录；L2 批准时当场重新验证 |
@@ -52,8 +53,10 @@
 | ![执行：先看判级预览再提交](docs/images/screenshots/zh-CN/run.png) | ![审批：批准绑定实际命令](docs/images/screenshots/zh-CN/request.png) |
 | **容器：带占用和更新提示** | **应用目录** |
 | ![容器：带占用和更新提示](docs/images/screenshots/zh-CN/containers.png) | ![应用目录](docs/images/screenshots/zh-CN/apps.png) |
-| **审计：哈希链可校验** |  |
-| ![审计：哈希链可校验](docs/images/screenshots/zh-CN/audit.png) |  |
+| **审计：哈希链可校验** | **Agent 协作：协作图实时显示谁在干活** |
+| ![审计：哈希链可校验](docs/images/screenshots/zh-CN/audit.png) | ![Agent 协作：协作图实时显示谁在干活](docs/images/screenshots/zh-CN/agents.png) |
+| **环境检测：出口 IP、AI 服务的地区与风控** | **文件同步：分发到多台主机、从多台主机收集** |
+| ![环境检测：出口 IP、AI 服务的地区与风控](docs/images/screenshots/zh-CN/env.png) | ![文件同步：分发到多台主机、从多台主机收集](docs/images/screenshots/zh-CN/sync.png) |
 
 ## 快速开始
 

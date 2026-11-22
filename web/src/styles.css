@@ -904,6 +904,89 @@ h1, h2, h3, .brand-name, .stat-value, .metric-val { letter-spacing: -0.022em; }
   .nav-item.active svg { color: var(--primary); }
 }
 
+/* Agent 协作：协作图。线、包裹、小助手和网关都用状态色，动效在“减少动态效果”时全部停下。 */
+.crew-wrap { display: flex; flex-direction: column; gap: 10px; }
+.crew-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.crew-map { width: 100%; min-width: 680px; height: auto; display: block; overflow: visible; }
+.crew-edge { fill: none; stroke: color-mix(in srgb, var(--text) 14%, transparent); stroke-width: 1.5; }
+.crew-edge.active { stroke: color-mix(in srgb, var(--primary) 55%, transparent); stroke-width: 2; stroke-dasharray: 6 6; animation: crew-dash 0.9s linear infinite; }
+.crew-edge.off { stroke-dasharray: 2 6; opacity: 0.5; }
+@keyframes crew-dash { to { stroke-dashoffset: -12; } }
+.crew-link path { fill: none; stroke: color-mix(in srgb, #A855F7 55%, transparent); stroke-width: 1.6; stroke-dasharray: 3 5; animation: crew-dash 1.4s linear infinite; }
+.crew-token { fill: #A855F7; stroke: color-mix(in srgb, #A855F7 35%, transparent); stroke-width: 3; }
+.crew-link-label { font-size: 11px; fill: var(--text-3); text-anchor: middle; font-family: var(--mono, monospace); }
+.crew-packet rect { stroke: none; }
+.crew-packet.agent rect { fill: #A855F7; }
+.crew-packet.file rect { fill: var(--ok); }
+.crew-packet.app rect { fill: var(--warn); }
+.crew-packet.cmd rect { fill: var(--primary); }
+.crew-tower-core { fill: var(--raised); stroke: var(--border); stroke-width: 1.5; }
+.crew-tower.busy .crew-tower-core { stroke: var(--primary); }
+.crew-tower-ring { fill: none; stroke: var(--primary); stroke-width: 2; stroke-dasharray: 10 14; transform-box: fill-box; transform-origin: center; animation: crew-spin 6s linear infinite; }
+@keyframes crew-spin { to { transform: rotate(360deg); } }
+.crew-tower-label { font-size: 12px; fill: var(--text-2); text-anchor: middle; font-weight: 600; }
+.crew-host-box { fill: var(--raised); stroke: var(--border); stroke-width: 1.2; transition: stroke 0.3s; }
+.crew-host.active .crew-host-box { stroke: var(--primary); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--primary) 45%, transparent)); }
+.crew-host.waiting .crew-host-box { stroke: var(--warn); stroke-dasharray: 5 4; }
+.crew-host.off { opacity: 0.55; }
+.crew-host-name { font-size: 12.5px; fill: var(--text); font-weight: 600; font-family: var(--mono, monospace); }
+.crew-dot { fill: var(--ok); }
+.crew-dot.off { fill: var(--text-3); }
+.crew-off-label { font-size: 10.5px; fill: var(--text-3); }
+.crew-wait circle { fill: var(--warn); animation: crew-pulse 1.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+.crew-wait text { fill: #000; font-size: 12px; font-weight: 700; text-anchor: middle; }
+@keyframes crew-pulse { 50% { transform: scale(1.18); } }
+.crew-pet-body { transform-box: fill-box; transform-origin: center bottom; }
+.crew-pet.thinking .crew-pet-body { animation: crew-bob 0.9s ease-in-out infinite; }
+@keyframes crew-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px) rotate(-4deg); } }
+.crew-eye { fill: #fff; }
+.crew-pet.thinking .crew-eye { animation: crew-blink 2.6s infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes crew-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
+.crew-mouth { fill: none; stroke: #fff; stroke-width: 1.4; stroke-linecap: round; }
+.crew-bubble rect { fill: var(--raised); stroke: var(--border); }
+.crew-bubble circle { fill: var(--text-2); animation: crew-dots 1.2s ease-in-out infinite; }
+.crew-bubble circle:nth-of-type(2) { animation-delay: 0.2s; }
+.crew-bubble circle:nth-of-type(3) { animation-delay: 0.4s; }
+@keyframes crew-dots { 0%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+.crew-gw path { fill: color-mix(in srgb, #A855F7 22%, var(--raised)); stroke: #A855F7; stroke-width: 1.2; }
+.crew-gw.off path { stroke: var(--text-3); fill: var(--raised); }
+.crew-gw text { font-size: 8.5px; font-weight: 700; fill: var(--text); text-anchor: middle; }
+.crew-map.still .crew-edge.active, .crew-map.still .crew-link path, .crew-map.still .crew-tower-ring, .crew-map.still .crew-wait circle,
+.crew-map.still .crew-pet-body, .crew-map.still .crew-eye, .crew-map.still .crew-bubble circle { animation: none !important; }
+.crew-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--text-2); }
+.crew-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.crew-legend i { display: inline-block; flex: none; }
+.lg-packet { width: 10px; height: 10px; border-radius: 3px; }
+.lg-packet.agent { background: #A855F7; } .lg-packet.file { background: var(--ok); } .lg-packet.app { background: var(--warn); } .lg-packet.cmd { background: var(--primary); }
+.lg-token { width: 8px; height: 8px; border-radius: 50%; background: #A855F7; box-shadow: 0 0 4px #A855F7; }
+.lg-wait { width: 16px; height: 16px; border-radius: 50%; background: var(--warn); color: #000; font-size: 11px; font-style: normal; font-weight: 700; text-align: center; line-height: 16px; }
+.lg-pet { width: 14px; height: 14px; border-radius: 50%; background: #D97757; }
+
+/* Agent 协作：派任务和任务卡片 */
+.agent-picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.agent-pick { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-2); font: inherit; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
+.agent-pick.on { border-color: var(--primary); background: var(--accent-soft); color: var(--text); font-weight: 600; }
+.agent-face { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 11.5px; font-weight: 700; flex: none; }
+.agent-face.sm { width: 20px; height: 20px; font-size: 10.5px; }
+.agent-face.xs { width: 14px; height: 14px; font-size: 8.5px; margin-right: 4px; }
+.agent-task { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); display: flex; flex-direction: column; gap: 8px; }
+.agent-task.running { border-color: color-mix(in srgb, #A855F7 45%, var(--border)); }
+.agent-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.agent-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 12px; background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text-2); }
+.agent-chip svg { width: 13px; height: 13px; }
+.agent-chip.ok { color: var(--ok); }
+.agent-chip.failed, .agent-chip.error { color: var(--crit); }
+.agent-chip.running { color: #A855F7; }
+.think-dots { display: inline-flex; gap: 2px; }
+.think-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: crew-dots 1.2s ease-in-out infinite; }
+.think-dots i:nth-child(2) { animation-delay: 0.2s; } .think-dots i:nth-child(3) { animation-delay: 0.4s; }
+.agent-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.agent-col { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.agent-out { max-height: 260px; margin: 0; font-size: 12px; }
+@media (prefers-reduced-motion: reduce) {
+  .crew-edge.active, .crew-link path, .crew-tower-ring, .crew-wait circle, .crew-pet-body, .crew-eye, .crew-bubble circle, .think-dots i { animation: none !important; }
+}
+
 /* 文件同步：拖放区和待分发的文件列表。 */
 .dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 26px 16px; border: 1.5px dashed var(--border); border-radius: var(--r, 12px); text-align: center; cursor: pointer;
   color: var(--text-2); transition: border-color 0.2s, background-color 0.2s, transform 0.2s; }
@@ -1604,6 +1687,16 @@ button.tag:hover { background: color-mix(in srgb, var(--text) 10%, transparent);
 
 /* 各主机的 AI 环境 */
 .env-matrix th, .env-matrix td { white-space: nowrap; }
+.egress-table tbody th { width: 120px; font-weight: 500; color: var(--text-3); text-align: left; }
+.egress-table td { overflow-wrap: anywhere; }
+.risk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; padding: 14px 18px; }
+.risk-item { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 13px; }
+.risk-item > svg { width: 17px; height: 17px; flex: none; margin-top: 2px; color: var(--text-3); }
+.risk-item.ok > svg { color: var(--ok); }
+.risk-item.warn { border-color: color-mix(in srgb, var(--warn) 40%, var(--border)); }
+.risk-item.warn > svg { color: var(--warn); }
+.risk-item b { margin-right: 8px; }
+.risk-item .muted { margin-top: 4px; font-size: 12.5px; line-height: 1.5; }
 .env-matrix .badge .mono { font-size: 11.5px; }
 .env-group td { padding-top: 12px; padding-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--text-3); background: transparent; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

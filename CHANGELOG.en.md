@@ -4,6 +4,24 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.4.0
+
+### Added
+
+- Agent collaboration (a new page in the sidebar):
+  - Dispatch a task: hand the same task to Claude Code, Codex CLI or Gemini CLI on several hosts, each working on its own host. Read-only by default; you can allow edits inside the working directory only. Dispatching is one request and runs only after approval.
+  - Compare results side by side, then "Summarize": the outputs of all hosts are combined and given to the assistant on one host to compare and summarize (also a request).
+  - Collaboration map: a live picture of the tower and the hosts. Operations fly along the lines like small packets (colored by agent task, file distribution, app install and other commands), busy assistants bob with a "…" bubble, flowing links show which LiteLLM / New API gateway an assistant calls models through, and hosts waiting for approval flash a question mark. Animations stop when the system asks for reduced motion.
+  - Assistants and gateways per host: which assistants are installed, which model provider they use, which gateway they go through and how many tasks they ran recently.
+- Risk levels: running an AI coding assistant normally is a change (L1); skipping permission prompts or the sandbox (`--dangerously-skip-permissions`, `--yolo`, `--sandbox danger-full-access` and so on), or arguments that cannot be fully seen, are high risk (L2).
+- Environment check:
+  - Egress IP is now shown in two columns, IPv4 and IPv6, each with its own ownership, type, risk score and proxy flag (before, hosts with IPv6 only showed the IPv6 egress).
+  - New "AI services: region and anti-abuse": which region ChatGPT, Claude and Google put the host in and whether it is within their usual service regions; whether the ChatGPT website demands a CAPTCHA, whether Google search treats the host as unusual traffic, and whether the IP location matches the region the AI services see. The Apps → Environment table gains a column for these signals.
+
+### Improved
+
+- README screenshots now show the current interface.
+
 ## v0.3.0
 
 ### Added

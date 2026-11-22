@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import {
-  Activity, Box, Ellipsis, FolderSync, Gauge, LayoutDashboard, KeyRound, CircleAlert, CircleCheck, FileCode2, LayoutGrid, LogOut, OctagonPause, ScrollText,
+  Activity, Bot, Box, Ellipsis, FolderSync, Gauge, LayoutDashboard, KeyRound, CircleAlert, CircleCheck, FileCode2, LayoutGrid, LogOut, OctagonPause, ScrollText,
   Settings as SettingsIcon, ShieldCheck, SquareTerminal, TriangleAlert,
 } from "lucide-react";
 import { api } from "./api";
@@ -21,6 +21,7 @@ import { Credentials } from "./pages/Credentials";
 import { SpeedtestPage } from "./pages/Speedtest";
 import { AppsPage } from "./pages/Apps";
 import { FileSyncPage } from "./pages/FileSync";
+import { AgentsPage } from "./pages/Agents";
 // 终端页带着一个不小的终端渲染库，按需加载。
 const TerminalPage = lazy(() => import("./pages/Terminal").then((m) => ({ default: m.TerminalPage })));
 import { stamp, uptime } from "./ui";
@@ -67,12 +68,19 @@ const nav = [
   { to: "/activity", label: "活动", icon: Activity },
   { to: "/containers", label: "容器", icon: Box },
   { to: "/apps", label: "应用", icon: LayoutDashboard, main: true },
+  { to: "/agents", label: "Agent 协作", icon: Bot },
   { to: "/sync", label: "文件同步", icon: FolderSync },
   { to: "/speedtest", label: "测速", icon: Gauge },
   { to: "/snippets", label: "Snippet", icon: FileCode2 },
   { to: "/credentials", label: "凭据", icon: KeyRound },
   { to: "/audit", label: "审计", icon: ScrollText },
 ];
+
+/** 请求详情按编号重新挂载：从一个请求直接跳到另一个时，上一个的输出和文件内容不会串过来。 */
+function RequestRoute() {
+  const { id } = useParams();
+  return <RequestDetail key={id} />;
+}
 
 function Shell() {
   const t = useT();
@@ -86,6 +94,12 @@ function Shell() {
   // 手机上的“更多”：底栏放不下的页面。换页面就收起来。
   const [more, setMore] = useState(false);
   useEffect(() => { setMore(false); }, [loc.pathname]);
+  useEffect(() => {
+    if (!more) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMore(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [more]);
   const secondary = [...nav.filter((n) => !n.main), { to: "/settings", label: "设置", icon: SettingsIcon }];
   const inMore = secondary.some((n) => loc.pathname.startsWith(n.to));
   const logout = async () => {
@@ -142,7 +156,7 @@ function Shell() {
         <div className="more-overlay" onClick={() => setMore(false)}>
           <div className="more-sheet" role="menu" aria-label={t("更多")} onClick={(e) => e.stopPropagation()}>
             {secondary.map((n) => (
-              <NavLink key={n.to} to={n.to} role="menuitem" className={({ isActive }) => "more-item" + (isActive ? " active" : "")}>
+              <NavLink key={n.to} to={n.to} role="menuitem" onClick={() => setMore(false)} className={({ isActive }) => "more-item" + (isActive ? " active" : "")}>
                 <n.icon /><span>{t(n.label)}</span>
               </NavLink>
             ))}
@@ -190,9 +204,10 @@ function Shell() {
           <Route path="/run" element={<Run />} />
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/activity" element={<ActivityPage />} />
-          <Route path="/requests/:id" element={<RequestDetail />} />
+          <Route path="/requests/:id" element={<RequestRoute />} />
           <Route path="/containers" element={<Containers />} />
           <Route path="/apps" element={<AppsPage />} />
+          <Route path="/agents" element={<AgentsPage />} />
           <Route path="/sync" element={<FileSyncPage />} />
           <Route path="/speedtest" element={<SpeedtestPage />} />
           <Route path="/credentials" element={<Credentials />} />

@@ -199,6 +199,7 @@ Lässt sich die Adresse nicht öffnen, prüfen Sie zuerst, ob die Listen-Adresse
 
 **Umgebung** auf der Host-Seite und **Apps → Umgebung** senden von diesem Host aus eine Reihe rein lesender Anfragen und werten aus, wie die einzelnen Dienste antworten:
 
+- **Region und Risikoprüfung der KI-Dienste**: welcher Region ChatGPT, Claude und Google (anhand der von YouTube erkannten Region) diesen Host zuordnen und ob diese Region zum üblichen Versorgungsgebiet gehört; ob die ChatGPT-Website eine Mensch-Prüfung verlangt und ob die Google-Suche die Adresse als ungewöhnlichen Traffic einstuft; ob der Standort laut IP-Datenbank mit der von den KI-Diensten erkannten Region übereinstimmt (bei einer Abweichung wird der Host oft so behandelt, als stünde er in einer nicht unterstützten Region).
 - **Modell-APIs** (OpenAI, Anthropic, Google Gemini, xAI, DeepSeek): Die Anfrage wird ohne Schlüssel gesendet. Lautet die Antwort „Schlüssel fehlt“, ist die API **Verfügbar**; mit einem Schlüssel sind Aufrufe möglich. Wird die Anfrage wegen des Landes oder der Region des Ausgangs abgelehnt, ist sie **Eingeschränkt**; nehmen Sie einen Host in einer anderen Region oder leiten Sie über ein Gateway wie LiteLLM oder New API weiter.
 - **Websites und Streaming** (Google, YouTube, Netflix, Disney+, TikTok, Facebook, X, die Web-Version von ChatGPT usw.): **Verfügbar**, wenn sich die Seite normal öffnen lässt; **Eingeschränkt**, wenn die Anfrage abgelehnt oder auf eine Seite „in Ihrer Region nicht verfügbar“ umgeleitet wird. Bei YouTube und Netflix wird außerdem angezeigt, in welcher Region Sie landen; Netflix wird anhand eines Titels beurteilt, der keine Eigenproduktion ist, und „Nur Originals abrufbar“ bedeutet, dass der Katalog dieser Region für diese Adresse nicht freigegeben ist.
 - **Nicht erreichbar**: Innerhalb von 8 Sekunden kam keine Verbindung zustande; möglicherweise blockiert das Netzwerk sie, oder auf dem Host fehlt `curl`.
@@ -213,9 +214,21 @@ Websites sehen die Ausgangsadresse des Hosts. Von ihrem Typ und davon, ob sie ne
 - **Typ**: Rechenzentrum, Privatanschluss, Geschäftsanschluss, Mobilfunknetz usw. Ein VPS hat in der Regel eine Rechenzentrumsadresse; Streaming-Dienste zeigen dort oft nur Eigenproduktionen, und Abo-Anmeldungen bei KI-Diensten lösen leichter die Risikokontrolle aus.
 - **Proxy-Markierung**: ob die Datenbank die Adresse als Proxy- oder VPN-Ausgang markiert hat.
 - **Risikowert**: 0 bis 100; je höher, desto mehr Missbrauch ist für diese Adresse oder ihren Netzbereich verzeichnet. Unter 33 gilt als niedrig, über 66 als hoch.
-- Außerdem werden der Betreiber (ASN), der Standort, ein etwaiger IPv6-Ausgang und die Nutzung von Cloudflare WARP angezeigt.
+- Außerdem werden der Betreiber (ASN), der Standort und die Nutzung von Cloudflare WARP angezeigt.
+- IPv4 und IPv6 werden getrennt geprüft und getrennt angezeigt: Auf Hosts mit IPv6 bevorzugen viele Websites IPv6, und die beiden Ausgänge können sich in Zugehörigkeit und Reputation unterscheiden.
 
 Diese Angaben ermittelt der Host selbst, indem er seine eigene Ausgangsadresse bei einer öffentlichen IP-Datenbank (proxycheck.io) abfragt. Sie dienen nur zur Orientierung: Verschiedene Datenbanken können zu unterschiedlichen Ergebnissen kommen, und die Risikokontrolle der Websites richtet sich nicht allein danach. Lässt sich nichts ermitteln, wird „Nicht gefunden“ angezeigt; die übrigen Prüfungen sind davon nicht betroffen.
+
+### Was ist „Agent-Kollaboration“? Können die Assistenten meine Hosts unkontrolliert verändern?
+
+Auf der Seite „Agent-Kollaboration“ können Sie dieselbe Aufgabe (zum Beispiel „nginx-Konfiguration und die letzten Fehlerlogs prüfen“) an Claude Code, Codex CLI oder Gemini CLI auf mehreren Hosts vergeben; der Assistent auf jedem Host arbeitet nur auf seinem eigenen Host. Danach können Sie die Ergebnisse der Hosts nebeneinander ansehen und mit „Zusammenfassen“ den Assistenten auf einem der Hosts vergleichen und zusammenfassen lassen.
+
+- Aufgabe vergeben und Zusammenfassen sind beides Anfragen: Sie sehen zuerst den Befehl, der auf jedem Host laufen wird, und seine Risikostufe; ausgeführt wird erst nach der Genehmigung, und das Audit zeichnet wie gewohnt auf.
+- Standardmäßig nur lesend: Der Assistent kann nur schauen, nichts ändern, und Aufforderungen, Befehle auszuführen, werden abgelehnt. Auch mit „Änderungen an Dateien im Arbeitsverzeichnis erlauben“ werden nur Änderungen innerhalb des Arbeitsverzeichnisses freigegeben (acceptEdits bei Claude Code, die Sandbox workspace-write bei Codex, auto_edit bei Gemini CLI).
+- Die Seite bietet keinen Schalter, um Berechtigungsabfragen oder die Sandbox zu überspringen; solche Befehle, von Hand eingegeben (zum Beispiel `--dangerously-skip-permissions` oder `--yolo`), werden als Hochrisiko (L2) eingestuft.
+- Der Assistent muss vorher im App-Katalog installiert und eingerichtet sein (API-Schlüssel oder Abo-Anmeldung). Hosts, auf denen er fehlt, werden angezeigt.
+
+Die Kollaborationskarte oben auf der Seite zeigt live, was der Tower an welchen Host sendet (Farben unterscheiden Agent-Aufgaben, Dateiverteilung, App-Installation und andere Befehle), welcher Assistent gerade nachdenkt und über welche LiteLLM- bzw. New-API-Instanz die Assistenten Modelle aufrufen. Ist in den Systemeinstellungen „Bewegung reduzieren“ aktiviert, halten die Animationen der Karte an.
 
 ### Wie erfasse ich, wie viele Tokens die einzelnen KI-Tools verbrauchen?
 

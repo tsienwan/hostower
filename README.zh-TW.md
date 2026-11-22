@@ -32,7 +32,8 @@
 | 主機 | 透過 SSH 管理，主機上零安裝；內建本機主機（直接執行二進位檔或宿主機版映像檔時）；在頁面上新增、編輯、刪除主機，中斷後重新連線 |
 | 監控 | 每台主機一條 SSH 長連線、每 5 秒一輪的串流取樣：CPU、記憶體、負載、磁碟讀寫、網路、分割區使用量、溫度、每個容器的資源使用量；歷史資料寫入磁碟，保留時長可調；可選的增強採集程式提供處理程序排行 |
 | 操作 | 執行命令並串流輸出；批次、輪流、預演、遇錯停止；參數化 Snippet；互動終端機（按高風險核准、全程錄製）；檔案瀏覽、搜尋、預覽、編輯、上傳、下載；把檔案分發到多台主機，按檔名規則從多台主機收集檔案 |
-| 容器與應用 | 容器和映像檔管理、按映像檔部署或更新、映像檔倉庫登入；應用目錄（Docker Compose 應用和 npm 命令列工具，含 OpenList、LiteLLM、Open WebUI、Ollama 等），安裝好後給出存取位址、初始帳號和上手步驟；偵測每台主機的出口 IP 類型和風險分數、能不能用 OpenAI、Claude、Gemini 等模型介面、Google、YouTube、Netflix 等網站能不能開啟和在哪個區、安裝了哪些 AI 命令列工具；沒有 Docker 時可以從頁面上發起安裝 |
+| 容器與應用 | 容器和映像檔管理、按映像檔部署或更新、映像檔倉庫登入；應用目錄（Docker Compose 應用和 npm 命令列工具，含 OpenList、LiteLLM、Open WebUI、Ollama 等），安裝好後給出存取位址、初始帳號和上手步驟；偵測每台主機的出口 IP（IPv4 和 IPv6 分開）類型和風險分數、AI 服務把它當成哪個區和風險控管訊號、能不能用 OpenAI、Claude、Gemini 等模型介面、Google、YouTube、Netflix 等網站能不能開啟和在哪個區、安裝了哪些 AI 命令列工具；沒有 Docker 時可以從頁面上發起安裝 |
+| Agent 協作 | 把同一個任務派給多台主機上的 Claude Code、Codex CLI、Gemini CLI，並排比較結果，再讓其中一個彙整；協作圖即時顯示下發的操作、正在思考的助手和經由閘道的模型呼叫 |
 | 憑據 | SSH 憑據、映像檔倉庫、應用密鑰集中保存，以信封加密；任何地方都只出現 `ref:<名稱>` |
 | 稽核 | 雜湊鏈、資料庫觸發器防竄改、JSONL 檔案副本、離線驗證；可選的封存後清理 |
 | 身分 | Passkey、密碼（可加動態驗證碼）、OIDC 單一登入；L2 核准時當場重新驗證 |
@@ -52,8 +53,10 @@
 | ![執行：先看等級判定預覽再提交](docs/images/screenshots/en/run.png) | ![核准：核准綁定實際指令](docs/images/screenshots/en/request.png) |
 | **容器：附資源占用與更新提示** | **應用程式目錄** |
 | ![容器：附資源占用與更新提示](docs/images/screenshots/en/containers.png) | ![應用程式目錄](docs/images/screenshots/en/apps.png) |
-| **稽核：雜湊鏈可校驗** |  |
-| ![稽核：雜湊鏈可校驗](docs/images/screenshots/en/audit.png) |  |
+| **稽核：雜湊鏈可校驗** | **Agent 協作：協作圖即時顯示誰在做事** |
+| ![稽核：雜湊鏈可校驗](docs/images/screenshots/en/audit.png) | ![Agent 協作：協作圖即時顯示誰在做事](docs/images/screenshots/en/agents.png) |
+| **環境偵測：出口 IP、AI 服務的地區與風險控管** | **檔案同步：分發到多台主機、從多台主機收集** |
+| ![環境偵測：出口 IP、AI 服務的地區與風險控管](docs/images/screenshots/en/env.png) | ![檔案同步：分發到多台主機、從多台主機收集](docs/images/screenshots/en/sync.png) |
 
 ## 快速開始
 

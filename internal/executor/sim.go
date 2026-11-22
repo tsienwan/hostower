@@ -229,7 +229,7 @@ func (s *Sim) Exec(ctx context.Context, h inventory.Host, command string, out io
 			select {
 			case <-ctx.Done():
 				return -1, ctx.Err()
-			case <-time.After(time.Duration(40+len(line)%120) * time.Millisecond):
+			case <-time.After(simLineDelay(command, line)):
 			}
 		}
 		io.WriteString(out, line+"\n")
@@ -281,7 +281,7 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 			out = append(out, "/home/deploy/.claude/.credentials.json")
 		}
 		return append(out, "== end"), 0
-	case strings.HasPrefix(cmd, `echo "egress $(curl -s -m 8 `):
+	case strings.HasPrefix(cmd, `echo "egress4 $(curl -4 -s -m 8 `):
 		// 网络检测（hostenv.NetCommand）：每台模拟主机的出口、IP 类型和能打开的网站不一样。
 		locs := [][3]string{{"SG", "SIN", "Singapore"}, {"US", "LAX", "United States"}, {"JP", "NRT", "Japan"}, {"HK", "HKG", "Hong Kong"}, {"DE", "FRA", "Germany"}}
 		l := locs[int(sh.seed*811)%len(locs)]
@@ -291,9 +291,25 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 			kind, risk = "Residential", 0
 		}
 		out := []string{
-			"egress ip=" + h.Addr + " loc=" + l[0] + " colo=" + l[1] + " warp=off ",
-			"egress6 ",
-			fmt.Sprintf(`ipinfo {"status":"ok","%s":{"asn":"AS64500","provider":"Example Cloud Ltd","country":"%s","city":"%s","proxy":"no","type":"%s","risk":%d}}`, h.Addr, l[2], l[2], kind, risk),
+			"egress4 ip=" + h.Addr + " loc=" + l[0] + " colo=" + l[1] + " warp=off ",
+			fmt.Sprintf(`ipinfo4 {"status":"ok","%s":{"asn":"AS64500","provider":"Example Cloud Ltd","country":"%s","city":"%s","proxy":"no","type":"%s","risk":%d}}`, h.Addr, l[2], l[2], kind, risk),
+		}
+		// 一半的模拟主机有 IPv6 出口（文档保留网段 2001:db8::/32）。
+		if sh.seed > 0.5 {
+			v6 := fmt.Sprintf("2001:db8:%x::1", int(sh.seed*4000))
+			out = append(out, "egress6 ip="+v6+" loc="+l[0]+" colo="+l[1]+" warp=off ",
+				fmt.Sprintf(`ipinfo6 {"status":"ok","%s":{"asn":"AS64500","provider":"Example Cloud Ltd","country":"%s","city":"%s","proxy":"no","type":"Hosting","risk":%d}}`, v6, l[2], l[2], risk/2))
+		}
+		// AI 服务看到的区：日本的那几台被 ChatGPT 当成香港（“送中”），机房地址风险分高的被要求人机验证。
+		seen := l[0]
+		if l[0] == "JP" {
+			seen = "HK"
+		}
+		out = append(out, "seen chatgpt loc="+seen, "seen claude loc="+l[0])
+		if kind == "Hosting" && risk > 40 {
+			out = append(out, "risk chatgpt HTTP/2 403 cf-mitigated: challenge ", "risk google |429|")
+		} else {
+			out = append(out, "risk chatgpt HTTP/2 200 ", "risk google |200|")
 		}
 		for _, id := range []string{"openai", "anthropic", "gemini", "xai", "deepseek"} {
 			switch {
@@ -345,6 +361,30 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 		}
 		sort.Strings(out)
 		return out, 0
+	case strings.Contains(cmd, `PATH="$HOME/.local/bin:$PATH" `) && (strings.Contains(cmd, " claude -p ") || strings.Contains(cmd, " codex exec ") || strings.Contains(cmd, " gemini -p ")):
+		// Agent 任务（gateway 的 agentTask / agentSummary）：模拟助手一边思考一边输出，每台主机的结论不太一样。
+		if strings.Contains(cmd, "cd ") && sh.seed > 0.9 {
+			return []string{"bash: line 1: claude: command not found"}, 127
+		}
+		if !strings.HasPrefix(cmd, "cd ") {
+			// 汇总（没有工作目录，材料从标准输入来）。
+			return []string{
+				"我读了各台主机的结果，按主机对比如下。",
+				"一致的地方：nginx 配置语法都正确，最近的系统日志里都没有新的错误。",
+				"不一致的地方：有的主机负载偏高或磁盘快满了，见各台的结论。",
+				"需要人注意：磁盘用到 85% 以上的主机，先清理日志或扩容。",
+				"建议：先在一台主机上处理，确认没问题再推到其他主机。",
+			}, 0
+		}
+		load := []string{"负载正常", "负载偏高，主要是 node 进程", "磁盘 /var 用了 87%，需要清理"}[int(sh.seed*977)%3]
+		return []string{
+			"我先看一下这台主机的情况。",
+			"• 读取 /etc/os-release、uptime 和 df -h 的结果……",
+			"• 检查 nginx 配置：语法正确，2 个站点。",
+			"• 检查最近 200 行系统日志：没有新的错误。",
+			"结论（" + h.Name + "）：" + load + "。",
+			"建议：保持现状；如果要调整，先在一台主机上试。",
+		}, 0
 	case cmd == "command -v curl":
 		if sh.hasCurl() {
 			return []string{"/usr/bin/curl"}, 0
@@ -709,4 +749,15 @@ func (s *Sim) ListDir(ctx context.Context, h inventory.Host, dir string) ([]File
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
+}
+
+// SimAgentDelay 是模拟的 AI 编程助手每输出一行前“想”多久；测试里设成 0。
+var SimAgentDelay = 1100 * time.Millisecond
+
+// simLineDelay 是模拟输出两行之间的停顿。AI 编程助手“想”得慢一些（每行一秒多），页面上才看得到它在思考。
+func simLineDelay(command, line string) time.Duration {
+	if SimAgentDelay > 0 && (strings.Contains(command, " claude -p ") || strings.Contains(command, " codex exec ") || strings.Contains(command, " gemini -p ")) {
+		return SimAgentDelay + time.Duration(len(line)%700)*time.Millisecond
+	}
+	return time.Duration(40+len(line)%120) * time.Millisecond
 }

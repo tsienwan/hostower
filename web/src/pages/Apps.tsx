@@ -403,7 +403,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
   const load = useCallback(() => {
     if (!names) return;
     setLoading(true);
-    api.appsInstalled(names.split(",")).then((r) => setData(remember("apps:installed", r.hosts))).catch(fail).finally(() => setLoading(false));
+    api.appsInstalledAll(names.split(",")).then((r) => setData(remember("apps:installed", r))).catch(fail).finally(() => setLoading(false));
   }, [names]);
   useEffect(() => { load(); }, [load]);
 
@@ -575,9 +575,10 @@ function AutoUpdateCard({ onChecked }: { onChecked: () => void }) {
     }).catch(() => {}), 2000);
     return () => clearInterval(id);
   }, [waitSince, onChecked]);
+  // 返回是否成功：失败时不要开始“正在检查”的轮询。
   const act = async (f: () => Promise<AppAutoStatus>) => {
     setBusy(true);
-    try { setSt(await f()); } catch (e) { fail(e); } finally { setBusy(false); }
+    try { setSt(await f()); return true; } catch (e) { fail(e); return false; } finally { setBusy(false); }
   };
   if (!st) return null;
   return (
@@ -595,9 +596,9 @@ function AutoUpdateCard({ onChecked }: { onChecked: () => void }) {
             )}
           </div>
           <div className="row" style={{ gap: 8 }}>
-            {st.enabled && owner && <button className="btn sm" disabled={busy || st.running || waitSince !== null} onClick={() => { const since = st.lastRun ?? 0; act(api.checkAppAuto).then(() => setWaitSince(since)); }}><RefreshCw className={st.running || waitSince !== null ? "spin" : ""} />{t("立即检查")}</button>}
+            {st.enabled && owner && <button className="btn sm" disabled={busy || st.running || waitSince !== null} onClick={() => { const since = st.lastRun ?? 0; act(api.checkAppAuto).then((ok) => ok && setWaitSince(since)); }}><RefreshCw className={st.running || waitSince !== null ? "spin" : ""} />{t("立即检查")}</button>}
             <button role="switch" aria-checked={st.enabled} aria-label={t("自动发起更新")} className={"switch" + (st.enabled ? " on" : "")}
-              disabled={!owner || busy} title={owner ? undefined : t("只有所有者能修改")} onClick={() => { const on = !st.enabled, since = st.lastRun ?? 0; act(() => api.setAppAuto(on)).then(() => on && setWaitSince(since)); }}><span /></button>
+              disabled={!owner || busy} title={owner ? undefined : t("只有所有者能修改")} onClick={() => { const on = !st.enabled, since = st.lastRun ?? 0; act(() => api.setAppAuto(on)).then((ok) => ok && on && setWaitSince(since)); }}><span /></button>
           </div>
         </div>
       </div>

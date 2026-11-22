@@ -210,6 +210,8 @@ func (s *Server) Handler() http.Handler {
 	priv("GET /api/v1/files/search", s.fileSearch)
 	priv("POST /api/v1/files/upload", s.fileUpload)
 	priv("POST /api/v1/files/distribute", s.fileDistribute)
+	priv("POST /api/v1/agents/task", s.agentTask)
+	priv("POST /api/v1/agents/summary", s.agentSummary)
 	priv("GET /api/v1/files/collect", s.fileCollect)
 	priv("GET /api/v1/files/collect/download", s.fileCollectDownload)
 	priv("GET /api/v1/audit", s.auditList)
@@ -378,6 +380,25 @@ func (s *Server) setSession(w http.ResponseWriter, token string) {
 
 func (s *Server) clearSession(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", HttpOnly: true, Secure: s.secure, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+}
+
+// auditErr 和 audit 一样，但把写入失败交给调用方：要求“写不进审计就中止”的操作用它。
+func (s *Server) auditErr(r *http.Request, e audit.Entry) error {
+	if e.Entry == "" {
+		e.Entry = "web"
+	}
+	if sess := sessionOf(r); sess != nil && e.Actor == "" {
+		e.Actor = sess.User.Name
+	}
+	if e.Detail == nil {
+		e.Detail = map[string]any{}
+	}
+	e.Detail["ip"] = s.clientIP(r)
+	_, err := s.Kernel.Audit().Append(r.Context(), e)
+	if err != nil {
+		s.Log.Error("写审计失败", "err", err)
+	}
+	return err
 }
 
 func (s *Server) audit(r *http.Request, e audit.Entry) {

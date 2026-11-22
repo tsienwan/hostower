@@ -74,11 +74,15 @@ func TestParseService(t *testing.T) {
 
 func TestParseNet(t *testing.T) {
 	out := "site google |204|\n" +
-		"egress ip=203.0.113.9 loc=SG colo=SIN warp=off \n" +
-		"egress6 \n" +
+		"egress4 ip=203.0.113.9 loc=SG colo=SIN warp=off \n" +
+		"egress6 ip=2001:db8::9 loc=SG colo=SIN warp=off \n" +
+		"seen chatgpt loc=SG\n" +
+		"seen claude \n" +
+		"risk chatgpt HTTP/2 403 cf-mitigated: challenge \n" +
+		"risk google |302|https://www.google.com/sorry/index?continue=x\n" +
 		"svc openai {\"error\":{\"message\":\"Missing bearer authentication in header\"}}|code=401\n" +
 		"svc anthropic {\"error\":{\"type\":\"forbidden\"}}|code=403\n" +
-		"ipinfo {    \"status\": \"ok\",    \"203.0.113.9\": {        \"asn\": \"AS64500\",        \"provider\": \"Example <b>Hosting</b> Ltd\",        \"country\": \"Singapore\",        \"city\": \"Singapore\",        \"proxy\": \"no\",        \"type\": \"Hosting\",        \"risk\": 33    }}\n" +
+		"ipinfo4 {    \"status\": \"ok\",    \"203.0.113.9\": {        \"asn\": \"AS64500\",        \"provider\": \"Example <b>Hosting</b> Ltd\",        \"country\": \"Singapore\",        \"city\": \"Singapore\",        \"proxy\": \"no\",        \"type\": \"Hosting\",        \"risk\": 33    }}\n" +
 		"site netflix </html>|200|https://www.netflix.com/sg/title/81280792\n" +
 		"site disney |302|https://www.disneyplus.com/unavailable\n" +
 		"site youtube |200|\n" +
@@ -87,8 +91,28 @@ func TestParseNet(t *testing.T) {
 		"site reddit |403|\n" +
 		"== end\n"
 	n := ParseNet(out)
-	e := n.Egress
-	if e.IP != "203.0.113.9" || e.Country != "SG" || e.Colo != "SIN" || e.Warp || e.IPv6 != "" {
+	if n.Egress.V6 == nil || n.Egress.V6.IP != "2001:db8::9" || n.Egress.V6.Risk != -1 || n.Egress.V6.Type != "" {
+		t.Errorf("IPv6 出口：%+v", n.Egress.V6)
+	}
+	ai := map[string]AIRegion{}
+	for _, a := range n.AI {
+		ai[a.ID] = a
+	}
+	if ai["chatgpt"].Region != "SG" || ai["claude"].Region != "" || ai["google"].Region != "SG" || ai["chatgpt"].Restricted {
+		t.Errorf("AI 地区：%+v", n.AI)
+	}
+	risk := map[string]RiskCheck{}
+	for _, r := range n.Risks {
+		risk[r.ID] = r
+	}
+	if risk["chatgpt-challenge"].State != "warn" || risk["google-captcha"].State != "warn" || risk["region-mismatch"].State != "ok" {
+		t.Errorf("风控：%+v", n.Risks)
+	}
+	if n.Egress.V4 == nil {
+		t.Fatal("没有解析出 IPv4 出口")
+	}
+	e := *n.Egress.V4
+	if e.IP != "203.0.113.9" || e.Country != "SG" || e.Colo != "SIN" || n.Egress.Warp {
 		t.Errorf("出口：%+v", e)
 	}
 	if e.ASN != "AS64500" || e.Type != "hosting" || e.Risk != 33 || e.Proxy || e.Provider != "Example bHosting/b Ltd" {
@@ -122,7 +146,23 @@ func TestParseNet(t *testing.T) {
 		t.Errorf("netflix 自制剧：%+v", s)
 	}
 	// 什么都没查到：没有风险分，不是 0 分。
-	if z := ParseNet(""); z.Egress.Risk != -1 || z.Egress.IP != "" {
-		t.Errorf("空输出：%+v", z.Egress)
+	z := ParseNet("")
+	if z.Egress.V4 != nil || z.Egress.V6 != nil || len(z.AI) != 3 || len(z.Risks) != 3 {
+		t.Errorf("空输出：%+v", z)
+	}
+	for _, r := range z.Risks {
+		if r.State != "unknown" {
+			t.Errorf("什么都没查到时风控信号应该是 unknown：%+v", r)
+		}
+	}
+	// 地区不一致；受限地区。
+	mm := ParseNet("egress4 ip=203.0.113.9 loc=SG \nseen chatgpt loc=HK\n")
+	for _, r := range mm.Risks {
+		if r.ID == "region-mismatch" && r.State != "warn" {
+			t.Errorf("IP 在 SG、ChatGPT 当成 HK，应该提示地区不一致：%+v", r)
+		}
+	}
+	if !mm.AI[0].Restricted {
+		t.Errorf("HK 在受限名单里：%+v", mm.AI[0])
 	}
 }

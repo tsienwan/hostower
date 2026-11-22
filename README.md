@@ -32,7 +32,8 @@ A rule engine assigns the level: a shell parser splits pipes, `&&`, command subs
 | Hosts | Managed over SSH with nothing to install on the host; a built-in local host (when running the binary directly or the host-mode image); add, edit, delete and reconnect hosts from the UI |
 | Monitoring | One long-lived SSH connection per host streaming a sample every 5 seconds: CPU, memory, load, disk I/O, network, filesystem usage, temperature, per-container usage; history kept on disk with adjustable retention; an optional enhanced collector adds a process ranking |
 | Operations | Run commands with streaming output; batches, rolling runs, dry runs, stop on error; parameterized Snippets; an interactive terminal (approved as L2, fully recorded); browse, search, preview, edit, upload and download files; distribute files to multiple hosts, and collect files from multiple hosts by file-name pattern |
-| Containers and apps | Manage containers and images, deploy or update by image, log in to registries; an app catalog (Docker Compose apps and npm CLI tools, including OpenList, LiteLLM, Open WebUI and Ollama) that gives you the address, initial account and first steps once an app is installed; checks each host's egress IP type and risk score, whether it can use model APIs such as OpenAI, Claude and Gemini, whether sites such as Google, YouTube and Netflix open and in which region, and which AI CLI tools it has installed; install Docker from the UI on hosts that lack it |
+| Containers and apps | Manage containers and images, deploy or update by image, log in to registries; an app catalog (Docker Compose apps and npm CLI tools, including OpenList, LiteLLM, Open WebUI and Ollama) that gives you the address, initial account and first steps once an app is installed; checks each host's egress IP type and risk score (IPv4 and IPv6 separately), which region AI services place it in and their risk-control signals, whether it can use model APIs such as OpenAI, Claude and Gemini, whether sites such as Google, YouTube and Netflix open and in which region, and which AI CLI tools it has installed; install Docker from the UI on hosts that lack it |
+| Agent collaboration | Dispatch the same task to Claude Code, Codex CLI or Gemini CLI on several hosts, compare the results side by side, then have one of them summarize; the collaboration map shows live the operations being sent out, which assistants are thinking and the model calls made through a gateway |
 | Credentials | SSH credentials, registry logins and app secrets stored centrally with envelope encryption; everywhere else only `ref:<name>` appears |
 | Audit | Hash chain, database triggers against tampering, a JSONL file copy, offline verification; optional archive-then-prune |
 | Sign-in | Passkeys, passwords (with optional authenticator codes), OIDC single sign-on; L2 approvals require re-verification on the spot |
@@ -52,8 +53,10 @@ Screenshots are from development mode (simulated hosts).
 | ![Run: see the risk preview before submitting](docs/images/screenshots/en/run.png) | ![Approval: bound to the exact command](docs/images/screenshots/en/request.png) |
 | **Containers: usage and update hints** | **App catalog** |
 | ![Containers: usage and update hints](docs/images/screenshots/en/containers.png) | ![App catalog](docs/images/screenshots/en/apps.png) |
-| **Audit: a verifiable hash chain** |  |
-| ![Audit: a verifiable hash chain](docs/images/screenshots/en/audit.png) |  |
+| **Audit: a verifiable hash chain** | **Agent collaboration: the map shows who's working, live** |
+| ![Audit: a verifiable hash chain](docs/images/screenshots/en/audit.png) | ![Agent collaboration: the map shows who's working, live](docs/images/screenshots/en/agents.png) |
+| **Environment check: egress IP, AI services' region and risk controls** | **File sync: distribute to and collect from multiple hosts** |
+| ![Environment check: egress IP, AI services' region and risk controls](docs/images/screenshots/en/env.png) | ![File sync: distribute to and collect from multiple hosts](docs/images/screenshots/en/sync.png) |
 
 ## Quick start
 

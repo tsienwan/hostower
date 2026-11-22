@@ -277,6 +277,10 @@ export const api = {
   /** 把暂存好的文件分发到若干台主机的同一个目录下：每个文件一个请求。 */
   fileDistribute: (body: { hosts: string[]; dir: string; files: { name: string; upload: string }[] }) => call<{ requests?: Req[]; error?: string }>("POST", "/files/distribute", body),
   /** 按文件名规则列出各台主机上的文件（只读查询）。query 是 hosts、dir、pattern、depth 拼好的查询串。 */
+  /** 把一个任务派给若干台主机上的 AI 编程助手；preview 只看命令和判级。 */
+  agentTask: (body: { agent: string; hosts: string[]; dir: string; prompt: string; write: boolean; preview?: boolean }) => call<Preview | { requests: Req[] }>("POST", "/agents/task", body),
+  /** 让一台主机上的助手汇总一次 Agent 任务的结果。 */
+  agentSummary: (body: { from: string; host: string; agent: string; prompt: string; preview?: boolean }) => call<Preview | { requests: Req[] }>("POST", "/agents/summary", body),
   fileCollect: (query: string) => call<{ hosts: CollectHost[]; limit: number }>("GET", "/files/collect?" + query),
   writeFile: (host: string, path: string, content: string, intent: string) => call<Req>("PUT", "/files/content", { host, path, content, intent }),
   audit: (o: { q?: string; types?: string; scope?: "key" | "all"; page?: number; size?: number }) => call<{ records: AuditRecord[]; total: number }>("GET", "/audit" + q(o)),
@@ -316,6 +320,12 @@ export const api = {
   containerAction: (b: ContainerAction) => call<Req>("POST", "/containers/action", b),
   apps: () => call<{ apps: AppItem[]; categories: string[] }>("GET", "/apps"),
   appsInstalled: (hosts: string[]) => call<{ hosts: HostApps[] }>("GET", "/apps/installed" + q({ hosts: hosts.join(",") })),
+  /** 查很多台主机的“已安装”：服务端一次最多 50 台，这里分批查完再合起来。 */
+  appsInstalledAll: async (hosts: string[]) => {
+    const out: HostApps[] = [];
+    for (let i = 0; i < hosts.length; i += 50) out.push(...(await call<{ hosts: HostApps[] }>("GET", "/apps/installed" + q({ hosts: hosts.slice(i, i + 50).join(",") }))).hosts);
+    return out;
+  },
   appReveal: (host: string, instance: string) => call<{ output: string }>("GET", "/apps/reveal" + q({ host, instance })),
   hostEnv: (name: string) => call<HostEnv>("GET", `/hosts/${encodeURIComponent(name)}/env`),
   appInstall: (b: AppInstallBody) => call<AppPlanResult>("POST", "/apps/install", b),
@@ -544,8 +554,13 @@ export interface EnvService { id: string; title: string; used?: string; state: "
 /** 网站检测：region 是网站认为主机所在的区；note 是补充结论（netflix 的 full / originals）。 */
 export interface EnvSite { id: string; title: string; group: string; state: EnvService["state"]; code: number; region?: string; note?: string }
 /** 出口：type 是地址类型（hosting、residential、business、wireless、vpn…），risk 是 0～100 的风险分，-1 表示没查到。 */
-export interface EnvEgress { ip?: string; ipv6?: string; country?: string; colo?: string; warp?: boolean; asn?: string; provider?: string; city?: string; region?: string; type?: string; proxy?: boolean; risk: number }
-export interface HostEnv { tools: EnvTool[]; services: EnvService[]; sites: EnvSite[]; egress: EnvEgress; checkedAt: number }
+export interface EnvIP { ip: string; country?: string; colo?: string; asn?: string; provider?: string; city?: string; region?: string; type?: string; proxy?: boolean; risk: number }
+/** 出口：IPv4 和 IPv6 分开查，没有的为空。 */
+export interface EnvEgress { v4?: EnvIP; v6?: EnvIP; warp?: boolean }
+/** AI 服务把主机当成哪个区；restricted 表示在内置的不支持地区名单里。 */
+export interface EnvAIRegion { id: string; region: string; restricted?: boolean }
+export interface EnvRisk { id: string; state: "ok" | "warn" | "unknown"; code?: number }
+export interface HostEnv { tools: EnvTool[]; services: EnvService[]; sites: EnvSite[]; egress: EnvEgress; ai?: EnvAIRegion[]; risks?: EnvRisk[]; restricted?: string[]; checkedAt: number }
 export interface AIProvider { id: string; title: string; baseUrl?: string; models?: string[]; key: "required" | "optional"; note?: string; custom?: boolean; apis?: string[] }
 export interface AIConfig { provider: string; baseUrl?: string; model?: string; smallModel?: string; secret?: string; api?: string }
 export interface AppRecord { app: string; version: string; type: "compose" | "npm"; instance: string; params?: Record<string, string>; bins?: string[]; envs?: string[]; config?: Record<string, string> }

@@ -68,7 +68,7 @@ func TestHostEnv(t *testing.T) {
 	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &out) != nil {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
-	if len(out.Tools) != len(hostenv.Tools) || len(out.Services) != len(hostenv.Services) || len(out.Sites) != len(hostenv.Sites) || out.Egress.Country == "" || out.Egress.Type == "" {
+	if len(out.Tools) != len(hostenv.Tools) || len(out.Services) != len(hostenv.Services) || len(out.Sites) != len(hostenv.Sites) || out.Egress.V4 == nil || out.Egress.V4.Country == "" || out.Egress.V4.Type == "" {
 		t.Fatalf("检测结果不完整：%+v", out)
 	}
 	for _, sv := range out.Services {

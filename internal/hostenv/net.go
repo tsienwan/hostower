@@ -52,12 +52,21 @@ var NetCommand = buildNetCommand()
 func buildNetCommand() string {
 	const trace = "https://www.cloudflare.com/cdn-cgi/trace" // hygiene:allow 公开的 trace 接口：只返回请求方自己的地址和位置
 	var jobs []string
-	// 出口：地址、国家或地区、Cloudflare 接入点、是不是走 WARP；IPv6 出口另查一次。
+	// 出口：IPv4 和 IPv6 分开查（只查一次的话，有 IPv6 的主机默认走 IPv6，就看不到 IPv4 出口了）。
+	// 每个出口：地址、国家或地区、Cloudflare 接入点、是不是走 WARP；再拿地址去公开的 IP 信息库查归属和类型。
+	for _, v := range []string{"4", "6"} {
+		jobs = append(jobs,
+			`echo "egress`+v+` $(curl -`+v+` -s -m 8 `+trace+` 2>/dev/null | grep -E '^(ip|loc|colo|warp)=' | tr '\n' ' ')"`,
+			`{ ip="$(curl -`+v+` -s -m 8 `+trace+` 2>/dev/null | sed -n 's/^ip=//p')"; [ -n "$ip" ] && echo "ipinfo`+v+` $(curl -s -m 8 "https://proxycheck.io/v2/$ip?vpn=1&asn=1&risk=1" 2>/dev/null | tr -d '\n' | tail -c 1500)"; }`) // hygiene:allow 公开的 IP 信息库
+	}
+	// AI 服务看到的地区：ChatGPT 和 Claude 的网页都在 Cloudflare 后面，它们自己的 trace 接口说明它们把这台主机当成哪个区。
+	for _, a := range aiSeen {
+		jobs = append(jobs, `echo "seen `+a.id+` $(curl -s -m 8 '`+a.url+`' 2>/dev/null | grep -E '^loc=' | head -n 1)"`)
+	}
+	// 风控信号：ChatGPT 网页有没有对这台主机要求人机验证；Google 搜索有没有把它当成“异常流量”。
 	jobs = append(jobs,
-		`echo "egress $(curl -s -m 8 `+trace+` 2>/dev/null | grep -E '^(ip|loc|colo|warp)=' | tr '\n' ' ')"`,
-		`echo "egress6 $(curl -6 -s -m 6 `+trace+` 2>/dev/null | grep -E '^ip=' | tr '\n' ' ')"`,
-		// 出口 IP 的归属和类型：先问出自己的出口地址，再拿它去查公开的 IP 信息库。
-		`{ ip="$(curl -s -m 8 `+trace+` 2>/dev/null | sed -n 's/^ip=//p')"; echo "ipinfo $(curl -s -m 8 "https://proxycheck.io/v2/$ip?vpn=1&asn=1&risk=1" 2>/dev/null | tr -d '\n' | tail -c 1500)"; }`) // hygiene:allow 公开的 IP 信息库
+		`echo "risk chatgpt $(curl -sI -m 8 -A 'Mozilla/5.0' 'https://chatgpt.com/' 2>/dev/null | grep -i -E '^(HTTP|cf-mitigated)' | tr -d '\r' | tr '\n' ' ')"`, // hygiene:allow 被检测的公开网站
+		`echo "risk google $(curl -sI -m 8 -A 'Mozilla/5.0' -w '|%{http_code}|%{redirect_url}' 'https://www.google.com/search?q=hostower' 2>/dev/null | tail -n 1)"`)
 	for _, s := range Services {
 		jobs = append(jobs, `echo "svc `+s.ID+` $(curl -s -m 8 -w '|code=%{http_code}' '`+s.URL+`' 2>/dev/null | tail -c 600 | tr '\n' ' ')"`)
 	}
@@ -76,13 +85,27 @@ func buildNetCommand() string {
 	return strings.Join(jobs, " & ") + " & wait; echo '== end'"
 }
 
-// Egress 是主机的出口。
+// aiSeen 是查“AI 服务把这台主机当成哪个区”的地址（服务自己域名下的 Cloudflare trace）。
+var aiSeen = []struct{ id, url string }{
+	{"chatgpt", "https://chatgpt.com/cdn-cgi/trace"}, // hygiene:allow 被检测的公开网站
+	{"claude", "https://claude.ai/cdn-cgi/trace"},    // hygiene:allow 被检测的公开网站
+}
+
+// AIRestricted 是 OpenAI、Anthropic、Google 的 AI 服务都不对其提供服务的常见地区（内置的参考名单，以各家官方公布的为准）。
+var AIRestricted = []string{"CN", "HK", "MO", "RU", "BY", "IR", "KP", "SY", "CU"}
+
+// Egress 是主机的出口：IPv4 和 IPv6 各一个（没有的为空）。
 type Egress struct {
-	IP      string `json:"ip,omitempty"`
-	IPv6    string `json:"ipv6,omitempty"`    // 有 IPv6 出口时的地址
+	V4   *IPInfo `json:"v4,omitempty"`
+	V6   *IPInfo `json:"v6,omitempty"`
+	Warp bool    `json:"warp,omitempty"` // 出口走的是 Cloudflare WARP
+}
+
+// IPInfo 是一个出口地址的情况。
+type IPInfo struct {
+	IP      string `json:"ip"`
 	Country string `json:"country,omitempty"` // 两个字母的国家或地区代码
 	Colo    string `json:"colo,omitempty"`    // Cloudflare 接入点（机场代码），大致是出口附近的城市
-	Warp    bool   `json:"warp,omitempty"`    // 出口走的是 Cloudflare WARP
 	// 下面来自 IP 信息库；查不到时为空。
 	ASN      string `json:"asn,omitempty"`
 	Provider string `json:"provider,omitempty"` // 运营方
@@ -107,11 +130,28 @@ type SiteStatus struct {
 	Note string `json:"note,omitempty"`
 }
 
+// AIRegion 是一家 AI 服务把这台主机当成哪个区。
+type AIRegion struct {
+	ID     string `json:"id"`     // chatgpt | claude | google
+	Region string `json:"region"` // 两个字母；没查到为空
+	// Restricted 表示这个区在 AIRestricted 名单里。
+	Restricted bool `json:"restricted,omitempty"`
+}
+
+// RiskCheck 是一项风控信号。State：ok（没有问题）、warn（有问题）、unknown（没查出来）。
+type RiskCheck struct {
+	ID    string `json:"id"` // chatgpt-challenge | google-captcha | region-mismatch
+	State string `json:"state"`
+	Code  int    `json:"code,omitempty"`
+}
+
 // NetStatus 是网络检测的全部结果。
 type NetStatus struct {
 	Egress   Egress          `json:"egress"`
 	Services []ServiceStatus `json:"services"`
 	Sites    []SiteStatus    `json:"sites"`
+	AI       []AIRegion      `json:"ai"`
+	Risks    []RiskCheck     `json:"risks"`
 }
 
 var (
@@ -143,40 +183,123 @@ func ParseNet(out string) NetStatus {
 			continue
 		}
 		switch kind {
-		case "egress", "egress6", "ipinfo":
+		case "egress4", "egress6", "ipinfo4", "ipinfo6":
 			lines[kind] = rest
-		case "svc", "site", "region":
+		case "svc", "site", "region", "seen", "risk":
 			id, body, _ := strings.Cut(rest, " ")
 			lines[kind+" "+id] = body
 		}
 	}
-	st := NetStatus{Egress: Egress{Risk: -1}, Services: make([]ServiceStatus, 0, len(Services)), Sites: make([]SiteStatus, 0, len(Sites))}
-	e := &st.Egress
-	for _, m := range kvRe.FindAllStringSubmatch(lines["egress"], -1) {
-		switch {
-		case m[1] == "ip" && (ipv4Re.MatchString(m[2]) || ipv6Re.MatchString(m[2])):
-			e.IP = m[2]
-		case m[1] == "loc" && len(m[2]) == 2 && strings.ToUpper(m[2]) == m[2] && asLetters(m[2]):
-			e.Country = m[2]
-		case m[1] == "colo" && len(m[2]) == 3 && asLetters(m[2]):
-			e.Colo = m[2]
-		case m[1] == "warp":
-			e.Warp = m[2] == "on" || m[2] == "plus"
-		}
-	}
-	for _, m := range kvRe.FindAllStringSubmatch(lines["egress6"], -1) {
-		if m[1] == "ip" && strings.Contains(m[2], ":") && ipv6Re.MatchString(m[2]) {
-			e.IPv6 = m[2]
-		}
-	}
-	parseIPInfo(e, lines["ipinfo"])
+	st := NetStatus{Services: make([]ServiceStatus, 0, len(Services)), Sites: make([]SiteStatus, 0, len(Sites)), AI: []AIRegion{}, Risks: []RiskCheck{}}
+	st.Egress.V4 = parseEgress(lines["egress4"], lines["ipinfo4"], ipv4Re, &st.Egress.Warp)
+	st.Egress.V6 = parseEgress(lines["egress6"], lines["ipinfo6"], ipv6Re, &st.Egress.Warp)
 	for _, s := range Services {
 		st.Services = append(st.Services, ParseService(s, lines["svc "+s.ID]))
 	}
 	for _, s := range Sites {
 		st.Sites = append(st.Sites, parseSite(s, lines["site "+s.ID], lines["region "+s.ID]))
 	}
+	parseAI(&st, lines)
 	return st
+}
+
+// parseEgress 解析一个出口（trace 的那一行和 IP 信息库的回答）；没有这个出口时返回 nil。
+func parseEgress(trace, info string, ipRe *regexp.Regexp, warp *bool) *IPInfo {
+	e := &IPInfo{Risk: -1}
+	for _, m := range kvRe.FindAllStringSubmatch(trace, -1) {
+		switch {
+		case m[1] == "ip" && ipRe.MatchString(m[2]):
+			e.IP = m[2]
+		case m[1] == "loc" && validRegion(m[2]):
+			e.Country = m[2]
+		case m[1] == "colo" && len(m[2]) == 3 && asLetters(m[2]):
+			e.Colo = m[2]
+		case m[1] == "warp":
+			*warp = *warp || m[2] == "on" || m[2] == "plus"
+		}
+	}
+	if e.IP == "" {
+		return nil
+	}
+	parseIPInfo(e, info)
+	return e
+}
+
+func validRegion(s string) bool { return len(s) == 2 && asLetters(s) }
+
+func restricted(region string) bool {
+	for _, r := range AIRestricted {
+		if r == region {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	locRe       = regexp.MustCompile(`\bloc=([A-Z]{2})\b`)
+	challengeRe = regexp.MustCompile(`(?i)cf-mitigated:\s*challenge`)
+	httpRe      = regexp.MustCompile(`HTTP/[0-9.]+ ([0-9]{3})`)
+)
+
+// parseAI 解析 AI 服务看到的地区和风控信号。
+func parseAI(st *NetStatus, lines map[string]string) {
+	for _, a := range aiSeen {
+		r := AIRegion{ID: a.id}
+		if m := locRe.FindStringSubmatch(lines["seen "+a.id]); m != nil {
+			r.Region = m[1]
+		}
+		r.Restricted = restricted(r.Region)
+		st.AI = append(st.AI, r)
+	}
+	// Google 没有 trace 接口：用 YouTube 认为的区（同一家的地区判断）。
+	g := AIRegion{ID: "google"}
+	for _, s := range st.Sites {
+		if s.ID == "youtube" {
+			g.Region = s.Region
+		}
+	}
+	g.Restricted = restricted(g.Region)
+	st.AI = append(st.AI, g)
+
+	// ChatGPT 网页：Cloudflare 回 cf-mitigated: challenge 就是要求人机验证（这个地址的信誉不好）。
+	c := RiskCheck{ID: "chatgpt-challenge", State: "unknown"}
+	line := lines["risk chatgpt"]
+	if m := httpRe.FindStringSubmatch(line); m != nil {
+		c.Code, _ = strconv.Atoi(m[1])
+	}
+	switch {
+	case challengeRe.MatchString(line):
+		c.State = "warn"
+	case c.Code >= 200 && c.Code < 400:
+		c.State = "ok"
+	}
+	st.Risks = append(st.Risks, c)
+
+	// Google 搜索：429 或者被带到 /sorry/ 就是“异常流量”，要做人机验证才能搜。
+	g2 := RiskCheck{ID: "google-captcha", State: "unknown"}
+	if m := siteRe.FindStringSubmatch(lines["risk google"]); m != nil {
+		g2.Code, _ = strconv.Atoi(m[1])
+		switch {
+		case g2.Code == 429 || strings.Contains(m[2], "/sorry/"):
+			g2.State = "warn"
+		case g2.Code >= 200 && g2.Code < 400:
+			g2.State = "ok"
+		}
+	}
+	st.Risks = append(st.Risks, g2)
+
+	// 地区不一致：IP 信息库说在 A，AI 服务却当成 B（比如 IP 在新加坡、Google 当成香港），常常会被当成“不支持的地区”。
+	m := RiskCheck{ID: "region-mismatch", State: "unknown"}
+	if st.Egress.V4 != nil && st.Egress.V4.Country != "" {
+		m.State = "ok"
+		for _, a := range st.AI {
+			if a.Region != "" && a.Region != st.Egress.V4.Country {
+				m.State = "warn"
+			}
+		}
+	}
+	st.Risks = append(st.Risks, m)
 }
 
 func asLetters(s string) bool {
@@ -189,7 +312,7 @@ func asLetters(s string) bool {
 }
 
 // parseIPInfo 解析 IP 信息库的回答：{"status":"ok","<地址>":{…}}。
-func parseIPInfo(e *Egress, body string) {
+func parseIPInfo(e *IPInfo, body string) {
 	i := strings.Index(body, "{")
 	if i < 0 {
 		return

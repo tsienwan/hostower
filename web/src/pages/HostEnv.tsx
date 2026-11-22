@@ -1,6 +1,6 @@
 // 主机的环境检测：出口 IP 的归属和类型、各家模型接口能不能用、常用网站和流媒体能不能打开和在哪个区、
 // 装了哪些 AI 命令行工具和运行环境。全部是只读查询，点“检测”才查。状态都带文字，不只靠颜色。
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CircleCheck, CircleHelp, CircleSlash, CircleX, Download, Radar, RefreshCw, TriangleAlert } from "lucide-react";
 import { api, type EnvService, type EnvSite, type HostEnv } from "../api";
@@ -44,23 +44,40 @@ export function ipTypeText(t: (s: string) => string, type?: string) {
 const riskTone = (r: number) => (r < 0 ? "neutral" : r <= 33 ? "ok" : r <= 66 ? "warn" : "crit");
 const riskText = (r: number) => (r <= 33 ? "低" : r <= 66 ? "中" : "高");
 
+const aiTitles: Record<string, string> = { chatgpt: "ChatGPT / OpenAI", claude: "Claude / Anthropic", google: "Gemini / Google" };
+const aiUsed: Record<string, string> = { chatgpt: "Codex CLI", claude: "Claude Code", google: "Gemini CLI" };
+const riskMeta: Record<string, { title: string; ok: string; warn: string; why: string }> = {
+  "chatgpt-challenge": { title: "ChatGPT 网页的人机验证", ok: "没有要求", warn: "要求人机验证", why: "Cloudflare 对信誉差的地址先要求人机验证；脚本、命令行工具这时会直接失败，网页登录也要反复验证。" },
+  "google-captcha": { title: "Google 的异常流量拦截", ok: "没有拦截", warn: "被当成异常流量", why: "Google 搜索要求做人机验证，说明这个地址被 Google 标成了异常流量，Gemini 等服务也可能受影响。" },
+  "region-mismatch": { title: "地区是否一致", ok: "一致", warn: "不一致", why: "IP 信息库说的位置和 AI 服务当成的区不一样时（比如 IP 在新加坡、服务当成香港），常常会被当成不支持的地区。" },
+};
 const siteGroups: [string, string][] = [["video", "视频与流媒体"], ["social", "社交"], ["ai", "AI 网页版"], ["search", "搜索与百科"], ["dev", "开发"]];
 function siteNote(t: (s: string) => string, s: EnvSite) {
   return s.note === "full" ? t("非自制剧也能看") : s.note === "originals" ? t("只能看自制剧") : "";
 }
 
+/** 上个版本缓存下来的结果格式不一样（没有 IPv4/IPv6 之分、没有风控信号）：不用它，重新检测。 */
+function fresh(e: HostEnv | undefined): HostEnv | null {
+  return e && e.risks && e.egress && !("ip" in e.egress) ? e : null;
+}
+
 /** 检测一台主机并缓存结果（切换页面再回来不用重新查）。 */
 function useEnv(host: string, auto: boolean) {
   const key = "env:" + host;
-  const [env, setEnv] = useState<HostEnv | null>(() => cached<HostEnv>(key) ?? null);
+  const [env, setEnv] = useState<HostEnv | null>(() => fresh(cached<HostEnv>(key)));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // 切到另一台主机时：换成那台的缓存，晚到的旧主机结果不要串过来。
+  const cur = useRef(host);
+  useEffect(() => { cur.current = host; setEnv(fresh(cached<HostEnv>(key))); setErr(""); }, [host, key]);
   const check = useCallback(() => {
     setBusy(true);
     setErr("");
-    return api.hostEnv(host).then((r) => setEnv(remember(key, r))).catch((e) => setErr(e instanceof Error ? e.message : String(e))).finally(() => setBusy(false));
+    return api.hostEnv(host).then((r) => { remember(key, r); if (cur.current === host) setEnv(r); })
+      .catch((e) => { if (cur.current === host) setErr(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (cur.current === host) setBusy(false); });
   }, [host, key]);
-  useEffect(() => { if (auto && !cached<HostEnv>(key)) check(); }, [auto, key, check]);
+  useEffect(() => { if (auto && !fresh(cached<HostEnv>(key))) check(); }, [auto, key, check]);
   return { env, busy, err, check };
 }
 
@@ -72,6 +89,8 @@ export function EnvPanel({ host }: { host: string }) {
   const ai = env?.tools.filter((x) => x.kind === "ai") ?? [];
   const rt = env?.tools.filter((x) => x.kind === "runtime") ?? [];
   const e = env?.egress;
+  // 判断“机房地址、风险高”这些提示时看哪个出口：有 IPv4 看 IPv4，没有再看 IPv6。
+  const p = e?.v4 ?? e?.v6;
 
   return (
     <>
@@ -84,33 +103,76 @@ export function EnvPanel({ host }: { host: string }) {
       {!env || !e ? <div className="card"><Empty icon={<Radar />} title={busy ? t("检测中…") : online ? t("还没有检测") : t("主机离线，没法检测")} /></div> : (
         <>
           <div className="card">
-            <div className="card-head"><h2>{t("出口 IP")}</h2><span className="muted" style={{ fontSize: 12.5 }}>{t("网站看到的是这个地址：它的类型和风险分影响会不会被限制、要不要人机验证")}</span></div>
-            <div className="facts">
-              <div className="fact"><dt>{t("地址")}</dt><dd className="mono">{e.ip || "—"}</dd></div>
-              <div className="fact"><dt>{t("位置")}</dt><dd>{[e.city, e.region].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(" · ") || "—"}{e.country && <span className="mono muted">　{e.country}{e.colo ? ` · ${e.colo}` : ""}</span>}</dd></div>
-              <div className="fact"><dt>{t("类型")}</dt><dd>{e.type
-                ? <span className={"badge " + (e.type === "residential" || e.type === "wireless" ? "ok" : e.type === "vpn" ? "warn" : "neutral")}>{ipTypeText(t, e.type)}</span>
-                : <span className="muted">{t("没有查到")}</span>}</dd></div>
-              <div className="fact"><dt>{t("风险分")}</dt><dd>{e.risk >= 0
-                ? <span className={"badge " + riskTone(e.risk)} title={t("信息库给的 0 到 100 的分数，越高越容易被网站风控")}>{e.risk} · {t(riskText(e.risk))}</span>
-                : <span className="muted">{t("没有查到")}</span>}</dd></div>
-              <div className="fact"><dt>{t("运营方")}</dt><dd>{e.provider || "—"}{e.asn && <span className="mono muted">　{e.asn}</span>}</dd></div>
-              <div className="fact"><dt>{t("代理标记")}</dt><dd>{e.proxy
-                ? <span className="badge warn"><TriangleAlert />{t("被标成代理或 VPN")}</span>
-                : e.type ? <span className="badge ok"><CircleCheck />{t("没有被标记")}</span> : <span className="muted">{t("没有查到")}</span>}
-                {e.warp && <span className="badge neutral" style={{ marginLeft: 6 }}>Cloudflare WARP</span>}</dd></div>
-              <div className="fact"><dt>IPv6</dt><dd>{e.ipv6 ? <span className="mono">{e.ipv6}</span> : <span className="muted">{t("没有 IPv6 出口")}</span>}</dd></div>
+            <div className="card-head"><h2>{t("出口 IP")}</h2><span className="muted" style={{ fontSize: 12.5 }}>{t("网站看到的是这个地址：它的类型和风险分影响会不会被限制、要不要人机验证")}</span>
+              {e.warp && <span className="badge neutral">Cloudflare WARP</span>}</div>
+            <div className="table-wrap">
+              <table className="table egress-table">
+                <thead><tr><th /><th>IPv4</th><th>IPv6</th></tr></thead>
+                <tbody>
+                  <tr><th>{t("地址")}</th>{[e.v4, e.v6].map((x, i) => <td key={i} className="mono">{x?.ip ?? <span className="muted">{i ? t("没有 IPv6 出口") : t("没有 IPv4 出口")}</span>}</td>)}</tr>
+                  <tr><th>{t("位置")}</th>{[e.v4, e.v6].map((x, i) => <td key={i}>{x ? <>{[x.city, x.region].filter(Boolean).filter((v, k, a) => a.indexOf(v) === k).join(" · ") || "—"}{x.country && <span className="mono muted">　{x.country}{x.colo ? ` · ${x.colo}` : ""}</span>}</> : "—"}</td>)}</tr>
+                  <tr><th>{t("类型")}</th>{[e.v4, e.v6].map((x, i) => <td key={i}>{x?.type
+                    ? <span className={"badge " + (x.type === "residential" || x.type === "wireless" ? "ok" : x.type === "vpn" ? "warn" : "neutral")}>{ipTypeText(t, x.type)}</span>
+                    : x ? <span className="muted">{t("没有查到")}</span> : "—"}</td>)}</tr>
+                  <tr><th>{t("风险分")}</th>{[e.v4, e.v6].map((x, i) => <td key={i}>{x && x.risk >= 0
+                    ? <span className={"badge " + riskTone(x.risk)} title={t("信息库给的 0 到 100 的分数，越高越容易被网站风控")}>{x.risk} · {t(riskText(x.risk))}</span>
+                    : x ? <span className="muted">{t("没有查到")}</span> : "—"}</td>)}</tr>
+                  <tr><th>{t("运营方")}</th>{[e.v4, e.v6].map((x, i) => <td key={i}>{x?.provider || "—"}{x?.asn && <span className="mono muted">　{x.asn}</span>}</td>)}</tr>
+                  <tr><th>{t("代理标记")}</th>{[e.v4, e.v6].map((x, i) => <td key={i}>{x?.proxy
+                    ? <span className="badge warn"><TriangleAlert />{t("被标成代理或 VPN")}</span>
+                    : x?.type ? <span className="badge ok"><CircleCheck />{t("没有被标记")}</span> : x ? <span className="muted">{t("没有查到")}</span> : "—"}</td>)}</tr>
+                </tbody>
+              </table>
             </div>
-            {(e.type === "hosting" || e.proxy || e.risk > 33) && (
-              <div className="card-body" style={{ paddingTop: 0 }}>
+            {p && (p.type === "hosting" || p.proxy || p.risk > 33) && (
+              <div className="card-body" style={{ paddingTop: 12, paddingBottom: 0 }}>
                 <div className="note warn"><TriangleAlert /><span>
-                  {[e.type === "hosting" && t("这是机房的地址：流媒体常常只给看自制剧或直接拒绝，部分网站会频繁要求人机验证，AI 服务的订阅登录也更容易被风控。"),
-                    e.proxy && t("这个地址被标成了代理或 VPN 出口，很多网站会直接限制。"),
-                    e.risk > 33 && t("风险分偏高，说明这个地址或它所在的网段有过滥用记录。")].filter(Boolean).join(" ")}
+                  {[p.type === "hosting" && t("这是机房的地址：流媒体常常只给看自制剧或直接拒绝，部分网站会频繁要求人机验证，AI 服务的订阅登录也更容易被风控。"),
+                    p.proxy && t("这个地址被标成了代理或 VPN 出口，很多网站会直接限制。"),
+                    p.risk > 33 && t("风险分偏高，说明这个地址或它所在的网段有过滥用记录。")].filter(Boolean).join(" ")}
                 </span></div>
               </div>
             )}
-            <div className="card-body hint" style={{ paddingTop: 0 }}>{t("归属、类型和风险分来自公开的 IP 信息库（由这台主机自己去查），只供参考：不同的库结论可能不一样，网站各自的风控也不完全看这些。")}</div>
+            <div className="card-body hint" style={{ paddingTop: 10 }}>{t("IPv4 和 IPv6 分开查：有 IPv6 的主机，很多网站会优先走 IPv6，两个出口的归属和信誉可能不一样。归属、类型和风险分来自公开的 IP 信息库（由这台主机自己去查），只供参考。")}</div>
+          </div>
+
+          <div className="card">
+            <div className="card-head"><h2>{t("AI 服务的地区与风控")}</h2><span className="muted" style={{ fontSize: 12.5 }}>{t("各家 AI 服务把这台主机当成哪个区、有没有对它做额外的风控")}</span></div>
+            <div className="table-wrap">
+              <table className="table">
+                <thead><tr><th>{t("服务")}</th><th>{t("当成的区")}</th><th>{t("这个区能不能用")}</th><th className="hide-sm">{t("影响")}</th></tr></thead>
+                <tbody>
+                  {(env.ai ?? []).map((a) => (
+                    <tr key={a.id}>
+                      <td style={{ fontWeight: 560 }}>{aiTitles[a.id] ?? a.id}</td>
+                      <td className="mono">{a.region || <span className="muted">{t("没有查到")}</span>}
+                        {a.region && p?.country && a.region !== p.country && <span className="badge warn" style={{ marginLeft: 6 }} title={t("和 IP 信息库的位置（{loc}）不一致", { loc: p.country })}>{t("与 IP 位置不一致")}</span>}</td>
+                      <td>{!a.region ? <span className="muted">—</span> : a.restricted
+                        ? <span className="badge crit"><CircleSlash />{t("不在服务范围")}</span>
+                        : <span className="badge ok"><CircleCheck />{t("在服务范围")}</span>}</td>
+                      <td className="hide-sm muted">{aiUsed[a.id] ?? ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="risk-list">
+              {(env.risks ?? []).map((r) => {
+                const m = riskMeta[r.id];
+                if (!m) return null;
+                return (
+                  <div key={r.id} className={"risk-item " + r.state}>
+                    {r.state === "warn" ? <TriangleAlert /> : r.state === "ok" ? <CircleCheck /> : <CircleHelp />}
+                    <div>
+                      <b>{t(m.title)}</b>
+                      <span className={"badge " + (r.state === "warn" ? "warn" : r.state === "ok" ? "ok" : "neutral")}>{r.state === "warn" ? t(m.warn) : r.state === "ok" ? t(m.ok) : t("没有查出来")}</span>
+                      <div className="muted">{t(m.why)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="card-body hint" style={{ paddingTop: 0 }}>{t("“服务范围”按内置的常见不支持地区名单判断（{list}），以各家官方公布的为准。", { list: (env.restricted ?? []).join("、") })}</div>
           </div>
 
           <div className="card">
@@ -213,7 +275,7 @@ export function EnvMatrix() {
   const hosts = useStore((s) => s.hosts);
   const [data, setData] = useState<Record<string, HostEnv>>(() => {
     const m: Record<string, HostEnv> = {};
-    for (const h of hosts) { const c = cached<HostEnv>("env:" + h.name); if (c) m[h.name] = c; }
+    for (const h of hosts) { const c = fresh(cached<HostEnv>("env:" + h.name)); if (c) m[h.name] = c; }
     return m;
   });
   const [errs, setErrs] = useState<Record<string, string>>({});
@@ -231,9 +293,12 @@ export function EnvMatrix() {
     } finally { setBusy((b) => b.filter((x) => x !== name)); }
   }, []);
   // 一次查三台：每台主机要并行发二十多个请求，全部一起查会挤占连接。
+  // 离开这一页后，还没轮到的主机就不再检测（每台主机要发二十多个请求）。
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const checkAll = async () => {
     const queue = hosts.filter((h) => h.status.online).map((h) => h.name);
-    await Promise.all([0, 1, 2].map(async () => { for (let n = queue.shift(); n; n = queue.shift()) await checkOne(n); }));
+    await Promise.all([0, 1, 2].map(async () => { for (let n = queue.shift(); n && alive.current; n = queue.shift()) await checkOne(n); }));
   };
 
   const sample = Object.values(data)[0];
@@ -255,7 +320,7 @@ export function EnvMatrix() {
           <div className="table-wrap">
             <table className="table env-matrix">
               <thead><tr>
-                <th>{t("主机")}</th><th>{t("出口")}</th><th>{t("IP 类型")}</th><th>{t("风险分")}</th>
+                <th>{t("主机")}</th><th>{t("出口")}</th><th>{t("IP 类型")}</th><th>{t("风险分")}</th><th>{t("风控")}</th>
                 {services.map((s) => <th key={s.id} title={ts(s.title)}>{short(s.title)}</th>)}
                 {sites.map((s) => <th key={s.id}>{short(s.title)}</th>)}
                 {tools.map((x) => <th key={x.name}>{x.title}</th>)}
@@ -264,14 +329,18 @@ export function EnvMatrix() {
               <tbody>
                 {hosts.map((h) => {
                   const e = data[h.name];
+                  // 旧版本缓存下来的结果没有 v4/v6：当成没查过。
+                  const ep = e?.egress?.v4 ?? e?.egress?.v6;
+                  const warns = e?.risks?.filter((r) => r.state === "warn").length ?? 0;
                   return (
                     <tr key={h.name}>
                       <td><Link to={`/hosts/${encodeURIComponent(h.name)}?tab=env`} style={{ fontWeight: 560 }}>{h.name}</Link>
                         {errs[h.name] && <div className="crit" style={{ fontSize: 12 }}>{ts(errs[h.name])}</div>}
                         {!h.status.online && <div className="muted" style={{ fontSize: 12 }}>{t("离线")}</div>}</td>
-                      <td className="mono">{e?.egress.country ?? <span className="muted">—</span>}</td>
-                      <td>{e?.egress.type ? ipTypeText(t, e.egress.type) : <span className="muted">—</span>}</td>
-                      <td>{e && e.egress.risk >= 0 ? <span className={"badge " + riskTone(e.egress.risk)}>{e.egress.risk} · {t(riskText(e.egress.risk))}</span> : <span className="muted">—</span>}</td>
+                      <td className="mono">{ep?.country ?? <span className="muted">—</span>}{e?.egress.v6 && <span className="badge neutral" style={{ marginLeft: 6 }} title={e.egress.v6.ip}>v6</span>}</td>
+                      <td>{ep?.type ? ipTypeText(t, ep.type) : <span className="muted">—</span>}</td>
+                      <td>{ep && ep.risk >= 0 ? <span className={"badge " + riskTone(ep.risk)}>{ep.risk} · {t(riskText(ep.risk))}</span> : <span className="muted">—</span>}</td>
+                      <td>{warns > 0 ? <span className="badge warn" title={e!.risks!.filter((r) => r.state === "warn").map((r) => t(riskMeta[r.id]?.title ?? r.id)).join("\n")}><TriangleAlert />{warns}</span> : e?.risks ? <span className="badge ok"><CircleCheck /><span className="sr-only">{t("没有风控信号")}</span></span> : <span className="muted">—</span>}</td>
                       {services.map((s) => { const x = e?.services.find((y) => y.id === s.id); return <td key={s.id}>{x ? <ServiceBadge s={x} compact /> : <span className="muted">—</span>}</td>; })}
                       {sites.map((s) => {
                         const x = e?.sites.find((y) => y.id === s.id);

@@ -199,6 +199,7 @@ If the address does not open, first check whether the listen address is `127.0.0
 
 **Environment** on the host page and **Apps → Environment** send a batch of read-only requests from this host and look at how each service answers:
 
+- **AI services' region and risk controls**: which region ChatGPT, Claude and Google (using the region YouTube assigns) place this host in, and whether that region is within the usual service coverage; whether the ChatGPT website demands human verification and whether Google Search flags the address as unusual traffic; and whether the IP database's location matches the region the AI services see (a mismatch often gets the host treated as being in an unsupported region).
 - **Model APIs** (OpenAI, Anthropic, Google Gemini, xAI, DeepSeek): the request is sent without a key. An answer of “missing key” means **Available**; add a key and you can call it. A refusal based on the country or region of the egress means **Restricted**; use a host in another region, or route through a gateway such as LiteLLM or New API.
 - **Websites and streaming** (Google, YouTube, Netflix, Disney+, TikTok, Facebook, X, the ChatGPT web app and others): **Available** if the site opens normally; **Restricted** if it refuses or redirects to a “not available in your region” page. For YouTube and Netflix the region you land in is shown as well; Netflix is judged with a non-original title, and “Originals only” means that region's catalog is not open to this address.
 - **Unreachable**: no connection within 8 seconds; the network may be blocking it, or the host may not have `curl`.
@@ -213,9 +214,21 @@ Websites see the host's egress address. What type it is and whether it has a bad
 - **Type**: data center, residential broadband, business line, mobile network and so on. A VPS almost always has a data center address; streaming services often show it originals only, and subscription sign-ins for AI services are more likely to trip risk control.
 - **Proxy flag**: whether the database has marked it as a proxy or VPN exit.
 - **Risk score**: 0 to 100; the higher it is, the more abuse has been recorded for this address or its network range. Below 33 counts as low, above 66 as high.
-- Also shown: the operator (ASN), the location, whether there is an IPv6 egress, and whether traffic goes through Cloudflare WARP.
+- Also shown: the operator (ASN), the location, and whether traffic goes through Cloudflare WARP.
+- IPv4 and IPv6 are checked and shown separately: on hosts with IPv6, many websites prefer IPv6, and the two egresses may differ in ownership and reputation.
 
 The host gets this information by looking up its own egress address in a public IP database (proxycheck.io). It is for reference only: different databases may reach different conclusions, and websites' risk control does not rely on these alone. When the lookup fails, “Not found” is shown and the other checks are unaffected.
+
+### What is “Agent collaboration”? Will the assistants mess with my hosts?
+
+The “Agent collaboration” page lets you dispatch the same task (for example “check the nginx configuration and recent error logs”) to Claude Code, Codex CLI or Gemini CLI on several hosts; the assistant on each host only works on its own host. When they finish, you can view each host's conclusions side by side, then click “Summarize” to have the assistant on one of the hosts compare and sum them up.
+
+- Dispatching a task and summarizing are both requests: you first see the command that will run on each host and its risk level, nothing runs until it is approved, and the audit log records it as usual.
+- Read-only by default: the assistant can look but not change anything, and asking it to run commands is refused. Ticking “Allow changes to files in the working directory” only opens up changes inside the working directory (acceptEdits for Claude Code, the workspace-write sandbox for Codex, auto_edit for Gemini CLI).
+- The page has no switch for skipping permission prompts or the sandbox; such commands typed by hand (for example `--dangerously-skip-permissions` or `--yolo`) are rated high-risk (L2).
+- The assistant must first be installed and configured (API key or subscription sign-in) from the app catalog. You'll be told which hosts don't have it.
+
+The collaboration map at the top of the page shows live what the tower is sending to which host (colors distinguish Agent tasks, file distribution, app installs and other commands), which assistant is thinking, and which LiteLLM / New API instance each assistant calls models through. When the system's “reduce motion” setting is on, the map's animations stop.
 
 ### How do I track how many tokens each AI tool uses?
 
