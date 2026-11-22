@@ -904,6 +904,19 @@ h1, h2, h3, .brand-name, .stat-value, .metric-val { letter-spacing: -0.022em; }
   .nav-item.active svg { color: var(--primary); }
 }
 
+/* 文件同步：拖放区和待分发的文件列表。 */
+.dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 26px 16px; border: 1.5px dashed var(--border); border-radius: var(--r, 12px); text-align: center; cursor: pointer;
+  color: var(--text-2); transition: border-color 0.2s, background-color 0.2s, transform 0.2s; }
+.dropzone svg { width: 26px; height: 26px; color: var(--text-3); transition: transform 0.25s, color 0.2s; }
+.dropzone:hover, .dropzone:focus-visible { border-color: var(--primary); outline: none; }
+.dropzone.over { border-color: var(--primary); background: var(--accent-soft); transform: scale(1.01); }
+.dropzone.over svg { color: var(--primary); transform: translateY(-4px); }
+.dropzone .muted { font-size: 12.5px; }
+.sync-files { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.sync-file { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 6px 6px 12px; font-size: 13px; }
+.sync-file + .sync-file { border-top: 1px solid var(--border); }
+@media (prefers-reduced-motion: reduce) { .dropzone, .dropzone svg { transition: none; } .dropzone.over { transform: none; } }
+
 /* 正在执行的卡片：顶上一条来回流动的光带。 */
 .card.is-running { position: relative; overflow: hidden; }
 .card.is-running::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--primary), transparent); background-size: 40% 100%; background-repeat: no-repeat; animation: run-sweep 1.6s linear infinite; }

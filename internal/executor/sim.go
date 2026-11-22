@@ -237,6 +237,12 @@ func (s *Sim) Exec(ctx context.Context, h inventory.Host, command string, out io
 	return code, nil
 }
 
+var (
+	// 路径和规则只有带特殊字符时才加引号（snippet.Quote），两种写法都认。
+	simCatRe  = regexp.MustCompile(`^mkdir -p '?[^' ]+'? && cat > '?([^' ]+)'?$`)
+	simFindRe = regexp.MustCompile(`^\{ find '?([^' ]+)'? -xdev -maxdepth \d+ -type f -name '?([^' ]+)'? -printf`)
+)
+
 func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, int) {
 	cmd := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(command), "sudo "))
 	gb := func(kb int64) string { return fmt.Sprintf("%.0fG", float64(kb)/1024/1024) }
@@ -324,6 +330,21 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 	case strings.HasPrefix(cmd, "docker logs ") && strings.Contains(cmd, "grep -a 'Username:'"):
 		// 应用上手指南里“读取初始账号”（3x-ui 第一次启动时打印的那一行）。
 		return []string{"2026/11/13 09:00:01 No panel user existed, so one was generated. Username: demoUser01  Password: demo-Pass-0000  (shown once; change it in Panel Settings)"}, 0
+	case strings.HasPrefix(cmd, "{ find "):
+		// 文件收集（gateway 的 collectCommand）：在模拟主机的文件里按目录和文件名规则找。
+		m := simFindRe.FindStringSubmatch(cmd)
+		if m == nil {
+			return nil, 0
+		}
+		dir := strings.TrimSuffix(m[1], "/") + "/"
+		var out []string
+		for p, data := range sh.files {
+			if ok, _ := path.Match(m[2], path.Base(p)); ok && strings.HasPrefix(p, dir) {
+				out = append(out, fmt.Sprintf("%d\t%s", len(data), p))
+			}
+		}
+		sort.Strings(out)
+		return out, 0
 	case cmd == "command -v curl":
 		if sh.hasCurl() {
 			return []string{"/usr/bin/curl"}, 0
@@ -602,6 +623,15 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 func (s *Sim) ExecStdin(ctx context.Context, h inventory.Host, command string, stdin io.Reader, out io.Writer) (int, error) {
 	if err := s.offline(h); err != nil {
 		return -1, err
+	}
+	// 文件分发（mkdir -p 目录 && cat > '目标'）：把内容记下来，之后在这台模拟主机上读得到、找得到。
+	if m := simCatRe.FindStringSubmatch(command); m != nil {
+		data, _ := io.ReadAll(io.LimitReader(stdin, 8<<20))
+		s.mu.Lock()
+		s.host(h).files[path.Clean(m[1])] = data
+		s.mu.Unlock()
+		fmt.Fprintf(out, "[sim] 已写入 %s（%d 字节）\n", m[1], len(data))
+		return 0, nil
 	}
 	n, _ := io.Copy(io.Discard, stdin)
 	if strings.HasPrefix(command, "docker load") {

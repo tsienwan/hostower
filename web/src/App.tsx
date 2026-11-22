@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import {
-  Activity, Box, Ellipsis, Gauge, LayoutDashboard, KeyRound, CircleAlert, CircleCheck, FileCode2, LayoutGrid, LogOut, OctagonPause, ScrollText,
+  Activity, Box, Ellipsis, FolderSync, Gauge, LayoutDashboard, KeyRound, CircleAlert, CircleCheck, FileCode2, LayoutGrid, LogOut, OctagonPause, ScrollText,
   Settings as SettingsIcon, ShieldCheck, SquareTerminal, TriangleAlert,
 } from "lucide-react";
 import { api } from "./api";
@@ -20,6 +20,7 @@ import { Containers } from "./pages/Containers";
 import { Credentials } from "./pages/Credentials";
 import { SpeedtestPage } from "./pages/Speedtest";
 import { AppsPage } from "./pages/Apps";
+import { FileSyncPage } from "./pages/FileSync";
 // 终端页带着一个不小的终端渲染库，按需加载。
 const TerminalPage = lazy(() => import("./pages/Terminal").then((m) => ({ default: m.TerminalPage })));
 import { stamp, uptime } from "./ui";
@@ -66,6 +67,7 @@ const nav = [
   { to: "/activity", label: "活动", icon: Activity },
   { to: "/containers", label: "容器", icon: Box },
   { to: "/apps", label: "应用", icon: LayoutDashboard, main: true },
+  { to: "/sync", label: "文件同步", icon: FolderSync },
   { to: "/speedtest", label: "测速", icon: Gauge },
   { to: "/snippets", label: "Snippet", icon: FileCode2 },
   { to: "/credentials", label: "凭据", icon: KeyRound },
@@ -191,6 +193,7 @@ function Shell() {
           <Route path="/requests/:id" element={<RequestDetail />} />
           <Route path="/containers" element={<Containers />} />
           <Route path="/apps" element={<AppsPage />} />
+          <Route path="/sync" element={<FileSyncPage />} />
           <Route path="/speedtest" element={<SpeedtestPage />} />
           <Route path="/credentials" element={<Credentials />} />
           <Route path="/snippets" element={<Snippets />} />

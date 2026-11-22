@@ -274,6 +274,10 @@ export const api = {
   searchFiles: (host: string, path: string, word: string) => call<{ paths: string[]; truncated: boolean }>("GET", "/files/search" + q({ host, path, q: word })),
   downloadURL: (host: string, path: string) => "/api/v1/files/download" + q({ host, path }),
   uploadFile: (host: string, dir: string, name: string, upload: string) => call<Req>("POST", "/files/upload", { host, dir, name, upload }),
+  /** 把暂存好的文件分发到若干台主机的同一个目录下：每个文件一个请求。 */
+  fileDistribute: (body: { hosts: string[]; dir: string; files: { name: string; upload: string }[] }) => call<{ requests?: Req[]; error?: string }>("POST", "/files/distribute", body),
+  /** 按文件名规则列出各台主机上的文件（只读查询）。query 是 hosts、dir、pattern、depth 拼好的查询串。 */
+  fileCollect: (query: string) => call<{ hosts: CollectHost[]; limit: number }>("GET", "/files/collect?" + query),
   writeFile: (host: string, path: string, content: string, intent: string) => call<Req>("PUT", "/files/content", { host, path, content, intent }),
   audit: (o: { q?: string; types?: string; scope?: "key" | "all"; page?: number; size?: number }) => call<{ records: AuditRecord[]; total: number }>("GET", "/audit" + q(o)),
   speedtest: () => call<SpeedConfig>("GET", "/speedtest"),
@@ -532,6 +536,8 @@ export interface AppGuide {
   open: { title: string; scheme: "http" | "https"; port: string; path: string; local?: boolean }[];
   account?: string; steps: string[]; reveal?: { title: string; hint?: string };
 }
+/** 文件收集：一台主机上匹配规则的文件；size 是 -1 表示主机给不出大小。 */
+export interface CollectHost { host: string; files: { path: string; size: number }[]; truncated?: boolean; error?: string }
 /** 主机环境检测：装了哪些命令、各家模型接口能不能用。 */
 export interface EnvTool { name: string; title: string; kind: "ai" | "runtime"; app?: string; installed: boolean; path?: string; version?: string; signed?: boolean }
 export interface EnvService { id: string; title: string; used?: string; state: "ok" | "blocked" | "unreachable" | "unknown"; code: number }

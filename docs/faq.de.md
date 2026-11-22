@@ -221,6 +221,15 @@ Diese Angaben ermittelt der Host selbst, indem er seine eigene Ausgangsadresse b
 
 Installieren Sie LiteLLM oder New API (im App-Katalog unter **KI-Tools**), lassen Sie die API-Adresse von Claude Code, Codex CLI und den anderen Tools darauf zeigen und stellen Sie für jedes Tool oder jede Person einen eigenen Schlüssel aus. Anzahl der Aufrufe, Token-Verbrauch und Kosten pro Schlüssel und pro Modell sehen Sie in der Verwaltungsoberfläche des Gateways selbst. Hostower selbst leitet Modellanfragen weder weiter noch zeichnet es sie auf.
 
+### Wie verteile ich dieselbe Datei auf mehrere Hosts? Wie sammle ich Logs von mehreren Hosts ein?
+
+Verwenden Sie **Dateisynchronisierung** in der linken Seitenleiste:
+
+- **Auf Hosts verteilen**: Ziehen Sie die Dateien hinein (höchstens 20 auf einmal), geben Sie das Zielverzeichnis an und wählen Sie die Hosts aus. Aus jeder Datei wird eine Anfrage: Sie sehen zunächst, wohin auf jedem Host geschrieben wird und welche Risikostufe gilt; geschrieben wird erst nach der Genehmigung. Ein nicht vorhandenes Verzeichnis wird automatisch angelegt, eine gleichnamige Datei wird überschrieben. Für das Schreiben in Systemverzeichnisse muss das Anmeldekonto die nötigen Rechte haben; das Schreiben in sensible Pfade wie `/etc/ssh` wird als Hochrisiko eingestuft.
+- **Von Hosts einsammeln**: Geben Sie das Verzeichnis und ein Dateinamensmuster an (etwa `*.log`; `*` steht für eine beliebige Zeichenfolge, `?` für ein einzelnes Zeichen), wählen Sie die Hosts und die Anzahl der Ebenen, die nach unten durchsucht werden, klicken Sie zuerst auf **Suchen**, um zu sehen, welche Dateien es gibt, und dann auf **Archiv herunterladen**. Im Archiv liegen die Dateien nach dem Schema „Hostname/Dateipfad“.
+
+Grenzen beim Einsammeln: höchstens 200 Dateien pro Host, keine einzelne Datei größer als 100 MB und insgesamt nicht mehr als 1 GB pro Download; Dateien, die sich nicht lesen lassen (private Schlüssel, Dateien mit Zugangsdaten oder Dateien, für die dem Anmeldekonto die Rechte fehlen), und solche über den Grenzen werden im Archiv in „_跳过的文件.txt“ (übersprungene Dateien) vermerkt. Die Suche ist eine reine Leseabfrage; jede heruntergeladene Datei wird im Audit festgehalten.
+
 ### Wie werden Images mit festen Versions-Tags (etwa `v3.9.0`) aktualisiert?
 
 Die Seite **Container** liest die Tag-Liste aus der Registry:

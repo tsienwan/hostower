@@ -4,6 +4,14 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.3.0
+
+### Added
+
+- File sync (a new page in the sidebar):
+  - Distribute to hosts: drag files onto the page, pick a target directory and hosts (all, filtered by tag, or one by one), up to 20 files at a time. Each file is one request and is written to the same directory on the chosen hosts after approval; risk levels, approval and audit work the same as for typed commands.
+  - Collect from hosts: find files on several hosts by directory and file-name pattern (wildcards such as `*.log`), preview the list, then download them as one archive laid out as "host name/file path". Finding is a read-only query, every downloaded file is audited, and private keys and credential files still cannot be read.
+
 ## v0.2.0
 
 ### Added

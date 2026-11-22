@@ -78,6 +78,7 @@
 | `internal/secrets` | 信封加密的凭据存储 |
 | `internal/auth` | Passkey、密码、动态码（TOTP）的登录和身份验证，登录方式设置，会话，首次启动的初始密码 |
 | `internal/metrics` | 流式采样、解析、内存历史和分级落盘 |
+| `internal/gateway`（filesync） | 文件同步：分发是每个文件一个多主机的命令请求（`mkdir -p 目录 && cat > 目标`，内容从标准输入送）；收集是只读的 find 加逐个“下载文件”，打成 zip |
 | `internal/hostenv` | 主机的环境检测：装了哪些 AI 命令行工具和运行环境、出口 IP 的归属和类型、各家模型接口和常用网站能不能用（全部是只读查询） |
 | `internal/selfmon` | 本机监测 |
 | `internal/update` | 自我更新：检查、下载、验签、切换 |

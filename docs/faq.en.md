@@ -221,6 +221,15 @@ The host gets this information by looking up its own egress address in a public 
 
 Install LiteLLM or New API (under **AI tools** in the app catalog), point the API address of Claude Code, Codex CLI and the other tools at it, and issue a separate key for each tool or each person. The number of calls, token usage and cost per key and per model are shown in the gateway's own admin interface. Hostower itself neither proxies nor records model requests.
 
+### How do I send the same file to several hosts? How do I collect logs from several hosts?
+
+Use **File sync** in the left sidebar:
+
+- **Distribute to hosts**: drag the files in (up to 20 at a time), enter the target directory and pick the hosts. Each file becomes one request: you first see where it will be written on each host and the risk level, and nothing is written until it is approved. A directory that does not exist is created automatically, and a file with the same name is overwritten. Writing to system directories requires the login account to have permission; writing to sensitive paths such as `/etc/ssh` is classified as high-risk.
+- **Collect from hosts**: enter the directory and a file-name pattern (for example `*.log`; `*` stands for any run of characters and `?` for a single character), pick the hosts and how many levels down to look, click **Search** first to see which files there are, then click **Download archive**. Inside the archive, files are stored as “host name/file path”.
+
+Limits on collecting: at most 200 files per host, no single file larger than 100 MB, and no more than 1 GB in total per download; files that cannot be read (private keys, credential files, or files the login account has no permission for) and those over the limits are listed in “_跳过的文件.txt” (skipped files) inside the archive. Searching is a read-only query; every downloaded file is recorded in the audit log.
+
 ### How do images with fixed version tags (such as `v3.9.0`) get updated?
 
 The Containers page reads the tag list from the registry:

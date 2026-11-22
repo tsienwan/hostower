@@ -221,6 +221,15 @@ Ces informations sont obtenues par l'hôte lui-même, qui interroge une base pub
 
 Installez LiteLLM ou New API (dans **Outils IA** du catalogue d'applications), faites pointer l'adresse d'API de Claude Code, Codex CLI et des autres outils vers cette passerelle, puis attribuez une clé distincte à chaque outil ou à chaque personne. Le nombre d'appels, la consommation de tokens et le coût par clé et par modèle se consultent dans l'interface d'administration de la passerelle elle-même. Hostower ne relaie ni n'enregistre les requêtes aux modèles.
 
+### Comment envoyer le même fichier vers plusieurs hôtes ? Comment récupérer les journaux de plusieurs hôtes ?
+
+Utilisez **Synchronisation de fichiers**, dans le menu de gauche :
+
+- **Distribuer vers les hôtes** : faites glisser les fichiers (20 au maximum à la fois), indiquez le répertoire cible et choisissez les hôtes. Chaque fichier devient une demande : vous voyez d'abord où il sera écrit sur chaque hôte ainsi que le niveau de risque, et rien n'est écrit avant l'approbation. Un répertoire inexistant est créé automatiquement, et un fichier du même nom est écrasé. Écrire dans les répertoires système exige que le compte de connexion en ait le droit ; écrire dans des chemins sensibles comme `/etc/ssh` est classé à haut risque.
+- **Collecter depuis les hôtes** : indiquez le répertoire et un motif de nom de fichier (par exemple `*.log` ; `*` représente une suite quelconque de caractères et `?` un seul caractère), choisissez les hôtes et le nombre de niveaux à parcourir, cliquez d'abord sur **Rechercher** pour voir quels fichiers existent, puis sur **Télécharger l'archive**. Dans l'archive, les fichiers sont rangés sous la forme « nom d'hôte/chemin du fichier ».
+
+Limites de la collecte : 200 fichiers au maximum par hôte, 100 MB au plus par fichier et 1 GB au total par téléchargement ; les fichiers illisibles (clés privées, fichiers d'identifiants, ou fichiers pour lesquels le compte de connexion n'a pas les droits) et ceux qui dépassent les limites sont consignés dans « _跳过的文件.txt » (fichiers ignorés), à l'intérieur de l'archive. La recherche est une requête en lecture seule ; chaque fichier téléchargé fait l'objet d'une entrée d'audit.
+
 ### Comment sont mises à jour les images à étiquette de version fixe (comme `v3.9.0`) ?
 
 La page Conteneurs lit la liste des étiquettes depuis le registre :

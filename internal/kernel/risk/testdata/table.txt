@@ -471,3 +471,7 @@ L0 docker logs 3x-ui 2>&1 | grep -a 'Username:' | tail -n 1
 # 执行被检测的程序看版本不是只读：检测脚本里不能这么写
 L1 claude --version
 L1 curl -s -m 8 -o /dev/null -w '%{http_code}' https://example.com/v1/models
+# 文件同步（gateway 的 filesync）：按文件名规则列出要收集的文件是只读；分发是写文件，按变更处理
+L0 { find /var/log -xdev -maxdepth 3 -type f -name '*.log' -printf '%s\t%p\n' 2>/dev/null || find /var/log -xdev -maxdepth 3 -type f -name '*.log' 2>/dev/null; } | head -n 201
+L1 mkdir -p /opt/app && cat > /opt/app/config.yaml
+L2 mkdir -p /etc/ssh && cat > /etc/ssh/sshd_config
