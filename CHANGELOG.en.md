@@ -18,6 +18,15 @@ Versions follow [Semantic Versioning](https://semver.org/). Each release groups 
   - Egress IP is now shown in two columns, IPv4 and IPv6, each with its own ownership, type, risk score and proxy flag (before, hosts with IPv6 only showed the IPv6 egress).
   - New "AI services: region and anti-abuse": which region ChatGPT, Claude and Google put the host in and whether it is within their usual service regions; whether the ChatGPT website demands a CAPTCHA, whether Google search treats the host as unusual traffic, and whether the IP location matches the region the AI services see. The Apps → Environment table gains a column for these signals.
 
+### Fixed
+
+- Risk levels: prefixing a command with `command` / `builtin` (e.g. `command rm -rf /`) turned L3 into L1, and paths such as `/etc/./shadow` or `/proc/self/root/etc/shadow` slipped past the private-key and credential rules as read-only. Both are now classified as written.
+- A host that accepted the connection but never finished the SSH handshake left requests "running" forever; file reads and writes did not stop on timeout or when the browser disconnected; a silently dropped network kept being reused as a dead connection.
+- Running on many hosts re-saved the entire output every time one host finished, slowing down other commands running at the same time.
+- Uploaded files are re-checked against their content digest before running (previously only the size).
+- When the image registry or npm was unreachable, opening the Apps page waited for a timeout per app; automatic update requests could resubmit a version that had been denied.
+- Web UI: the Agents page went blank when a snippet's name started with "agent"; the Installed list failed with more than 50 hosts; data from the previous session stayed in memory after signing out; a long-open page kept growing its request list and output cache; every output chunk re-rendered every output box on the page.
+
 ### Improved
 
 - README screenshots now show the current interface.
