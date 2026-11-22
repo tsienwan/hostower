@@ -34,23 +34,31 @@ export function useStore<T>(selector: (s: State) => T): T {
 export const getState = () => state;
 
 // ---- 流式输出：按 请求/主机 累积，单独订阅，避免每个分片都重渲染整页 ----
+// 每个 请求/主机 一组订阅：一个分片只叫醒看着那一份输出的组件，不是页面上所有的输出框。
 const outputs = new Map<string, string>();
-const outputListeners = new Set<() => void>();
-let outputVersion = 0;
+const outputListeners = new Map<string, Set<() => void>>();
 const key = (id: string, host: string) => id + "\u0000" + host;
+const notifyOutput = (k: string) => outputListeners.get(k)?.forEach((l) => l());
 
 export function useOutput(id: string, host: string): string | undefined {
-  useSyncExternalStore((l) => { outputListeners.add(l); return () => outputListeners.delete(l); }, () => outputVersion);
-  return outputs.get(key(id, host));
+  const k = key(id, host);
+  return useSyncExternalStore((l) => {
+    let set = outputListeners.get(k);
+    if (!set) outputListeners.set(k, (set = new Set()));
+    set.add(l);
+    return () => { set!.delete(l); if (set!.size === 0) outputListeners.delete(k); };
+  }, () => outputs.get(k));
 }
+
+// 页面开着很久时，请求列表和输出不能无限增长：只留最近这些。
+const maxRequests = 200;
 
 export function seedOutput(req: Req) {
   for (const t of req.targets) {
     const k = key(req.id, t.host);
     if ((outputs.get(k)?.length ?? 0) < t.output.length) outputs.set(k, t.output);
   }
-  outputVersion++;
-  outputListeners.forEach((l) => l());
+  for (const t of req.targets) notifyOutput(key(req.id, t.host));
 }
 
 let toastId = 0;
@@ -86,6 +94,12 @@ export function upsertRequest(r: Req) {
   const next = [...state.requests];
   if (i >= 0) next[i] = { ...r, targets: r.targets.map((t, j) => ({ ...t, output: next[i].targets[j]?.output ?? "" })) };
   else next.unshift(r);
+  if (next.length > maxRequests) {
+    // 掉出列表的请求，它的输出也不再留着。
+    const keep = new Set(next.slice(0, maxRequests).map((x) => x.id));
+    for (const k of outputs.keys()) if (!keep.has(k.split("\u0000")[0])) outputs.delete(k);
+    next.length = maxRequests;
+  }
   set({ requests: next });
 }
 
@@ -134,8 +148,7 @@ export function connect() {
         const d = ev.data as { id: string; host: string; chunk: string };
         const k = key(d.id, d.host);
         outputs.set(k, (outputs.get(k) ?? "") + d.chunk);
-        outputVersion++;
-        outputListeners.forEach((l) => l());
+        notifyOutput(k);
         break;
       }
       case "hosts": {
@@ -178,6 +191,8 @@ export function connect() {
 
 export function disconnect() {
   clearCache(); // 退出登录：上一个会话看过的数据不留在内存里
+  outputs.clear();
+  set({ hosts: [], groups: [], hostsLoaded: false, requests: [], toasts: [] });
   stopped = true;
   clearTimeout(timer);
   ws?.close();

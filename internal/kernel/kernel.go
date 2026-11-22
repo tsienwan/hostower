@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strconv"
 	"sync"
@@ -178,8 +179,14 @@ func (k *Kernel) load() error {
 }
 
 // save 把请求写回数据库。调用方持有 k.mu，或请求尚未发布。
+// 执行中途（每台主机结束时都会存一次）不带输出：一个五十台主机的请求，每次都把所有输出序列化一遍、
+// 而且是在持有 k.mu 的时候，会拖慢所有正在执行的命令。输出在请求结束时随最后一次保存一起写进去。
 func (k *Kernel) save(r *Request) {
-	body, err := json.Marshal(r)
+	var v any = r
+	if r.State == StateRunning {
+		v = clone(r, false)
+	}
+	body, err := json.Marshal(v)
 	if err != nil {
 		return
 	}
@@ -540,7 +547,10 @@ func (k *Kernel) Cancel(ctx context.Context, id string, by Actor) (*Request, err
 	if r.State.terminal() {
 		return clone(r, true), nil
 	}
-	k.audit.Append(ctx, audit.Entry{Type: "request.cancelled", Actor: by.Name, Entry: by.Entry, RequestID: r.ID})
+	if _, err := k.audit.Append(ctx, audit.Entry{Type: "request.cancelled", Actor: by.Name, Entry: by.Entry, RequestID: r.ID}); err != nil {
+		// 写不进审计就不取消（审计失败时操作必须中止）。
+		return nil, fmt.Errorf("写审计失败，没有取消：%w", err)
+	}
 	if r.State == StateRunning {
 		if cancel, ok := k.cancels[id]; ok {
 			go cancel() // 取消函数可能要拿 k.mu（关终端时），不能在持锁时直接调
@@ -560,7 +570,9 @@ func (k *Kernel) Cancel(ctx context.Context, id string, by Actor) (*Request, err
 func (k *Kernel) expire(r *Request) {
 	now := time.Now()
 	r.State, r.FinishedAt = StateExpired, &now
-	k.audit.Append(context.Background(), audit.Entry{Type: "request.expired", RequestID: r.ID, Level: r.Level.String()})
+	if _, err := k.audit.Append(context.Background(), audit.Entry{Type: "request.expired", RequestID: r.ID, Level: r.Level.String()}); err != nil {
+		slog.Error("写审计失败：请求过期没有记下来", "request", r.ID, "err", err)
+	}
 	k.changed(r)
 }
 

@@ -120,8 +120,12 @@ type Registry struct {
 
 type latestEntry struct {
 	version string
+	err     error // 查询失败：失败也缓存一段时间（failTTL），仓库连不上时不要每次打开页面都等一个超时
 	at      time.Time
 }
+
+// failTTL 是查询失败的结果缓存多久。
+const failTTL = 10 * time.Minute
 
 // NewRegistry 创建 npm 版本查询。
 func NewRegistry() *Registry {
@@ -136,9 +140,23 @@ func (r *Registry) Latest(ctx context.Context, pkg string) (string, error) {
 	r.mu.Lock()
 	e, ok := r.cache[pkg]
 	r.mu.Unlock()
-	if ok && time.Since(e.at) < r.TTL {
+	if ok && e.err != nil && time.Since(e.at) < failTTL {
+		return "", e.err
+	}
+	if ok && e.err == nil && time.Since(e.at) < r.TTL {
 		return e.version, nil
 	}
+	v, err := r.fetchLatest(ctx, pkg)
+	if err != nil && ctx.Err() != nil {
+		return "", err // 是调用方取消了，不算仓库的问题，不缓存
+	}
+	r.mu.Lock()
+	r.cache[pkg] = latestEntry{version: v, err: err, at: time.Now()}
+	r.mu.Unlock()
+	return v, err
+}
+
+func (r *Registry) fetchLatest(ctx context.Context, pkg string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.Base+"/"+pkg+"/latest", nil)
 	if err != nil {
 		return "", err
@@ -158,9 +176,6 @@ func (r *Registry) Latest(ctx context.Context, pkg string) (string, error) {
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&body); err != nil || !VersionRe.MatchString(body.Version) || body.Version == "latest" {
 		return "", errors.New("npm 仓库返回的版本号不对")
 	}
-	r.mu.Lock()
-	r.cache[pkg] = latestEntry{version: body.Version, at: time.Now()}
-	r.mu.Unlock()
 	return body.Version, nil
 }
 

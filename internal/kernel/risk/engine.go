@@ -187,6 +187,7 @@ var wrappers = map[string]wrapSpec{
 	"setsid":  {},
 	"exec":    {valueFlags: "-a"},
 	"builtin": {},
+	"command": {},
 	"nice":    {valueFlags: "-n"},
 	"ionice":  {valueFlags: "-c -n -p"},
 	"time":    {valueFlags: "-f -o"},
@@ -209,6 +210,11 @@ func resolve(args []word) resolved {
 			return r
 		}
 		name := path.Base(args[0].text)
+		// command -v / -V 是查命令在哪（只读），交给规则表；command [-p] 程序 … 等于直接运行那个程序。
+		if name == "command" && len(args) > 1 && args[1].static && (args[1].text == "-v" || args[1].text == "-V") {
+			r.name, r.full, r.args = name, args[0].text, args[1:]
+			return r
+		}
 		spec, ok := wrappers[name]
 		if !ok {
 			r.name, r.full, r.args = name, args[0].text, args[1:]

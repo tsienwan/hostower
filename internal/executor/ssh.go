@@ -127,12 +127,53 @@ func (s *SSH) dial(ctx context.Context, h inventory.Host) (*ssh.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	// ClientConfig.Timeout 只管 ssh.Dial；这里是自己拨的连接，握手要自己设期限，也要跟着 ctx 取消：
+	// 否则遇到接了 TCP 却一直不完成握手的主机（sshd 过载、MaxStartups 满了），请求会一直卡在“执行中”。
+	conn.SetDeadline(time.Now().Add(handshakeTimeout))
+	stop := context.AfterFunc(ctx, func() { conn.Close() })
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, cfg)
+	stop()
 	if err != nil {
 		conn.Close()
 		return nil, err
 	}
+	conn.SetDeadline(time.Time{})
 	return ssh.NewClient(c, chans, reqs), nil
+}
+
+const (
+	handshakeTimeout  = 15 * time.Second
+	keepaliveInterval = 30 * time.Second
+	keepaliveTimeout  = 15 * time.Second
+)
+
+// keepalive 定时向服务端发 keepalive 请求；网络悄悄断了、对面没有应答时把这条连接从缓存里拿掉，
+// 下一个会话会重新连，而不是在一条死连接上等到 TCP 超时（可能十几分钟）。连接关闭后自己退出。
+func (s *SSH) keepalive(h inventory.Host, client *ssh.Client) {
+	done := make(chan struct{})
+	go func() { client.Wait(); close(done) }()
+	t := time.NewTicker(keepaliveInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-done:
+			return
+		case <-t.C:
+		}
+		res := make(chan error, 1)
+		go func() { _, _, err := client.SendRequest("keepalive@openssh.com", true, nil); res <- err }()
+		select {
+		case <-done:
+			return
+		case err := <-res:
+			if err == nil {
+				continue
+			}
+		case <-time.After(keepaliveTimeout):
+		}
+		s.drop(h, client)
+		return
+	}
 }
 
 func (s *SSH) client(ctx context.Context, h inventory.Host) (*ssh.Client, error) {
@@ -154,6 +195,7 @@ func (s *SSH) client(ctx context.Context, h inventory.Host) (*ssh.Client, error)
 		return c.client, nil
 	}
 	s.conns[h.Name] = &sshConn{client: client, last: time.Now()}
+	go s.keepalive(h, client)
 	return client, nil
 }
 
@@ -257,25 +299,28 @@ func (l *lockedWriter) Write(p []byte) (int, error) {
 	return l.w.Write(p)
 }
 
-func (s *SSH) sftp(ctx context.Context, h inventory.Host) (*sftp.Client, error) {
+// sftp 开一个 SFTP 会话。返回的 done 用完要调用：它关掉会话；ctx 取消（超时、浏览器断开）时也会提前关掉，
+// 正在读写的操作随之返回，不会卡在一个慢文件（NFS、管道）上。
+func (s *SSH) sftp(ctx context.Context, h inventory.Host) (*sftp.Client, func(), error) {
 	client, err := s.client(ctx, h)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	fc, err := sftp.NewClient(client)
 	if err != nil {
 		s.drop(h, client)
-		return nil, err
+		return nil, nil, err
 	}
-	return fc, nil
+	stop := context.AfterFunc(ctx, func() { fc.Close() })
+	return fc, func() { stop(); fc.Close() }, nil
 }
 
 func (s *SSH) ReadFile(ctx context.Context, h inventory.Host, p string, limit int64) ([]byte, error) {
-	fc, err := s.sftp(ctx, h)
+	fc, done, err := s.sftp(ctx, h)
 	if err != nil {
 		return nil, err
 	}
-	defer fc.Close()
+	defer done()
 	f, err := fc.Open(p)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -292,11 +337,11 @@ func (s *SSH) ReadFile(ctx context.Context, h inventory.Host, p string, limit in
 }
 
 func (s *SSH) WriteFile(ctx context.Context, h inventory.Host, p string, data []byte) error {
-	fc, err := s.sftp(ctx, h)
+	fc, done, err := s.sftp(ctx, h)
 	if err != nil {
 		return err
 	}
-	defer fc.Close()
+	defer done()
 	tmp := path.Join(path.Dir(p), fmt.Sprintf(".%s.hostower-%d", path.Base(p), time.Now().UnixNano()))
 	f, err := fc.Create(tmp)
 	if err != nil {
@@ -322,11 +367,11 @@ func (s *SSH) WriteFile(ctx context.Context, h inventory.Host, p string, data []
 }
 
 func (s *SSH) ListDir(ctx context.Context, h inventory.Host, dir string) ([]FileInfo, error) {
-	fc, err := s.sftp(ctx, h)
+	fc, done, err := s.sftp(ctx, h)
 	if err != nil {
 		return nil, err
 	}
-	defer fc.Close()
+	defer done()
 	entries, err := fc.ReadDir(dir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

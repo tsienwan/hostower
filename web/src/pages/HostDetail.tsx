@@ -110,7 +110,7 @@ export function HostDetail() {
         {host.source === "managed" && <button className="btn danger icon" onClick={remove} title={t("删除主机")} aria-label={t("删除主机")}><Trash2 /></button>}
         <button className="btn hide-sm" disabled={!host.status.online} onClick={() => api.speedtest().then(setSpeed).catch(fail)}><Gauge />{t("测速")}</button>
         <Link className="btn hide-sm" to={`/containers?host=${host.name}`}>{t("容器")}</Link>
-        <Link className="btn primary" to={`/hosts/${host.name}/terminal`}><SquareTerminal />{t("终端")}</Link>
+        <Link className="btn primary" to={`/hosts/${encodeURIComponent(host.name)}/terminal`}><SquareTerminal />{t("终端")}</Link>
       </div>
       {editing && <HostForm host={host} onClose={() => setEditing(false)} />}
       {speed && <SpeedtestDialog hosts={[host.name]} config={speed} onClose={() => setSpeed(null)} />}
@@ -213,7 +213,7 @@ export function HostDetail() {
 
           {tab === "files" && <Files host={host.name} />}
           {tab === "network" && <NetworkPanel host={host.name} />}
-          {tab === "env" && <EnvPanel host={host.name} />}
+          {tab === "env" && <EnvPanel key={host.name} host={host.name} />}
         </div>
       </div>
     </>
@@ -265,7 +265,8 @@ function Files({ host }: { host: string }) {
   };
   // 搜索结果不知道是文件还是目录：先当目录打开，不行再当文件打开。
   const goto = (p: string) => {
-    api.listDir(host, p).then((r) => { setFound(null); setWord(""); setEntries(r.entries); setPath(r.path); })
+    const n = ++seq.current;
+    api.listDir(host, p).then((r) => { if (n !== seq.current) return; setFound(null); setWord(""); setEntries(r.entries); setPath(r.path); })
       .catch(() => { const dir = p.slice(0, p.lastIndexOf("/")) || "/"; setFound(null); setWord(""); load(dir); open(p); });
   };
   const [dragging, setDragging] = useState(false);
@@ -293,12 +294,16 @@ function Files({ host }: { host: string }) {
     if (e.dataTransfer.files.length) upload(e.dataTransfer.files);
   };
 
+  // 每次列目录编个号：慢的网络上连续点几个目录时，只认最后一次的结果。
+  const seq = useRef(0);
   const load = useCallback((p: string) => {
+    const n = ++seq.current;
     setError("");
     setEntries(null);
     setFound(null);
     setWord("");
-    api.listDir(host, p).then((r) => { setEntries(r.entries); setPath(r.path); }).catch((e) => { setError(e.message); setEntries([]); });
+    api.listDir(host, p).then((r) => { if (n === seq.current) { setEntries(r.entries); setPath(r.path); } })
+      .catch((e) => { if (n === seq.current) { setError(e.message); setEntries([]); } });
   }, [host]);
   useEffect(() => { load("/"); }, [load]);
 

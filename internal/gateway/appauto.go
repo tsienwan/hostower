@@ -33,6 +33,8 @@ var appAutoActor = kernel.Actor{ID: "system:app-updates", Name: "应用自动更
 type appAutoSent struct {
 	Req string    `json:"req"`
 	At  time.Time `json:"at"`
+	// Denied 记下“人拒绝过这个版本”：内核只在内存里留最近的几百个请求，旧请求查不到以后也要记得。
+	Denied bool `json:"denied,omitempty"`
 }
 
 type appAuto struct {
@@ -123,13 +125,18 @@ func (aa *appAuto) shouldSend(k *kernel.Kernel, key string, now time.Time) bool 
 	if !ok {
 		return true
 	}
+	if prev.Denied {
+		return false // 人拒绝过这个版本：不再打扰
+	}
 	r, err := k.Get(prev.Req)
 	if err == nil {
 		switch r.State {
 		case kernel.StatePending, kernel.StateRunning:
 			return false // 还在等批准或执行中
 		case kernel.StateDenied:
-			return false // 人拒绝过这个版本：不再打扰
+			prev.Denied = true
+			aa.sent[key] = prev // 存下来：这个请求以后从内核里掉出去了也记得
+			return false
 		}
 	}
 	return now.Sub(prev.At) >= appAutoRetry

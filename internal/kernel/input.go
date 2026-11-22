@@ -3,6 +3,8 @@ package kernel
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -120,6 +122,16 @@ func (k *Kernel) openInput(in *Input) (io.ReadCloser, error) {
 		if st, err := f.Stat(); err != nil || st.Size() != in.Size {
 			f.Close()
 			return nil, errors.New("上传的文件在提交之后变了，批准作废")
+		}
+		// 批准绑定的是文件的 SHA-256：执行前重新算一遍，大小相同、内容换过的也不放行。
+		h := sha256.New()
+		if _, err := io.Copy(h, f); err != nil || hex.EncodeToString(h.Sum(nil)) != in.SHA256 {
+			f.Close()
+			return nil, errors.New("上传的文件在提交之后变了，批准作废")
+		}
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			f.Close()
+			return nil, err
 		}
 		return f, nil
 	}

@@ -88,6 +88,7 @@ type digestEntry struct {
 	digest string
 	ok     bool // false 表示标签不存在
 	at     time.Time
+	err    error
 }
 
 const manifestAccept = "application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, " +
@@ -101,24 +102,28 @@ func (r *Registry) ImageDigest(ctx context.Context, image string) (digest string
 	if err != nil {
 		return "", false, err
 	}
-	key := ref.Registry + "/" + ref.Repo + ":" + ref.Tag
+	// 缓存键带上实际访问的仓库地址：换了地址（镜像加速、测试里的假仓库）就是另一份结果。
+	key := r.registryBase(ref.Registry) + "/" + ref.Repo + ":" + ref.Tag
 	r.mu.Lock()
 	if r.digests == nil {
 		r.digests = map[string]digestEntry{}
 	}
 	e, hit := r.digests[key]
 	r.mu.Unlock()
-	if hit && time.Since(e.at) < r.TTL {
+	if hit && e.err != nil && time.Since(e.at) < failTTL {
+		return "", false, e.err
+	}
+	if hit && e.err == nil && time.Since(e.at) < r.TTL {
 		return e.digest, e.ok, nil
 	}
 	digest, ok, err = r.headManifest(ctx, ref)
-	if err != nil {
-		return "", false, err
+	if err != nil && ctx.Err() != nil {
+		return "", false, err // 调用方取消了：不缓存
 	}
 	r.mu.Lock()
-	r.digests[key] = digestEntry{digest: digest, ok: ok, at: time.Now()}
+	r.digests[key] = digestEntry{digest: digest, ok: ok, err: err, at: time.Now()}
 	r.mu.Unlock()
-	return digest, ok, nil
+	return digest, ok, err
 }
 
 func (r *Registry) registryBase(host string) string {

@@ -1,6 +1,7 @@
 package risk
 
 import (
+	"path"
 	"regexp"
 	"strings"
 )
@@ -18,6 +19,9 @@ var secretRes = compileAll(
 	`/privkey[^/]*\.pem$`,
 	`(^|/)\.gnupg(/|$)`,
 	`^/proc/[^/]+/environ$`,
+	`^/proc/[^/]+/task/[^/]+/environ$`,
+	// /proc/<pid>/cwd 指向哪里看不出来：经由它读文件一律按读凭据处理。
+	`^/proc/[^/]+/cwd(/|$)`,
 	`^/run/secrets(/|$)`,
 )
 
@@ -58,12 +62,28 @@ func matchAny(res []*regexp.Regexp, s string) bool {
 	return false
 }
 
+// procRootRe 是 /proc/<pid>/root：它就是那个进程看到的根目录，后面的路径等于从 / 开始。
+var procRootRe = regexp.MustCompile(`^/proc/[^/]+/root(/|$)`)
+
+// normPath 把路径规整成匹配用的样子：去掉 ./、//、..（绝对路径才做），把 /proc/<pid>/root/… 换成 /…。
+// 不然 /etc/./shadow、/proc/self/root/etc/shadow 这类写法就能绕过下面按路径写的规则。
+func normPath(p string) string {
+	if !strings.HasPrefix(p, "/") {
+		return p
+	}
+	p = path.Clean(p)
+	for i := 0; i < 4 && procRootRe.MatchString(p); i++ {
+		p = path.Clean("/" + procRootRe.ReplaceAllString(p, ""))
+	}
+	return p
+}
+
 // isSecretPath 报告路径是否是私钥或凭据文件。公钥（.pub）不算。
 func isSecretPath(p string) bool {
 	if strings.HasSuffix(p, ".pub") {
 		return false
 	}
-	return matchAny(secretRes, p)
+	return matchAny(secretRes, p) || matchAny(secretRes, normPath(p))
 }
 
 // isSSHDirWhole 报告参数是否指向整个 .ssh 目录，或用通配符扫它里面的文件。
@@ -74,9 +94,13 @@ func isSSHDirWhole(p string, glob bool) bool {
 	return glob && sshDirInsideRe.MatchString(p)
 }
 
-func isCriticalConfig(p string) bool { return matchAny(criticalConfigRes, p) }
+func isCriticalConfig(p string) bool {
+	return matchAny(criticalConfigRes, p) || matchAny(criticalConfigRes, normPath(p))
+}
 
-func isBlockDevice(p string) bool { return blockDevRe.MatchString(p) }
+func isBlockDevice(p string) bool {
+	return blockDevRe.MatchString(p) || blockDevRe.MatchString(normPath(p))
+}
 
 func harmlessSink(p string) bool {
 	switch p {

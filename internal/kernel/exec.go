@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -137,8 +138,10 @@ func (k *Kernel) run(ctx context.Context, r *Request) {
 		r.State = StateDone
 	}
 	if len(r.Targets) > 1 {
-		k.audit.Append(context.Background(), audit.Entry{Type: "exec.finished", Actor: r.Actor.Name, RequestID: r.ID, Parent: r.AuditSeq,
-			Level: r.Level.String(), Detail: map[string]any{"ok": okN, "failed": failN, "skipped": skipN, "state": r.State}})
+		if _, err := k.audit.Append(context.Background(), audit.Entry{Type: "exec.finished", Actor: r.Actor.Name, RequestID: r.ID, Parent: r.AuditSeq,
+			Level: r.Level.String(), Detail: map[string]any{"ok": okN, "failed": failN, "skipped": skipN, "state": r.State}}); err != nil {
+			slog.Error("写审计失败：批量执行的结果没有记下来", "request", r.ID, "err", err)
+		}
 	}
 	k.changed(r)
 }
@@ -263,7 +266,11 @@ func (k *Kernel) runTarget(ctx context.Context, r *Request, t *Target) bool {
 	} else {
 		entry.ExitCode = &code
 	}
-	seq, _ := k.audit.Append(context.Background(), entry)
+	seq, aerr := k.audit.Append(context.Background(), entry)
+	if aerr != nil {
+		// 命令已经执行了，没法撤回：至少留下日志，让人知道审计里少了这一条。
+		slog.Error("写审计失败：一次执行没有记下来", "request", r.ID, "host", t.Host, "err", aerr)
+	}
 
 	k.mu.Lock()
 	t.AuditSeq = seq

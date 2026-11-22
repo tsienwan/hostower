@@ -266,6 +266,13 @@ func builtin(e *Engine, v *Verdict, c *command, depth int) (Level, string, strin
 			return L2, "service.critical", "影响远程连接或防火墙的服务"
 		}
 		return L1, "builtin.change", "变更服务状态"
+	case "claude", "codex", "gemini", "dsh", "aider", "opencode", "qwen":
+		return ruleAIAgent(c)
+	case "npx", "bunx", "pnpx":
+		// 临时下载运行一个包：要是带着让 AI 助手跳过权限确认的开关，按高危处理；别的照旧（往下走）。
+		if lvl, rule, reason := agentUnrestricted(c); lvl == L2 {
+			return lvl, rule, reason
+		}
 	case "docker", "podman", "nerdctl":
 		return ruleDocker(c)
 	case "fail2ban-client":
@@ -542,4 +549,44 @@ func ruleDocker(c *command) (Level, string, string) {
 		}
 	}
 	return L1, "builtin.change", "变更容器"
+}
+
+// ruleAIAgent 给 AI 编程助手判级。照常运行时它按自己的权限设置行事（要确认的操作在非交互模式下会被拒绝，
+// 或者被沙箱限制在工作目录里），算变更；跳过权限确认或沙箱就等于让它在主机上随意执行命令，算高危。
+// 参数看不全（来自变量）的也按高危处理：看不出有没有夹带跳过的开关。
+func ruleAIAgent(c *command) (Level, string, string) {
+	for _, a := range c.args {
+		if !a.static {
+			return L2, "agent.dynamic", "AI 编程助手的参数看不全，无法确认有没有跳过权限确认"
+		}
+	}
+	if lvl, rule, reason := agentUnrestricted(c); lvl == L2 {
+		return lvl, rule, reason
+	}
+	return L1, "agent.run", "运行 AI 编程助手：它会按自己的权限设置读写文件、访问网络"
+}
+
+// agentUnrestricted 找让 AI 编程助手跳过权限确认或沙箱的开关：直接的开关、配置项（codex -c sandbox_mode=…）、
+// 把 Bash 工具整个放开（claude --allowedTools Bash）。找到了返回 L2，否则返回 L0（表示没找到）。
+func agentUnrestricted(c *command) (Level, string, string) {
+	for i, a := range c.args {
+		t := a.text
+		next := ""
+		if i+1 < len(c.args) {
+			next = c.args[i+1].text
+		}
+		switch {
+		case t == "--dangerously-skip-permissions", t == "--dangerously-bypass-approvals-and-sandbox", t == "--yolo",
+			c.name == "gemini" && t == "-y",
+			(t == "--permission-mode" && next == "bypassPermissions") || t == "--permission-mode=bypassPermissions",
+			((t == "--sandbox" || t == "-s") && next == "danger-full-access") || t == "--sandbox=danger-full-access",
+			(t == "--approval-mode" && next == "yolo") || t == "--approval-mode=yolo",
+			(t == "-c" || t == "--config") && strings.Contains(next, "danger-full-access"),
+			strings.HasPrefix(t, "--config=") && strings.Contains(t, "danger-full-access"),
+			(t == "--allowedTools" || t == "--allowed-tools") && strings.Contains(next, "Bash"),
+			(strings.HasPrefix(t, "--allowedTools=") || strings.HasPrefix(t, "--allowed-tools=")) && strings.Contains(t, "Bash"):
+			return L2, "agent.unrestricted", "让 AI 编程助手跳过权限确认或沙箱，等于让它在主机上随意执行命令"
+		}
+	}
+	return L0, "", ""
 }
