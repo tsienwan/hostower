@@ -1,0 +1,43 @@
+apiVersion: hostower/v1
+kind: App
+name: n8n
+version: 2.48.7
+title: n8n
+category: 运维
+icon: activity
+summary: 可视化的工作流自动化，内置大量服务和大模型节点。
+description: 工作流、凭据和账号保存在名为 data 的 Docker 卷里（卸载并删除数据时一起删）。这里按用 HTTP 直接访问来配置。
+homepage: https://docs.n8n.io # hygiene:allow 项目的官方文档地址
+type: compose
+params:
+  - name: bind
+    title: 监听地址
+    type: enum
+    options: ["127.0.0.1", "0.0.0.0"]
+    default: 127.0.0.1
+    hint: 127.0.0.1 只能在主机本机访问（配合反向代理或 SSH 隧道）；0.0.0.0 对外开放。
+  - name: port
+    title: 端口
+    type: port
+    default: "5678"
+compose: |
+  services:
+    n8n:
+      image: n8nio/n8n:2.48.7
+      restart: unless-stopped
+      ports: ["{{ .bind }}:{{ .port }}:5678"]
+      environment:
+        N8N_SECURE_COOKIE: "false"
+      volumes: ["data:/home/node/.n8n"]
+  volumes:
+    data: {}
+guide:
+  open:
+    - title: 工作流编辑器
+      port: "{{ .port }}"
+      bind: "{{ .bind }}"
+  account: 没有初始账号：第一次打开时创建所有者账号。
+  steps:
+    - 创建账号后新建一个工作流，从触发器节点（定时、Webhook）开始连。
+    - 外部服务的密钥加在 Credentials 里，工作流里只引用，不要直接写进节点。
+notes: 打开 http://<主机地址>:{{ .port }}，第一次访问时创建所有者账号。

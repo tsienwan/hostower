@@ -47,6 +47,7 @@ var allowedDomains = []string{
 	"speed.cloudflare.com",  // 测速服务（internal/speedtest），只放这一个主机名，不放整个 cloudflare.com
 	"containerd.io",         // 不是网站：Docker 官方软件源里的包名（internal/apps/docker.go）
 	"install.speedtest.net", // Ookla 测速程序的官方下载地址（internal/speedtest/ookla.go），只放这一个主机名
+	"proxycheck.io",         // 环境检测查出口 IP 归属用的公开信息库（internal/hostenv），文档里要写明用的是哪一家
 }
 
 var domainFileExt = map[string]bool{".yaml": true, ".yml": true, ".md": true, ".txt": true, ".toml": true, ".json": true, ".conf": true, ".env": true}

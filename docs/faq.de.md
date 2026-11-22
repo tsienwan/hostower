@@ -185,6 +185,42 @@ Das ist die Standardbenennung von Docker Compose (Projekt-Dienst-Index), die äl
 
 Bei bereits installierten Apps bearbeiten Sie einmal deren Einstellungen oder aktualisieren sie unter **Installiert**, dann wird der Container mit dem neuen Namen neu erstellt; Datenverzeichnisse bleiben unberührt. Hat der Host bereits einen gleichnamigen Container, den nicht Hostower erstellt hat, meldet die Bereitstellung einen Namenskonflikt; kümmern Sie sich zuerst um diesen Container.
 
+### Die App ist installiert – wo öffne ich sie? Wie lauten anfängliches Konto und Passwort?
+
+Klicken Sie unter **Apps → Installiert** in der betreffenden Zeile auf das Raketensymbol (**Erste Schritte**): Dort finden Sie die Zugriffsadresse (direkt anklickbar), Hinweise zum anfänglichen Konto und die nächsten Schritte. Nachdem eine Installationsanfrage erfolgreich ausgeführt wurde, bietet die Detailseite der Anfrage denselben Einstieg.
+
+- Bei Apps, deren anfängliches Passwort bei der Installation festgelegt werden kann (admin-Passwort von OpenList, Hauptschlüssel von LiteLLM, Datenbankpasswörter), ist das Passwort das bei der Installation gewählte App-Secret.
+- Apps, bei denen Sie den Administrator beim ersten Öffnen selbst anlegen (Uptime Kuma, Portainer, Open WebUI, New API, n8n), haben kein anfängliches Konto; öffnen Sie sie nach der Installation möglichst bald und schließen Sie die Registrierung ab.
+- Anfänglicher Benutzername und Passwort von 3x-ui werden beim ersten Start zufällig erzeugt und erscheinen nur ein einziges Mal im Container-Log: Klicken Sie in den ersten Schritten auf **Anfänglichen Benutzernamen und Passwort auslesen**, dann liest das Panel diese Zeile mit einer einzigen Nur-Lese-Abfrage aus. Nach einer Neuerstellung des Containers steht sie nicht mehr im Log; setzen Sie die Zugangsdaten dann mit dem dort angegebenen Befehl in einem Terminal auf dem Host neu.
+
+Lässt sich die Adresse nicht öffnen, prüfen Sie zuerst, ob die Listen-Adresse `127.0.0.1` ist (nur vom Host selbst aus erreichbar; richten Sie einen Reverse-Proxy ein oder ändern Sie sie unter **Einstellungen bearbeiten** auf `0.0.0.0`), und danach, ob Host-Firewall und Sicherheitsgruppe des Cloud-Anbieters diesen Port erlauben.
+
+### Was bedeuten „Eingeschränkt“ und „Nicht erreichbar“ auf der Seite „Umgebung“?
+
+**Umgebung** auf der Host-Seite und **Apps → Umgebung** senden von diesem Host aus eine Reihe rein lesender Anfragen und werten aus, wie die einzelnen Dienste antworten:
+
+- **Modell-APIs** (OpenAI, Anthropic, Google Gemini, xAI, DeepSeek): Die Anfrage wird ohne Schlüssel gesendet. Lautet die Antwort „Schlüssel fehlt“, ist die API **Verfügbar**; mit einem Schlüssel sind Aufrufe möglich. Wird die Anfrage wegen des Landes oder der Region des Ausgangs abgelehnt, ist sie **Eingeschränkt**; nehmen Sie einen Host in einer anderen Region oder leiten Sie über ein Gateway wie LiteLLM oder New API weiter.
+- **Websites und Streaming** (Google, YouTube, Netflix, Disney+, TikTok, Facebook, X, die Web-Version von ChatGPT usw.): **Verfügbar**, wenn sich die Seite normal öffnen lässt; **Eingeschränkt**, wenn die Anfrage abgelehnt oder auf eine Seite „in Ihrer Region nicht verfügbar“ umgeleitet wird. Bei YouTube und Netflix wird außerdem angezeigt, in welcher Region Sie landen; Netflix wird anhand eines Titels beurteilt, der keine Eigenproduktion ist, und „Nur Originals abrufbar“ bedeutet, dass der Katalog dieser Region für diese Adresse nicht freigegeben ist.
+- **Nicht erreichbar**: Innerhalb von 8 Sekunden kam keine Verbindung zustande; möglicherweise blockiert das Netzwerk sie, oder auf dem Host fehlt `curl`.
+- **Unklar**: Die Verbindung kam zustande, aber die Antwort entspricht keinem der Fälle oben; eine Beurteilung ist nicht möglich.
+
+Geprüft wird hier nur, wie die Dienste antworten; es wird bei keinem Konto angemeldet. Die Web-Versionen und Abo-Anmeldungen der Anbieter haben eigene Regeln für Regionen und Risikokontrolle; weder eine verfügbare API noch eine Website, die sich öffnen lässt, bedeutet, dass auch ein Konto funktioniert. Dieselbe Seite listet außerdem auf, welche KI-CLI-Tools auf dem Host installiert sind (Claude Code, Codex CLI, Gemini CLI usw.), sowie die Laufzeitumgebungen; die Versionen werden aus den Installationsverzeichnissen gelesen, die Programme werden nicht ausgeführt.
+
+### Was sind Typ und Risikowert unter „Ausgangs-IP“? Wie zuverlässig sind sie?
+
+Websites sehen die Ausgangsadresse des Hosts. Von ihrem Typ und davon, ob sie negativ aufgefallen ist, hängt ab, ob Sie eingeschränkt werden und wie oft Sie eine Mensch-Prüfung bestehen müssen:
+
+- **Typ**: Rechenzentrum, Privatanschluss, Geschäftsanschluss, Mobilfunknetz usw. Ein VPS hat in der Regel eine Rechenzentrumsadresse; Streaming-Dienste zeigen dort oft nur Eigenproduktionen, und Abo-Anmeldungen bei KI-Diensten lösen leichter die Risikokontrolle aus.
+- **Proxy-Markierung**: ob die Datenbank die Adresse als Proxy- oder VPN-Ausgang markiert hat.
+- **Risikowert**: 0 bis 100; je höher, desto mehr Missbrauch ist für diese Adresse oder ihren Netzbereich verzeichnet. Unter 33 gilt als niedrig, über 66 als hoch.
+- Außerdem werden der Betreiber (ASN), der Standort, ein etwaiger IPv6-Ausgang und die Nutzung von Cloudflare WARP angezeigt.
+
+Diese Angaben ermittelt der Host selbst, indem er seine eigene Ausgangsadresse bei einer öffentlichen IP-Datenbank (proxycheck.io) abfragt. Sie dienen nur zur Orientierung: Verschiedene Datenbanken können zu unterschiedlichen Ergebnissen kommen, und die Risikokontrolle der Websites richtet sich nicht allein danach. Lässt sich nichts ermitteln, wird „Nicht gefunden“ angezeigt; die übrigen Prüfungen sind davon nicht betroffen.
+
+### Wie erfasse ich, wie viele Tokens die einzelnen KI-Tools verbrauchen?
+
+Installieren Sie LiteLLM oder New API (im App-Katalog unter **KI-Tools**), lassen Sie die API-Adresse von Claude Code, Codex CLI und den anderen Tools darauf zeigen und stellen Sie für jedes Tool oder jede Person einen eigenen Schlüssel aus. Anzahl der Aufrufe, Token-Verbrauch und Kosten pro Schlüssel und pro Modell sehen Sie in der Verwaltungsoberfläche des Gateways selbst. Hostower selbst leitet Modellanfragen weder weiter noch zeichnet es sie auf.
+
 ### Wie werden Images mit festen Versions-Tags (etwa `v3.9.0`) aktualisiert?
 
 Die Seite **Container** liest die Tag-Liste aus der Registry:

@@ -28,4 +28,13 @@ compose: |
       volumes: ["./data:/app/data"]
 upgrade:
   note: 从 1.x 升级到 2.x 时，第一次启动会自动迁移数据库，数据多时要几分钟，期间页面打不开；升级前建议先备份实例目录下的 data。
+guide:
+  open:
+    - title: 监控面板
+      port: "{{ .port }}"
+      bind: "{{ .bind }}"
+  account: 没有初始账号：第一次打开时创建管理员账号。
+  steps:
+    - 创建账号后点“添加监控项”，选 HTTP、TCP 或 Ping，填要监控的地址。
+    - 在“设置 → 通知”里加一个通知渠道，监控项出问题时才会收到提醒。
 notes: 打开 http://<主机地址>:{{ .port }}，第一次访问时创建管理员账号。

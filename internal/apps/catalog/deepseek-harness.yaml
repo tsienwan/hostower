@@ -16,4 +16,8 @@ npm:
   node: 24
 configure:
   kind: dsh
+guide:
+  steps:
+    - 在“已安装”里点“配置”选模型提供商、填 API Key。
+    - 配好后在主机的终端里进入项目目录，运行 dsh。
 notes: 在“已安装”里点“配置”选模型提供商（DeepSeek 或第三方）、填 API Key，然后在主机的终端里运行 dsh。

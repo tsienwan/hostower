@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Activity, ArrowUpCircle, Bot, Box, Check, Database, Dices, Download, Eye, Network, Package, Play, Plus, RefreshCw, RotateCw, Search,
-  Globe, KeyRound, Settings2, Shield, ShieldAlert, Sparkles, Square, SquareTerminal, Trash2, TriangleAlert,
+  ExternalLink, Globe, KeyRound, Rocket, Settings2, Shield, ShieldAlert, Sparkles, Square, SquareTerminal, Trash2, TriangleAlert,
 } from "lucide-react";
 import { api, type AIConfig, type AppAutoStatus, type AppActionName, type AppInstallTarget, type AppInstalled, type AppItem, type AppParam, type AppPlanResult, type HostApps, type Preview } from "../api";
 import { fail, toast, useStore } from "../store";
@@ -14,6 +14,8 @@ import { PreviewPanel } from "../shared";
 import { DockerSetup } from "../DockerSetup";
 import { cached, remember } from "../cache";
 import { ts, useT } from "../i18n";
+import { AppGuideDialog, guideUrl } from "./AppGuide";
+import { EnvMatrix } from "./HostEnv";
 
 const icons: Record<string, typeof Bot> = { bot: Bot, sparkles: Sparkles, activity: Activity, database: Database, network: Network, box: Box, shield: Shield, terminal: SquareTerminal };
 
@@ -37,15 +39,25 @@ const typeLabel = { compose: "容器应用", npm: "命令行工具" } as const;
 export function AppsPage() {
   const t = useT();
   const [sp, setSp] = useSearchParams();
-  const tab = sp.get("tab") === "installed" ? "installed" : "catalog";
+  const tab = sp.get("tab") === "installed" ? "installed" : sp.get("tab") === "env" ? "env" : "catalog";
   const [catalog, setCatalog] = useState<AppItem[] | null>(() => cached<AppItem[]>("apps:catalog") ?? null);
   const [categories, setCategories] = useState<string[]>([]);
   const [installing, setInstalling] = useState<AppItem | null>(null);
+  const [installHost, setInstallHost] = useState("");
 
   useEffect(() => {
     api.apps().then((r) => { setCatalog(remember("apps:catalog", r.apps)); setCategories(r.categories); }).catch(fail);
   }, []);
   const byName = useMemo(() => new Map((catalog ?? []).map((a) => [a.name, a])), [catalog]);
+  // 从主机的“环境”页点“安装”过来（?install=应用&host=主机）：直接打开安装框并选好那台主机。
+  const wantInstall = sp.get("install");
+  useEffect(() => {
+    const a = wantInstall ? byName.get(wantInstall) : undefined;
+    if (!a) return;
+    setInstallHost(sp.get("host") ?? "");
+    setInstalling(a);
+    setSp({}, { replace: true });
+  }, [wantInstall, byName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -54,17 +66,19 @@ export function AppsPage() {
         <div className="tabs" role="tablist">
           <button role="tab" aria-selected={tab === "catalog"} className={"tab" + (tab === "catalog" ? " active" : "")} onClick={() => setSp({})}>{t("应用目录")}</button>
           <button role="tab" aria-selected={tab === "installed"} className={"tab" + (tab === "installed" ? " active" : "")} onClick={() => setSp({ tab: "installed" })}>{t("已安装")}</button>
+          <button role="tab" aria-selected={tab === "env"} className={"tab" + (tab === "env" ? " active" : "")} onClick={() => setSp({ tab: "env" })}>{t("环境")}</button>
         </div>
       </div>
       <div className="content">
         <div className="page">
           <p className="lede">{t("安装、更新、启停和卸载都会变成请求：先看到每台主机上实际要执行的命令、要写进主机的 compose 文件和风险等级，批准后才执行。应用要的权限由判级引擎看实际内容决定，不由清单自己说了算。")}</p>
           {tab === "catalog"
-            ? <Catalog apps={catalog} categories={categories} onInstall={setInstalling} />
+            ? <Catalog apps={catalog} categories={categories} onInstall={(a) => { setInstallHost(""); setInstalling(a); }} />
+            : tab === "env" ? <EnvMatrix />
             : <Installed byName={byName} />}
         </div>
       </div>
-      {installing && <InstallDialog app={installing} onClose={() => setInstalling(null)} />}
+      {installing && <InstallDialog app={installing} initialHost={installHost} onClose={() => setInstalling(null)} />}
     </>
   );
 }
@@ -114,6 +128,7 @@ function Catalog({ apps, categories, onInstall }: { apps: AppItem[] | null; cate
                 <div className="row app-foot">
                   <span className="muted mono" style={{ fontSize: 12 }}>{a.npm ? a.npm.package : ""} {a.npm?.version ?? a.version}</span>
                   <span className="grow" />
+                  {a.homepage && <a className="btn ghost icon sm" href={a.homepage} target="_blank" rel="noopener noreferrer" title={t("官方文档")} aria-label={t("官方文档")}><ExternalLink /></a>}
                   <button className="btn primary sm" onClick={() => onInstall(a)}><Download />{t("安装")}</button>
                 </div>
               </div>
@@ -136,14 +151,14 @@ function randomSecret(n = 24) {
 
 interface Row { host: string; instance: string; params: Record<string, string>; secrets: Record<string, string> }
 
-function InstallDialog({ app, onClose }: { app: AppItem; onClose: () => void }) {
+function InstallDialog({ app, initialHost, onClose }: { app: AppItem; initialHost?: string; onClose: () => void }) {
   const t = useT();
   const nav = useNavigate();
   const hosts = useStore((s) => s.hosts);
   const owner = useStore((s) => s.boot?.user?.role === "owner");
   const params = app.params ?? [];
   const defaults = Object.fromEntries(params.filter((p) => p.type !== "secret").map((p) => [p.name, p.default ?? ""]));
-  const [picked, setPicked] = useState<string[]>([]);
+  const [picked, setPicked] = useState<string[]>(() => (initialHost && hosts.some((h) => h.name === initialHost) ? [initialHost] : []));
   const [hostQuery, setHostQuery] = useState("");
   const [common, setCommon] = useState<Row>({ host: "", instance: app.name, params: defaults, secrets: {} });
   const [each, setEach] = useState(false);
@@ -381,6 +396,8 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
   const [sel, setSel] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<{ action: AppActionName; keys: string[] } | null>(null);
   const [configuring, setConfiguring] = useState<{ host: string; instance: string } | null>(null);
+  const [guiding, setGuiding] = useState<string | null>(null);
+  const [sp, setSp] = useSearchParams();
   const names = hosts.map((h) => h.name).join(",");
 
   const load = useCallback(() => {
@@ -393,6 +410,15 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
   const rows = (data ?? []).flatMap((h) => h.installed.map((x) => ({ ...x, host: h.host, key: h.host + "/" + x.instance })));
   const errors = (data ?? []).filter((h) => h.error);
   const updates = rows.filter((r) => r.update || r.rebuilt);
+  // 从请求详情页跳过来（?host=…&app=…）：数据到了以后直接打开那个实例的上手指南，只打开一次。
+  const wantHost = sp.get("host"), wantApp = sp.get("app");
+  useEffect(() => {
+    if (!data || !wantHost || !wantApp) return;
+    const r = rows.find((x) => x.host === wantHost && x.app === wantApp && x.guide);
+    if (r) setGuiding(r.key);
+    setSp({ tab: "installed" }, { replace: true });
+  }, [data, wantHost, wantApp]); // eslint-disable-line react-hooks/exhaustive-deps
+  const guided = rows.find((r) => r.key === guiding);
   const toggle = (k: string) => setSel((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
 
   const run = async (action: AppActionName, keys: string[]) => {
@@ -478,9 +504,14 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
                             : <span className={"badge " + (running === r.containers.length ? "ok" : running === 0 ? "neutral" : "warn")}>
                                 {running === r.containers.length ? t("运行中") : running === 0 ? t("已停止") : t("{a}/{b} 运行中", { a: running, b: r.containers.length })}</span>}
                           {r.containers[0]?.ports && <div className="muted mono" style={{ fontSize: 12, marginTop: 2 }}>{r.containers[0].ports}</div>}
+                          {running > 0 && r.guide?.open.filter((o) => !o.local).slice(0, 1).map((o) => {
+                            const url = guideUrl(hosts.find((h) => h.name === r.host), o);
+                            return <a key={url} className="mono app-open" href={url} target="_blank" rel="noopener noreferrer"><ExternalLink />{t("打开")}</a>;
+                          })}
                         </td>
                         <td className="act">
                           <div className="row act-row">
+                            {r.guide && <button className="btn ghost icon sm" title={t("上手指南：访问地址、初始账号、接下来几步")} aria-label={t("上手指南")} onClick={() => setGuiding(r.key)}><Rocket /></button>}
                             {(r.update || r.rebuilt) && <button className="btn ghost icon sm" title={r.update ? t("更新到 {v}", { v: r.update }) : t("拉取新构建并重建容器")} aria-label={t("更新")} onClick={() => run("update", [r.key])}><ArrowUpCircle /></button>}
                             {r.type === "compose" && (running > 0
                               ? <button className="btn ghost icon sm" title={t("停止")} aria-label={t("停止")} onClick={() => run("stop", [r.key])}><Square /></button>
@@ -502,6 +533,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
           )}
       </div>
       {configuring && <AppConfigureDialog host={configuring.host} instance={configuring.instance} onClose={() => setConfiguring(null)} />}
+      {guided?.guide && <AppGuideDialog host={guided.host} instance={guided.instance} app={byName.get(guided.app)} guide={guided.guide} onClose={() => setGuiding(null)} />}
       {confirm && (
         <UninstallDialog count={confirm.keys.length} compose={rows.filter((r) => confirm.keys.includes(r.key)).every((r) => r.type === "compose")}
           onClose={() => setConfirm(null)} onSubmit={(purge) => { setConfirm(null); run(purge ? "purge" : "uninstall", confirm.keys); }} />

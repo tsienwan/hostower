@@ -10,6 +10,7 @@ import { SpeedtestDialog } from "./Speedtest";
 import { ContainerDetailDialog } from "./Containers";
 import { NetworkPanel } from "./Network";
 import { TrafficCard } from "./Traffic";
+import { EnvPanel } from "./HostEnv";
 import { BinaryPreview, TextPreview, previewKind, textKinds, type PreviewKind } from "../preview";
 import { Empty, LevelBadge, Pager, poll, SortTh, Sparkline, StateBadge, TrendChart, Usage, ago, bytes, stamp, rate, uptime, usePaged, useSort, useSteadyOrder, type Series } from "../ui";
 import { lang, ts, useT } from "../i18n";
@@ -43,8 +44,8 @@ export function HostDetail() {
   const requests = useStore((s) => s.requests);
   // 分页记在地址里（?tab=network）：应用页可以直接跳到“网络”。
   const [sp, setSp] = useSearchParams();
-  const tab = (["files", "network"].includes(sp.get("tab") ?? "") ? sp.get("tab") : "overview") as "overview" | "files" | "network";
-  const setTab = (v: "overview" | "files" | "network") => setSp(v === "overview" ? {} : { tab: v }, { replace: true });
+  const tab = (["files", "network", "env"].includes(sp.get("tab") ?? "") ? sp.get("tab") : "overview") as "overview" | "files" | "network" | "env";
+  const setTab = (v: "overview" | "files" | "network" | "env") => setSp(v === "overview" ? {} : { tab: v }, { replace: true });
   const [editing, setEditing] = useState(false);
   const [speed, setSpeed] = useState<SpeedConfig | null>(null);
   const nav = useNavigate();
@@ -119,6 +120,7 @@ export function HostDetail() {
             <button role="tab" aria-selected={tab === "overview"} className={"tab" + (tab === "overview" ? " active" : "")} onClick={() => setTab("overview")}>{t("概览")}</button>
             <button role="tab" aria-selected={tab === "files"} className={"tab" + (tab === "files" ? " active" : "")} onClick={() => setTab("files")}>{t("文件")}</button>
             <button role="tab" aria-selected={tab === "network"} className={"tab" + (tab === "network" ? " active" : "")} onClick={() => setTab("network")}>{t("网络")}</button>
+            <button role="tab" aria-selected={tab === "env"} className={"tab" + (tab === "env" ? " active" : "")} onClick={() => setTab("env")}>{t("环境")}</button>
           </div>
 
           {tab === "overview" && (
@@ -211,6 +213,7 @@ export function HostDetail() {
 
           {tab === "files" && <Files host={host.name} />}
           {tab === "network" && <NetworkPanel host={host.name} />}
+          {tab === "env" && <EnvPanel host={host.name} />}
         </div>
       </div>
     </>

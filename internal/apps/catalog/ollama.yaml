@@ -1,0 +1,40 @@
+apiVersion: hostower/v1
+kind: App
+name: ollama
+version: 0.40.17
+title: Ollama
+category: AI 工具
+icon: sparkles
+summary: 在主机上本地运行开源大模型，提供 HTTP 接口。
+description: 这里装的是只用 CPU 的版本，小内存的 VPS 只跑得动很小的模型。模型文件保存在实例目录下的 data 里，一个模型几个 GB。接口没有任何认证。
+homepage: https://ollama.com # hygiene:allow 项目的官方文档地址
+type: compose
+params:
+  - name: bind
+    title: 监听地址
+    type: enum
+    options: ["127.0.0.1", "0.0.0.0"]
+    default: 127.0.0.1
+    hint: 接口没有认证：对外开放等于谁都能用这台主机跑模型，对外开放前先用防火墙限制来源。
+  - name: port
+    title: 端口
+    type: port
+    default: "11434"
+compose: |
+  services:
+    ollama:
+      image: ollama/ollama:0.40.17
+      restart: unless-stopped
+      ports: ["{{ .bind }}:{{ .port }}:11434"]
+      volumes: ["./data:/root/.ollama"]
+guide:
+  open:
+    - title: 接口地址
+      port: "{{ .port }}"
+      bind: "{{ .bind }}"
+  account: 没有账号和密码，接口不做认证。
+  steps:
+    - 装好后还没有模型：在主机的终端里运行 docker exec -it {{ .instance }} ollama pull 模型名 下载一个。
+    - 下载完用 docker exec -it {{ .instance }} ollama run 模型名 在终端里直接对话。
+    - 别的程序把 Ollama 地址设成入口地址；OpenAI 兼容接口是入口地址后面加 /v1。
+notes: 接口地址 {{ .bind }}:{{ .port }}，没有认证。

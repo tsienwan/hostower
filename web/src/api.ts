@@ -312,6 +312,8 @@ export const api = {
   containerAction: (b: ContainerAction) => call<Req>("POST", "/containers/action", b),
   apps: () => call<{ apps: AppItem[]; categories: string[] }>("GET", "/apps"),
   appsInstalled: (hosts: string[]) => call<{ hosts: HostApps[] }>("GET", "/apps/installed" + q({ hosts: hosts.join(",") })),
+  appReveal: (host: string, instance: string) => call<{ output: string }>("GET", "/apps/reveal" + q({ host, instance })),
+  hostEnv: (name: string) => call<HostEnv>("GET", `/hosts/${encodeURIComponent(name)}/env`),
   appInstall: (b: AppInstallBody) => call<AppPlanResult>("POST", "/apps/install", b),
   appAction: (b: AppActionBody) => call<AppPlanResult>("POST", "/apps/action", b),
   hostNetwork: (host: string) => call<NetworkView>("GET", `/hosts/${encodeURIComponent(host)}/network`),
@@ -522,11 +524,26 @@ export interface AppItem {
   ai?: { kind: string; login?: string; loginHint?: string; providers: AIProvider[] };
   /** 升级说明；blockFrom 里的旧版本不能原地升级。 */
   upgrade?: { note?: string; blockFrom?: string[] };
+  /** 项目主页或文档。 */
+  homepage?: string;
 }
+/** 按一个实例的参数渲染好的上手指南。local 表示只在主机本机监听。 */
+export interface AppGuide {
+  open: { title: string; scheme: "http" | "https"; port: string; path: string; local?: boolean }[];
+  account?: string; steps: string[]; reveal?: { title: string; hint?: string };
+}
+/** 主机环境检测：装了哪些命令、各家模型接口能不能用。 */
+export interface EnvTool { name: string; title: string; kind: "ai" | "runtime"; app?: string; installed: boolean; path?: string; version?: string; signed?: boolean }
+export interface EnvService { id: string; title: string; used?: string; state: "ok" | "blocked" | "unreachable" | "unknown"; code: number }
+/** 网站检测：region 是网站认为主机所在的区；note 是补充结论（netflix 的 full / originals）。 */
+export interface EnvSite { id: string; title: string; group: string; state: EnvService["state"]; code: number; region?: string; note?: string }
+/** 出口：type 是地址类型（hosting、residential、business、wireless、vpn…），risk 是 0～100 的风险分，-1 表示没查到。 */
+export interface EnvEgress { ip?: string; ipv6?: string; country?: string; colo?: string; warp?: boolean; asn?: string; provider?: string; city?: string; region?: string; type?: string; proxy?: boolean; risk: number }
+export interface HostEnv { tools: EnvTool[]; services: EnvService[]; sites: EnvSite[]; egress: EnvEgress; checkedAt: number }
 export interface AIProvider { id: string; title: string; baseUrl?: string; models?: string[]; key: "required" | "optional"; note?: string; custom?: boolean; apis?: string[] }
 export interface AIConfig { provider: string; baseUrl?: string; model?: string; smallModel?: string; secret?: string; api?: string }
 export interface AppRecord { app: string; version: string; type: "compose" | "npm"; instance: string; params?: Record<string, string>; bins?: string[]; envs?: string[]; config?: Record<string, string> }
-export interface AppInstalled extends AppRecord { containers: { name: string; state: string; status: string; ports: string }[]; update?: string; blocked?: string; rebuilt?: boolean; upstream?: string; known: boolean }
+export interface AppInstalled extends AppRecord { containers: { name: string; state: string; status: string; ports: string }[]; update?: string; blocked?: string; rebuilt?: boolean; upstream?: string; known: boolean; guide?: AppGuide }
 export interface HostApps { host: string; installed: AppInstalled[]; error?: string }
 export interface AppInstallTarget { host: string; instance: string; params: Record<string, string>; secrets: Record<string, string>; version?: string; ai?: AIConfig }
 export interface AppInstallBody { app: string; targets: AppInstallTarget[]; preview?: boolean }

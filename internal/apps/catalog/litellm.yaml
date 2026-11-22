@@ -1,0 +1,71 @@
+apiVersion: hostower/v1
+kind: App
+name: litellm
+version: 1.110.2-1
+title: LiteLLM
+category: AI 工具
+icon: bot
+summary: 大模型网关：把各家模型统一成 OpenAI 兼容接口，按密钥统计用量和花费。
+description: 带一个只在容器网络里能访问的 PostgreSQL，用来保存模型配置、虚拟密钥和每次调用的 token 用量。主密钥和数据库密码都来自应用密钥，不出现在命令和审计里。
+homepage: https://docs.litellm.ai # hygiene:allow 项目的官方文档地址
+type: compose
+params:
+  - name: bind
+    title: 监听地址
+    type: enum
+    options: ["127.0.0.1", "0.0.0.0"]
+    default: 127.0.0.1
+    hint: 网关保存着各家模型的密钥，建议只在本机监听，对外用反向代理加 HTTPS。
+  - name: port
+    title: 端口
+    type: port
+    default: "4000"
+  - name: master_key
+    title: 主密钥
+    type: secret
+    env: LITELLM_MASTER_KEY
+    hint: 要以 sk- 开头。它既是管理界面 admin 的密码，也是权限最高的 API Key。
+  - name: db_password
+    title: 数据库密码
+    type: secret
+    env: POSTGRES_PASSWORD
+    hint: 只用字母和数字（它会写进数据库连接地址）。装好以后不要换，换了网关连不上数据库。
+compose: |
+  services:
+    litellm:
+      image: ghcr.io/berriai/litellm:v1.110.2
+      restart: unless-stopped
+      ports: ["{{ .bind }}:{{ .port }}:4000"]
+      environment:
+        LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+        DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD}@db:5432/litellm
+        STORE_MODEL_IN_DB: "True"
+      depends_on:
+        db:
+          condition: service_healthy
+    db:
+      image: postgres:18-alpine
+      restart: unless-stopped
+      environment:
+        POSTGRES_DB: litellm
+        POSTGRES_USER: litellm
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      volumes: ["./pg:/var/lib/postgresql"]
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+        interval: 5s
+        timeout: 5s
+        retries: 20
+guide:
+  open:
+    - title: 管理界面
+      port: "{{ .port }}"
+      path: /ui/
+      bind: "{{ .bind }}"
+  account: 用户名 admin，密码是安装时选的主密钥。
+  steps:
+    - 第一次启动要建数据库表，一两分钟后管理界面才打得开。
+    - 在管理界面的 Models 里添加模型（填各家的 API Key），在 Virtual Keys 里给每个人或每个工具单独发一个密钥。
+    - 客户端的接口地址填入口地址（不带 /ui/），API Key 填虚拟密钥。
+    - 每个密钥和模型的 token 用量、花费在管理界面的 Usage 里看。
+notes: 打开 http://<主机地址>:{{ .port }}/ui/，用户名 admin，密码是安装时选的主密钥。

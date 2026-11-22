@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { Activity, Ban, Check, ChevronRight, Fingerprint, KeyRound, ShieldAlert, ShieldCheck, ShieldX, Square, TriangleAlert } from "lucide-react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Activity, ArrowLeft, Ban, Check, ChevronRight, Fingerprint, KeyRound, Rocket, ShieldAlert, ShieldCheck, ShieldX, Square, TriangleAlert } from "lucide-react";
 import { api, ApiError, type Finding, type Req, type Target } from "../api";
 import { fail, seedOutput, toast, upsertRequest, useOutput, useStore } from "../store";
 import { verify } from "../verify";
@@ -45,12 +45,24 @@ function RequestTable({ rows }: { rows: Req[] }) {
   );
 }
 
+/**
+ * 返回刚才的页面。很多操作（装应用、放行端口、改站点）提交后会跳到请求页等批准；
+ * 批准完要能一步回到原来那一页接着做事。是从站内别的页面跳过来的才显示（直接打开链接时没有“刚才”）。
+ */
+function BackButton({ primary }: { primary?: boolean }) {
+  const t = useT();
+  const nav = useNavigate();
+  const loc = useLocation();
+  if (loc.key === "default") return null;
+  return <button className={"btn" + (primary ? " primary sm" : "")} onClick={() => nav(-1)} title={t("回到提交这个操作之前的页面")}><ArrowLeft />{t("返回刚才的页面")}</button>;
+}
+
 export function Approvals() {
   const t = useT();
   const pending = useStore((s) => s.requests).filter((r) => r.state === "pending");
   return (
     <>
-      <div className="topbar"><h1>{t("审批")}</h1><span className="muted num">{t("{n} 个等待中", { n: pending.length })}</span></div>
+      <div className="topbar"><BackButton /><h1>{t("审批")}</h1><span className="muted num">{t("{n} 个等待中", { n: pending.length })}</span></div>
       <div className="content">
         <div className="page">
           <p className="lede">{t("这里是所有等待人来决定的操作。批准的是你看到的那一份内容：命令或文件变了，批准自动作废。")}</p>
@@ -118,6 +130,7 @@ export function RequestDetail() {
   const [missing, setMissing] = useState(false);
   const [selected, setSelected] = useState("");
 
+  const loc = useLocation();
   // 完整内容（含输出和文件）取一次；之后的状态变化来自实时事件。
   const liveState = live?.state;
   useEffect(() => {
@@ -146,6 +159,7 @@ export function RequestDetail() {
   return (
     <>
       <div className="topbar">
+        <BackButton />
         <Link to="/activity" className="crumb">{t("活动")}</Link>
         <ChevronRight size={14} className="crumb-sep" />
         <h1 className="mono">{r.id}</h1>
@@ -223,8 +237,25 @@ export function RequestDetail() {
                   </div>
                 </div>
               )}
+              {/* 执行完了：给一个明显的入口回到提交之前的页面。 */}
+              {(r.state === "done" || r.state === "failed") && loc.key !== "default" && (
+                <div className={"note " + (r.state === "done" ? "ok" : "warn")}>{r.state === "done" ? <Check /> : <TriangleAlert />}
+                  <span className="grow">{r.state === "done" ? t("执行完成。") : t("执行结束，有失败的主机，结果在下面。")}</span>
+                  <BackButton primary />
+                </div>
+              )}
+              {/* 应用装好了：别让人去主机上翻日志找地址和密码，直接带到上手指南。 */}
+              {r.snippet?.startsWith("app:") && r.targets.some((tg) => tg.state === "ok") && (
+                <div className="note ok"><Rocket /><span>
+                  {t("应用已经装好。访问地址、初始账号和接下来几步在上手指南里：")}
+                  {r.targets.filter((tg) => tg.state === "ok").map((tg) => (
+                    <Link key={tg.host} style={{ marginRight: 10 }} to={`/apps?tab=installed&host=${encodeURIComponent(tg.host)}&app=${encodeURIComponent(r.snippet!.slice(4).split("@")[0])}`}>{tg.host}</Link>
+                  ))}
+                </span></div>
+              )}
+              {r.kind !== "terminal" && started && r.snippet?.startsWith("app:") && <InstallProgress id={r.id} target={current} />}
               {r.kind !== "terminal" && started && (
-                <div className="card">
+                <div className={"card" + (r.state === "running" ? " is-running" : "")}>
                   <div className="card-head">
                     <h2>{t("执行")}</h2>
                     <span className="muted num">{t("{ok} / {n} 成功", { ok: r.targets.filter((tg) => tg.state === "ok").length, n: r.targets.length })}</span>
@@ -302,6 +333,69 @@ export function RequestDetail() {
 
 function FragmentRow({ k, v }: { k: string; v: string }) {
   return <><dt>{k}</dt><dd>{v}</dd></>;
+}
+
+// 应用安装的进度：从 docker compose、npm 的输出里看走到了哪一步。只是把输出换个更直观的样子，
+// 每一步都带文字；判断不出来时就停在“准备”，不猜。
+const installSteps = [
+  { key: "prepare", label: "准备" },
+  { key: "pull", label: "下载" },
+  { key: "create", label: "创建" },
+  { key: "start", label: "启动" },
+  { key: "done", label: "完成" },
+] as const;
+
+function installStage(text: string): { step: number; pulled: number; layers: number } {
+  let step = 0;
+  if (/Pulling|Pull complete|Downloading|Extracting|Pulled|npm (http|warn|notice)|added \d+ packages|node-v\d/i.test(text)) step = 1;
+  if (/\b(Creating|Created)\b/.test(text)) step = 2;
+  if (/\b(Starting|Started|Running|Healthy)\b/.test(text)) step = 3;
+  // 镜像层：出现过的层数和已经完成的层数（只在下载这一步有意义）。
+  const ids = new Set<string>(), done = new Set<string>();
+  for (const m of text.matchAll(/^\s*([0-9a-f]{12}):? (.*)$/gm)) {
+    ids.add(m[1]);
+    if (/Pull complete|Already exists/.test(m[2])) done.add(m[1]);
+  }
+  return { step, pulled: done.size, layers: ids.size };
+}
+
+function InstallProgress({ id, target }: { id: string; target: Target }) {
+  const t = useT();
+  const streamed = useOutput(id, target.host);
+  const text = streamed ?? target.output ?? "";
+  const failed = target.state === "failed" || target.state === "error";
+  const finished = target.state === "ok";
+  const waiting = !finished && !failed && target.state !== "running";
+  const st = installStage(text);
+  const last = installSteps.length - 1;
+  const step = finished ? last : st.step;
+  const pct = finished ? 100 : (step / last) * 100 + (step === 1 && st.layers > 0 ? (st.pulled / st.layers) * (100 / last) * 0.9 : 0);
+  return (
+    <div className={"card install-prog" + (failed ? " failed" : finished ? " finished" : waiting ? " waiting" : " running")} role="group" aria-label={t("安装进度")}>
+      <div className="install-track" aria-hidden>
+        <div className="install-fill" style={{ width: pct + "%" }} />
+        <div className="install-rider" style={{ left: pct + "%" }}>{finished ? <Check /> : failed ? <TriangleAlert /> : <Rocket />}</div>
+      </div>
+      <ol className="install-steps">
+        {installSteps.map((s, i) => (
+          <li key={s.key} className={i < step || finished ? "past" : i === step ? "now" : ""} aria-current={i === step ? "step" : undefined}>
+            <span className="install-dot" />
+            <span>{t(s.label)}{i === 1 && step === 1 && st.layers > 0 ? " " + st.pulled + "/" + st.layers : ""}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="install-say" aria-live="polite">
+        <b className="mono">{target.host}</b>{" "}
+        {failed ? t("安装没有成功，停在“{step}”这一步，原因看下面的输出。", { step: t(installSteps[step].label) })
+          : finished ? t("装好了。")
+          : waiting ? t("排队中，轮到这台主机就开始。")
+          : step === 1 ? (st.layers > 0 ? t("正在下载镜像，已完成 {a} / {b} 层。", { a: st.pulled, b: st.layers }) : t("正在下载，网络慢的时候要等一会儿。"))
+          : step === 2 ? t("正在创建容器、网络和数据卷。")
+          : step === 3 ? t("正在启动。")
+          : t("正在准备目录和配置文件。")}
+      </div>
+    </div>
+  );
 }
 
 function Output({ id, target }: { id: string; target: Target }) {

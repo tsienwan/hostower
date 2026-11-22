@@ -42,7 +42,7 @@ const (
 )
 
 // Categories 是应用分类，按显示顺序排列。
-var Categories = []string{"AI 工具", "监控", "数据库", "网络", "运维"}
+var Categories = []string{"AI 工具", "监控", "数据库", "网络", "存储", "运维"}
 
 // Icons 是清单里能用的图标名（前端有对应的图标）。
 var Icons = []string{"bot", "sparkles", "activity", "database", "network", "box", "shield", "terminal"}
@@ -71,6 +71,10 @@ type App struct {
 	Configure *Configure `yaml:"configure" json:"-"`
 	AI        *AIView    `yaml:"-" json:"ai,omitempty"`
 	Notes     string     `yaml:"notes" json:"notes,omitempty"`
+	// Guide 是装好以后的上手指南（访问入口、初始账号、接下来几步），见 guide.go。
+	Guide *Guide `yaml:"guide" json:"-"`
+	// Homepage 是项目主页或文档地址，只在页面上给一个链接。
+	Homepage string `yaml:"homepage" json:"homepage,omitempty"`
 }
 
 // Upgrade 是升级说明。
@@ -134,7 +138,8 @@ var (
 	npmPkgRe     = regexp.MustCompile(`^(@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
 	binRe        = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,31}$`)
 	// VersionRe 是 npm 工具能换成的版本：具体版本号或 latest。
-	VersionRe = regexp.MustCompile(`^(latest|[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?)$`)
+	VersionRe  = regexp.MustCompile(`^(latest|[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?)$`)
+	homepageRe = regexp.MustCompile(`^https://[A-Za-z0-9.-]+(/[A-Za-z0-9._~/#-]*)?$`)
 	// 镜像必须带明确的标签：不接受隐含的 latest。
 	imageTagRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._/-]*:[A-Za-z0-9._-]+$`)
 )
@@ -305,6 +310,12 @@ func Parse(data []byte) (*App, error) {
 		}
 	default:
 		return nil, fmt.Errorf("未知的应用类型 %q", a.Type)
+	}
+	if a.Homepage != "" && !homepageRe.MatchString(a.Homepage) {
+		return nil, errors.New("homepage 要是 https:// 开头的地址")
+	}
+	if err := a.checkGuide(); err != nil {
+		return nil, err
 	}
 	return &a, nil
 }

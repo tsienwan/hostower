@@ -306,3 +306,60 @@ func TestRenderContainerNames(t *testing.T) {
 		}
 	}
 }
+
+// 上手指南：每个内置应用都要有；“读取初始账号”的命令交给真正的判级引擎，必须是只读的 L0。
+func TestGuides(t *testing.T) {
+	c := catalog(t)
+	e := risk.New()
+	for _, a := range c.List() {
+		if a.Guide == nil {
+			t.Errorf("%s 没有上手指南", a.Name)
+			continue
+		}
+		values, err := a.Values(nil)
+		if err != nil {
+			t.Fatalf("%s：%v", a.Name, err)
+		}
+		rec := Record{App: a.Name, Type: a.Type, Instance: a.Name, Params: values}
+		g, err := a.GuideFor(rec)
+		if err != nil || g == nil {
+			t.Fatalf("%s 的上手指南渲染不出来：%v", a.Name, err)
+		}
+		for _, s := range append([]string{g.Account}, g.Steps...) {
+			if strings.Contains(s, "{{") {
+				t.Errorf("%s 的上手指南里还有没填的参数：%s", a.Name, s)
+			}
+		}
+		if a.Type == TypeCompose && a.Name != "postgres" && a.Name != "mariadb" && a.Name != "redis" && len(g.Open) == 0 {
+			t.Errorf("%s 是带页面的容器应用，上手指南里要有访问入口", a.Name)
+		}
+		if a.Guide.Reveal == nil {
+			continue
+		}
+		cmd, err := a.RevealCommand(rec)
+		if err != nil {
+			t.Fatalf("%s：%v", a.Name, err)
+		}
+		if v := e.Classify(cmd); v.Level != risk.L0 {
+			t.Errorf("%s 读取初始账号的命令被判为 %s，页面上会查不出来：%s", a.Name, v.Level, cmd)
+		}
+	}
+}
+
+// 主机上记的参数不直接信：渲染指南和读取命令之前重新校验，夹带命令的值渲染不出来。
+func TestGuideRejectsBadParams(t *testing.T) {
+	c := catalog(t)
+	a, _ := c.Get("uptime-kuma")
+	bad := Record{App: a.Name, Type: a.Type, Instance: a.Name, Params: map[string]string{"bind": "0.0.0.0", "port": "80; reboot"}}
+	if g, err := a.GuideFor(bad); err == nil {
+		t.Errorf("不合法的端口应该被拒绝，得到 %+v", g)
+	}
+	x, _ := c.Get("3x-ui")
+	if _, err := x.RevealCommand(Record{App: x.Name, Type: x.Type, Instance: "x; reboot"}); err == nil {
+		t.Error("不合法的实例名应该被拒绝")
+	}
+	g, err := a.GuideFor(Record{App: a.Name, Type: a.Type, Instance: "kuma", Params: map[string]string{"bind": "127.0.0.1", "port": "3001"}})
+	if err != nil || len(g.Open) != 1 || !g.Open[0].Local || g.Open[0].Port != "3001" {
+		t.Errorf("只在本机监听的入口要标出来：%+v %v", g, err)
+	}
+}

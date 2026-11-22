@@ -17,4 +17,8 @@ configure:
   kind: claude
   login: ~/.local/bin/claude auth login
   loginHint: 终端里会打印一个链接：在你自己的浏览器里打开、登录 Claude，再把页面上显示的代码粘贴回终端。
+guide:
+  steps:
+    - 在“已安装”里点“配置”选模型供应商并填 API Key；用 Claude 订阅就点“订阅登录”。
+    - 配好后在主机的终端里进入项目目录，运行 claude。
 notes: 在“已安装”里点“配置”选模型供应商（DeepSeek、Kimi、智谱等）并填 API Key；用 Claude 订阅就点“订阅登录”。然后在主机的终端里运行 claude。

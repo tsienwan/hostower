@@ -1,0 +1,22 @@
+apiVersion: hostower/v1
+kind: App
+name: gemini-cli
+version: 0.70.0
+title: Gemini CLI
+category: AI 工具
+icon: bot
+summary: Google 的命令行编程助手。
+description: 装进登录账号自己的目录（~/.hostower/npm），不用 sudo；系统里的 Node.js 不够新时自动装一份校验过的 Node.js。
+homepage: https://github.com/google-gemini/gemini-cli # hygiene:allow 项目的官方文档地址
+type: npm
+npm:
+  package: "@google/gemini-cli"
+  version: 0.70.0
+  bins: [gemini]
+  node: 20
+guide:
+  steps:
+    - 在主机的终端里运行 gemini，第一次会让你选登录方式。
+    - 用 API Key 的话先设置环境变量 GEMINI_API_KEY（写进 ~/.profile 以后每次登录都生效），再运行 gemini。
+    - 用 Google 账号登录时终端会打印一个链接：在你自己的浏览器里打开并授权，把得到的代码粘回终端。
+notes: 在主机的终端里运行 gemini；用 API Key 时先设置环境变量 GEMINI_API_KEY。

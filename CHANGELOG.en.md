@@ -4,6 +4,29 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.2.0
+
+### Added
+
+- Getting-started guide for apps: after an app is installed, click the rocket icon under Apps → Installed to see its address (clickable), what the initial account is and the next few steps, without logging in to the host to dig through logs. A successful install request links to it as well. Apps that only listen on the host itself say that a reverse proxy is needed.
+- Read the initial account: 3x-ui generates a random username and password on first start and prints them once in its log; the guide can now read that line for you (a single read-only query; the result is shown, not stored).
+- New apps in the catalog: OpenList, Open WebUI, LiteLLM, New API, Ollama, n8n and Gemini CLI, plus a new Storage category. OpenList's admin password and LiteLLM's master key are set from app secrets at install time. LiteLLM and New API come with their own dashboards for per-key token usage.
+- Environment check per host: a new Environment tab on the host page.
+  - Egress IP: address, location, operator, type (data center, residential, business and so on), whether it is flagged as a proxy, a risk score, and whether there is IPv6 egress.
+  - LLM APIs: whether OpenAI, Anthropic (Claude), Google Gemini, xAI and DeepSeek can be used (available, restricted, unreachable).
+  - Websites and streaming: whether Google, YouTube, Netflix, Disney+, Prime Video, Spotify, TikTok, Facebook, Instagram, X, Telegram, Discord, Reddit, the ChatGPT and Gemini web apps, GitHub, Docker Hub, npm and Wikipedia open; YouTube and Netflix show which region the host lands in, and Netflix also tells whether non-original titles are available.
+  - Which AI command-line tools (Claude Code, Codex CLI, Gemini CLI and others, with version and sign-in state) and runtimes are installed; missing ones link straight to installation.
+- Apps → Environment: one table for all hosts, showing each host's egress type and risk score, which model APIs it can use, which region common sites put it in, and which AI command-line tools it has.
+
+- Install progress: the request page of an app install shows a progress track with the current step (prepare, download, create, start, done) and, while images download, how many layers are finished; a running request has a moving highlight on top. Animations are off when the system asks for reduced motion.
+
+### Improved
+
+- On phones the bottom bar keeps only Overview, Run, Approvals and Apps; the other pages (Activity, Containers, Speed test, Snippets, Credentials, Audit, Settings) move into More.
+- Operations that need approval (installing apps, opening ports, changing sites and so on) take you to the request page after submitting: the request and approvals pages now have a "Back to the previous page" button, and a finished request offers it too, so you no longer depend on the browser's back button.
+- The Installed list shows an Open link for apps that are reachable from outside; catalog cards link to the official documentation.
+- Corrected the 3x-ui notes: the panel listens on port 2053 by default and the initial account is not fixed.
+
 ## v0.1.7
 
 ### Fixes

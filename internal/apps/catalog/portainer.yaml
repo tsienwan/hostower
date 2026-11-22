@@ -28,4 +28,14 @@ compose: |
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
         - ./data:/data
+guide:
+  open:
+    - title: 管理界面
+      scheme: https
+      port: "{{ .port }}"
+      bind: "{{ .bind }}"
+  account: 没有初始账号：第一次打开时创建管理员账号，要在启动后 5 分钟内完成，超时就重启这个应用再来。
+  steps:
+    - 它用的是自签名证书，浏览器会提示不安全，确认后继续访问。
+    - 创建账号后选“Get Started”，就能管理这台主机上的容器。
 notes: 打开 https://<主机地址>:{{ .port }}，5 分钟内创建管理员账号，否则要重启容器。

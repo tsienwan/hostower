@@ -185,6 +185,42 @@ C'est le nommage par défaut de Docker Compose (projet-service-index), que produ
 
 Pour les applications déjà installées, modifiez une fois leurs paramètres ou mettez-les à jour sous **Installées** : le conteneur est recréé avec le nouveau nom ; les répertoires de données ne sont pas touchés. Si l'hôte possède déjà un conteneur du même nom que Hostower n'a pas créé, le déploiement signale un conflit de nom ; occupez-vous d'abord de ce conteneur.
 
+### L'application est installée : où l'ouvrir ? Quels sont le compte et le mot de passe initiaux ?
+
+Sous **Applications → Installées**, cliquez sur l'icône de fusée (**Guide de démarrage**) de la ligne concernée : vous y trouvez l'adresse d'accès (cliquable directement), des explications sur le compte initial et les quelques étapes suivantes. Une fois la demande d'installation exécutée avec succès, la page de détail de la demande propose le même accès.
+
+- Pour les applications dont le mot de passe initial peut être fixé à l'installation (mot de passe admin d'OpenList, clé maîtresse de LiteLLM, mots de passe des bases de données), le mot de passe est le secret d'application choisi lors de l'installation.
+- Les applications où vous créez vous-même l'administrateur à la première ouverture (Uptime Kuma, Portainer, Open WebUI, New API, n8n) n'ont pas de compte initial ; ouvrez-les au plus vite après l'installation pour terminer l'inscription.
+- Le nom d'utilisateur et le mot de passe initiaux de 3x-ui sont générés aléatoirement au premier démarrage et n'apparaissent qu'une seule fois, dans le journal du conteneur : dans le guide de démarrage, cliquez sur **Lire le nom d'utilisateur et le mot de passe initiaux**, et le panneau lit cette ligne au moyen d'une unique requête en lecture seule. Après une recréation du conteneur, le journal ne la contient plus ; dans ce cas, redéfinissez-les dans un terminal sur l'hôte avec la commande indiquée dans le guide.
+
+Si l'adresse ne s'ouvre pas, vérifiez d'abord si l'adresse d'écoute est `127.0.0.1` (accessible uniquement depuis l'hôte lui-même ; configurez un proxy inverse ou remplacez-la par `0.0.0.0` dans **Modifier les paramètres**), puis vérifiez que le pare-feu de l'hôte et le groupe de sécurité du fournisseur cloud autorisent ce port.
+
+### Que signifient « Restreint » et « Injoignable » sur la page « Environnement » ?
+
+**Environnement**, sur la page de l'hôte, et **Applications → Environnement** envoient depuis cet hôte une série de requêtes en lecture seule et observent la réponse de chaque service :
+
+- **API de grands modèles** (OpenAI, Anthropic, Google Gemini, xAI, DeepSeek) : la requête est envoyée sans clé. Une réponse « clé manquante » donne **Disponible** : il suffit de renseigner une clé pour l'appeler. Un refus motivé par le pays ou la région de la sortie donne **Restreint** : utilisez un hôte situé dans une autre région, ou passez par une passerelle telle que LiteLLM ou New API.
+- **Sites web et streaming** (Google, YouTube, Netflix, Disney+, TikTok, Facebook, X, la version web de ChatGPT, etc.) : **Disponible** si le site s'ouvre normalement ; **Restreint** s'il refuse la requête ou renvoie vers une page « service non disponible dans votre région ». Pour YouTube et Netflix, la région attribuée est également affichée ; Netflix est évalué avec un titre qui n'est pas une production originale, et « Productions originales uniquement » signifie que le catalogue de cette région n'est pas ouvert à cette adresse.
+- **Injoignable** : aucune connexion établie en 8 secondes ; le réseau la bloque peut-être, ou l'hôte n'a pas `curl`.
+- **Incertain** : la connexion a abouti, mais la réponse ne correspond à aucun des cas ci-dessus ; impossible de conclure.
+
+Seule la manière dont chaque service répond est examinée ici ; aucune connexion à un compte n'est effectuée. Les versions web et les connexions par abonnement de chaque fournisseur ont leurs propres règles de région et de contrôle des risques : ni une API disponible ni un site qui s'ouvre ne garantissent qu'un compte fonctionnera. La même page liste aussi les outils IA en ligne de commande installés sur l'hôte (Claude Code, Codex CLI, Gemini CLI, etc.) et les environnements d'exécution ; les versions sont lues dans les répertoires d'installation, ces programmes ne sont jamais exécutés.
+
+### Que sont le type et le score de risque dans « IP de sortie » ? Sont-ils fiables ?
+
+Les sites web voient l'adresse de sortie de l'hôte. Son type et ses éventuels antécédents déterminent si vous serez restreint et si vous devrez souvent passer une vérification humaine :
+
+- **Type** : centre de données, connexion résidentielle, ligne d'entreprise, réseau mobile, etc. Un VPS a en général une adresse de centre de données ; les services de streaming n'y donnent souvent accès qu'aux productions originales, et les connexions par abonnement aux services d'IA déclenchent plus facilement le contrôle des risques.
+- **Marquage proxy** : indique si la base d'informations l'a signalée comme sortie de proxy ou de VPN.
+- **Score de risque** : de 0 à 100 ; plus il est élevé, plus cette adresse ou sa plage réseau compte de signalements d'abus. En dessous de 33, il est considéré comme faible ; au-dessus de 66, comme élevé.
+- S'y ajoutent l'opérateur (ASN), la localisation, la présence d'une sortie IPv6 et le passage éventuel par Cloudflare WARP.
+
+Ces informations sont obtenues par l'hôte lui-même, qui interroge une base publique d'informations IP (proxycheck.io) sur sa propre adresse de sortie ; elles ne sont données qu'à titre indicatif : les conclusions peuvent varier d'une base à l'autre, et le contrôle des risques des sites ne repose pas uniquement sur elles. Si rien n'est trouvé, « Introuvable » s'affiche, sans incidence sur les autres vérifications.
+
+### Comment mesurer le nombre de tokens consommés par chaque outil IA ?
+
+Installez LiteLLM ou New API (dans **Outils IA** du catalogue d'applications), faites pointer l'adresse d'API de Claude Code, Codex CLI et des autres outils vers cette passerelle, puis attribuez une clé distincte à chaque outil ou à chaque personne. Le nombre d'appels, la consommation de tokens et le coût par clé et par modèle se consultent dans l'interface d'administration de la passerelle elle-même. Hostower ne relaie ni n'enregistre les requêtes aux modèles.
+
 ### Comment sont mises à jour les images à étiquette de version fixe (comme `v3.9.0`) ?
 
 La page Conteneurs lit la liste des étiquettes depuis le registre :

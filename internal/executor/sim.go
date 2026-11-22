@@ -254,6 +254,76 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 			out = append([]string{"docker", "compose"}, out...)
 		}
 		return out, 0
+	case strings.HasPrefix(cmd, "echo '== tools'; for c in "):
+		// 主机环境检测（hostenv.ToolsCommand）：每台模拟主机装的东西不一样。
+		out := []string{"== tools"}
+		if sh.seed < 0.6 {
+			out = append(out, "claude	/home/deploy/.local/bin/claude")
+		}
+		if sh.seed > 0.3 {
+			out = append(out, "codex	/home/deploy/.local/bin/codex")
+		}
+		if h.HasTag("docker") {
+			out = append(out, "docker	/usr/bin/docker")
+		}
+		out = append(out, "node	/usr/bin/node", "npm	/usr/bin/npm", "python3	/usr/bin/python3", "git	/usr/bin/git", "curl	/usr/bin/curl",
+			"== versions",
+			`/home/deploy/.hostower/npm/lib/node_modules/@anthropic-ai/claude-code/package.json:  "version": "2.1.30",`,
+			`/home/deploy/.hostower/npm/lib/node_modules/@openai/codex/package.json:  "version": "0.169.0",`,
+			"== claude-native", "== auth")
+		if sh.seed < 0.45 {
+			out = append(out, "/home/deploy/.claude/.credentials.json")
+		}
+		return append(out, "== end"), 0
+	case strings.HasPrefix(cmd, `echo "egress $(curl -s -m 8 `):
+		// 网络检测（hostenv.NetCommand）：每台模拟主机的出口、IP 类型和能打开的网站不一样。
+		locs := [][3]string{{"SG", "SIN", "Singapore"}, {"US", "LAX", "United States"}, {"JP", "NRT", "Japan"}, {"HK", "HKG", "Hong Kong"}, {"DE", "FRA", "Germany"}}
+		l := locs[int(sh.seed*811)%len(locs)]
+		hk := l[0] == "HK"
+		kind, risk := "Hosting", int(sh.seed*100)%70
+		if sh.seed < 0.25 {
+			kind, risk = "Residential", 0
+		}
+		out := []string{
+			"egress ip=" + h.Addr + " loc=" + l[0] + " colo=" + l[1] + " warp=off ",
+			"egress6 ",
+			fmt.Sprintf(`ipinfo {"status":"ok","%s":{"asn":"AS64500","provider":"Example Cloud Ltd","country":"%s","city":"%s","proxy":"no","type":"%s","risk":%d}}`, h.Addr, l[2], l[2], kind, risk),
+		}
+		for _, id := range []string{"openai", "anthropic", "gemini", "xai", "deepseek"} {
+			switch {
+			case hk && id == "openai":
+				out = append(out, `svc openai {"error":{"code":"unsupported_country_region_territory"}}|code=403`)
+			case hk && id == "anthropic":
+				out = append(out, `svc anthropic {"error":{"type":"forbidden","message":"Request not allowed"}}|code=403`)
+			case id == "gemini" && sh.seed > 0.85:
+				out = append(out, "svc gemini |code=000")
+			case id == "gemini":
+				out = append(out, `svc gemini "message": "API key not valid. Please pass a valid API key."|code=400`)
+			default:
+				out = append(out, "svc "+id+` {"error":{"message":"missing credentials"}}|code=401`)
+			}
+		}
+		for _, id := range []string{"google", "youtube", "disney", "primevideo", "spotify", "tiktok", "facebook", "instagram", "x", "telegram", "discord", "reddit", "chatgpt", "gemini-web", "github", "dockerhub", "npm", "wikipedia"} {
+			switch {
+			case hk && id == "chatgpt":
+				out = append(out, "site chatgpt |403|")
+			case id == "disney" && l[0] == "DE":
+				out = append(out, "site disney |302|https://www.disneyplus.com/unavailable") // hygiene:allow 模拟检测结果
+			case id == "tiktok" && sh.seed > 0.8:
+				out = append(out, "site tiktok |000|")
+			default:
+				out = append(out, "site "+id+" |200|")
+			}
+		}
+		nf := "200"
+		if kind == "Hosting" && risk > 40 {
+			nf = "404"
+		}
+		out = append(out, "site netflix x|"+nf+"|https://www.netflix.com/"+strings.ToLower(l[0])+"/title/81280792", `region youtube "countryCode":"`+l[0]+`"`, "== end") // hygiene:allow 模拟检测结果
+		return out, 0
+	case strings.HasPrefix(cmd, "docker logs ") && strings.Contains(cmd, "grep -a 'Username:'"):
+		// 应用上手指南里“读取初始账号”（3x-ui 第一次启动时打印的那一行）。
+		return []string{"2026/11/13 09:00:01 No panel user existed, so one was generated. Username: demoUser01  Password: demo-Pass-0000  (shown once; change it in Panel Settings)"}, 0
 	case cmd == "command -v curl":
 		if sh.hasCurl() {
 			return []string{"/usr/bin/curl"}, 0

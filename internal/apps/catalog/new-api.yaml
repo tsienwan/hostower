@@ -1,0 +1,41 @@
+apiVersion: hostower/v1
+kind: App
+name: new-api
+version: 1.0.0-rc.51
+title: New API
+category: AI 工具
+icon: bot
+summary: 大模型接口的聚合和分发：统一渠道、令牌、额度和用量统计。
+description: 默认用实例目录下 data 里的 SQLite，单个容器就能跑。上游目前发布的是候选版本（rc）。
+homepage: https://docs.newapi.pro # hygiene:allow 项目的官方文档地址
+preview: true
+type: compose
+params:
+  - name: bind
+    title: 监听地址
+    type: enum
+    options: ["127.0.0.1", "0.0.0.0"]
+    default: 127.0.0.1
+    hint: 网关保存着各家模型的密钥，建议只在本机监听，对外用反向代理加 HTTPS。
+  - name: port
+    title: 端口
+    type: port
+    default: "3000"
+compose: |
+  services:
+    new-api:
+      image: calciumion/new-api:v1.0.0-rc.51
+      restart: unless-stopped
+      ports: ["{{ .bind }}:{{ .port }}:3000"]
+      volumes: ["./data:/data"]
+guide:
+  open:
+    - title: 管理界面
+      port: "{{ .port }}"
+      bind: "{{ .bind }}"
+  account: 没有初始账号：第一次打开会进入初始化向导，在那里设置管理员的用户名和密码。
+  steps:
+    - 在“渠道”里添加上游（各家官方接口或别的中转），填上游的 API Key。
+    - 在“令牌”里创建令牌给客户端用；客户端的接口地址填入口地址。
+    - 每个令牌、每个模型的调用次数和 token 用量在“日志”和“数据看板”里看。
+notes: 打开 http://<主机地址>:{{ .port }}，第一次打开时在初始化向导里设置管理员账号。

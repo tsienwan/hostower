@@ -41,4 +41,8 @@ compose: |
       volumes: ["./data:/var/lib/mysql"]
 upgrade:
   note: 升级到 11.8 后，第一次启动会自动升级数据（MARIADB_AUTO_UPGRADE）；升级前建议先备份实例目录下的 data。
+guide:
+  account: 用户 root，密码是安装时选的应用密钥，默认数据库 {{ .database }}。
+  steps:
+    - 连接地址是 {{ .bind }}:{{ .port }}。监听 127.0.0.1 时只有这台主机上的程序能连。
 notes: 连接地址 {{ .bind }}:{{ .port }}，用户 root，数据库 {{ .database }}。

@@ -41,4 +41,8 @@ compose: |
 upgrade:
   note: PostgreSQL 的大版本之间数据目录不兼容，17 不能直接换成 18：要用 pg_upgrade，或者先导出（pg_dumpall）再导入新装的 18。Hostower 不会自动做这一步。
   blockFrom: ["17-"]
+guide:
+  account: 用户 postgres，密码是安装时选的应用密钥，默认数据库 {{ .database }}。
+  steps:
+    - 连接地址是 {{ .bind }}:{{ .port }}。监听 127.0.0.1 时只有这台主机上的程序能连。
 notes: 连接地址 {{ .bind }}:{{ .port }}，用户 postgres，数据库 {{ .database }}。

@@ -20,4 +20,17 @@ compose: |
       volumes:
         - ./db:/etc/x-ui
         - ./cert:/root/cert
-notes: 初始的面板地址和账号见容器日志（docker logs），登录后立刻修改账号、密码和面板路径。
+guide:
+  open:
+    - title: 管理面板
+      port: "2053"
+  account: 第一次启动时随机生成一组用户名和密码，只在容器日志里出现一次。点下面的按钮读出来。
+  reveal:
+    title: 读取初始用户名和密码
+    command: docker logs {{ .instance }} 2>&1 | grep -a 'Username:' | tail -n 1
+    hint: 读不到说明容器重建过、日志里已经没有了：在主机的终端里运行 docker exec -it {{ .instance }} /app/x-ui setting -username 新用户名 -password 新密码 重新设置，再重启这个应用。
+  steps:
+    - 登录后先在“面板设置”里改用户名、密码和面板路径。
+    - 面板默认在 2053 端口、订阅服务在 2096 端口；入站用的端口要在主机防火墙里放行（主机页的“网络”里可以放行端口）。
+    - 面板用的是明文 HTTP：长期使用请在“面板设置”里配置证书，或者用主机页“网络”里的反向代理加 HTTPS。
+notes: 面板默认在 2053 端口；初始用户名和密码是第一次启动时随机生成的，在“已安装”里点“上手指南”读取。登录后立刻修改账号、密码和面板路径。

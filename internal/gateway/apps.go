@@ -58,6 +58,8 @@ type installedView struct {
 	Remote string `json:"-"`
 	// Upstream 是上游出现、但目录还没收录的大版本标签，只提示，不提供一键更新。
 	Upstream string `json:"upstream,omitempty"`
+	// Guide 是按这个实例的参数渲染好的上手指南（访问入口、初始账号、接下来几步）。
+	Guide *apps.GuideView `json:"guide,omitempty"`
 }
 
 // installedOn 在几台主机上并行查询已安装的实例。
@@ -82,6 +84,8 @@ func (s *Server) installedOn(ctx context.Context, a kernel.Actor, hosts []string
 				v := installedView{Installed: x}
 				if app, ok := s.apps.Get(x.App); ok && app.Type == x.Type {
 					v.Known = true
+					// 主机上记的参数不合法时渲染不出来：不显示指南，别的照常。
+					v.Guide, _ = app.GuideFor(x.Record)
 					if t := s.appRegistry.Target(ctx, app); apps.Compare(t, x.Version) > 0 {
 						if app.UpgradeBlocked(x.Version) {
 							v.Blocked = t
@@ -121,6 +125,51 @@ func (s *Server) appInstalled(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"hosts": s.installedOn(r.Context(), actor(sessionOf(r)), hosts)})
+}
+
+// appReveal 读一个实例的初始账号：清单里写好的一条只读命令（比如从容器日志里找第一次启动时生成的密码）。
+// 实例是什么应用、什么参数，以主机上的 app.json 为准；命令照常过判级，不是 L0 就被内核拒绝。
+func (s *Server) appReveal(w http.ResponseWriter, r *http.Request) {
+	host, inst := r.URL.Query().Get("host"), r.URL.Query().Get("instance")
+	if !apps.InstanceRe.MatchString(inst) {
+		writeErr(w, 400, "实例名不合法")
+		return
+	}
+	if _, ok := s.Kernel.Inventory().Host(host); !ok {
+		writeErr(w, 404, "主机不存在")
+		return
+	}
+	a := actor(sessionOf(r))
+	ha := s.installedOn(r.Context(), a, []string{host})[0]
+	if ha.Error != "" {
+		writeErr(w, 400, ha.Error)
+		return
+	}
+	for _, x := range ha.Installed {
+		if x.Instance != inst {
+			continue
+		}
+		app, ok := s.apps.Get(x.App)
+		if !ok || app.Type != x.Type {
+			break
+		}
+		cmd, err := app.RevealCommand(x.Record)
+		if err != nil {
+			writeErr(w, 400, err.Error())
+			return
+		}
+		out, _, err := s.Kernel.Query(r.Context(), a, host, cmd)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		if len(out) > 4096 {
+			out = out[len(out)-4096:]
+		}
+		writeJSON(w, 200, map[string]any{"output": strings.TrimSpace(out)})
+		return
+	}
+	writeErr(w, 404, "这台主机上没有这个实例，或者它没有可以读取的初始信息")
 }
 
 // ---------- 安装 ----------

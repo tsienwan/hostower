@@ -904,6 +904,70 @@ h1, h2, h3, .brand-name, .stat-value, .metric-val { letter-spacing: -0.022em; }
   .nav-item.active svg { color: var(--primary); }
 }
 
+/* 正在执行的卡片：顶上一条来回流动的光带。 */
+.card.is-running { position: relative; overflow: hidden; }
+.card.is-running::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--primary), transparent); background-size: 40% 100%; background-repeat: no-repeat; animation: run-sweep 1.6s linear infinite; }
+@keyframes run-sweep { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+
+/* 应用安装进度：一条轨道、一枚沿着轨道走的小火箭、五个带文字的步骤。 */
+.install-prog { padding: 18px 20px 14px; display: flex; flex-direction: column; gap: 10px; }
+.install-track { position: relative; height: 6px; margin: 14px 12px 4px; border-radius: 6px; background: color-mix(in srgb, var(--text) 9%, transparent); }
+.install-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--primary); transition: width 0.7s ease; }
+.install-prog.running .install-fill { background-size: 200% 100%; background-image: linear-gradient(90deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 50%, #fff) 50%, var(--primary) 100%); animation: install-flow 1.4s linear infinite; }
+.install-prog.finished .install-fill { background: var(--ok); }
+.install-prog.failed .install-fill { background: var(--crit); }
+.install-rider { position: absolute; top: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--primary);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 50%, transparent); transition: left 0.7s ease, background-color 0.3s; }
+.install-rider svg { width: 15px; height: 15px; }
+.install-prog.running .install-rider { animation: install-bob 1.1s ease-in-out infinite; }
+.install-prog.running .install-rider svg { transform: rotate(45deg); }
+.install-prog.running .install-rider::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--primary); animation: install-ring 1.6s ease-out infinite; }
+.install-prog.waiting .install-rider { background: var(--text-3); box-shadow: none; }
+.install-prog.finished .install-rider { background: var(--ok); box-shadow: 0 2px 10px color-mix(in srgb, var(--ok) 50%, transparent); animation: install-pop 0.5s ease-out; }
+.install-prog.failed .install-rider { background: var(--crit); box-shadow: none; }
+.install-steps { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; padding: 0; font-size: 12.5px; color: var(--text-3); }
+.install-steps li { display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
+.install-steps li:first-child { align-items: flex-start; }
+.install-steps li:last-child { align-items: flex-end; }
+.install-dot { width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--text) 18%, transparent); transition: background-color 0.3s, transform 0.3s; }
+.install-steps li.past { color: var(--text-2); }
+.install-steps li.past .install-dot { background: var(--primary); }
+.install-steps li.now { color: var(--text); font-weight: 600; }
+.install-steps li.now .install-dot { background: var(--primary); transform: scale(1.5); }
+.install-prog.finished .install-steps li .install-dot { background: var(--ok); }
+.install-prog.failed .install-steps li.now { color: var(--crit); }
+.install-prog.failed .install-steps li.now .install-dot { background: var(--crit); }
+.install-say { font-size: 13px; color: var(--text-2); }
+@keyframes install-flow { from { background-position: 200% 0; } to { background-position: 0 0; } }
+@keyframes install-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes install-ring { from { transform: scale(1); opacity: 0.7; } to { transform: scale(2); opacity: 0; } }
+@keyframes install-pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .card.is-running::before, .install-prog .install-fill, .install-prog .install-rider, .install-prog .install-rider::after { animation: none !important; }
+}
+
+/* 手机底栏只放四个常用页面加“更多”：其余页面在“更多”弹出的面板里。桌面上没有“更多”。 */
+.nav-more { display: none; cursor: pointer; background: transparent; font: inherit; }
+.more-overlay { display: none; }
+@media (max-width: 760px) {
+  .side { overflow-x: visible; }
+  .side .nav-sec { display: none; }
+  .nav-more { display: flex; }
+  .side .nav-item { flex: 1 1 0; min-width: 0; }
+  .more-overlay { display: block; position: fixed; inset: 0; z-index: 60; background: color-mix(in srgb, #000 35%, transparent); animation: more-fade 0.16s ease-out; }
+  .more-sheet { position: absolute; left: 8px; right: 8px; bottom: calc(92px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 10px;
+    border: 1px solid var(--border); border-radius: 16px; background: var(--raised); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); animation: more-rise 0.2s var(--ease, ease-out); }
+  .more-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; height: 64px; padding: 0 4px; border: 0; border-radius: 12px; background: transparent;
+    color: var(--text-2); font: inherit; font-size: 11.5px; text-decoration: none; cursor: pointer; }
+  .more-item svg { width: 22px; height: 22px; }
+  .more-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .more-item.active { color: var(--primary); background: color-mix(in srgb, var(--text) 7%, transparent); font-weight: 600; }
+  .more-item:active { background: color-mix(in srgb, var(--text) 10%, transparent); }
+}
+@keyframes more-fade { from { opacity: 0; } }
+@keyframes more-rise { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) { .more-overlay, .more-sheet { animation: none; } }
+
 /* 主机详情 · 硬件：三块等宽并排（处理器、内存、整机），中间细线分开；下面是磁盘清单。窄屏改成上下排。 */
 .hw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .hw-tile { display: flex; gap: 14px; align-items: flex-start; padding: 20px; min-width: 0; }
@@ -1512,6 +1576,24 @@ button.tag:hover { background: color-mix(in srgb, var(--text) 10%, transparent);
 .app-details summary { cursor: pointer; color: var(--text-2); font-size: 13px; }
 .app-details pre { max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
 .app-table td { vertical-align: middle; }
+.app-open { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 12px; }
+.app-open svg { width: 12px; height: 12px; }
+
+/* 应用的上手指南 */
+.guide-h { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.guide-h svg { width: 15px; height: 15px; }
+.guide-link { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.guide-link > .muted { flex: none; font-size: 12.5px; }
+.guide-link a { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; font-size: 13px; }
+.guide-link a svg { flex: none; width: 13px; height: 13px; }
+.guide-out { margin: 0; padding: 10px 12px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--text) 6%, transparent); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; user-select: all; }
+.guide-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; line-height: 1.6; }
+
+/* 各主机的 AI 环境 */
+.env-matrix th, .env-matrix td { white-space: nowrap; }
+.env-matrix .badge .mono { font-size: 11.5px; }
+.env-group td { padding-top: 12px; padding-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--text-3); background: transparent; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* 容器页：没有权限访问 Docker 时的修复办法 */
 .docker-fix { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; max-width: 560px; text-align: left; font-size: 13px; }

@@ -185,6 +185,42 @@ That is Docker Compose's default naming (project-service-index), which older ver
 
 For apps already installed, edit their settings or update them once under **Installed** and the container is recreated with the new name; data directories are untouched. If the host already has a container with the same name that Hostower did not create, deployment reports a name conflict; deal with that container first.
 
+### An app is installed. Where do I open it, and what are the initial account and password?
+
+Under **Apps → Installed**, click the rocket icon (**Getting started**) on that row: it shows the address (you can click it to open), notes on the initial account and the next few steps. Once an install request has run successfully, the request's detail page has the same entry point.
+
+- For apps whose initial password can be set at install time (OpenList's admin password, LiteLLM's master key, database passwords), the password is the app secret you chose during installation.
+- Apps where you create the administrator yourself on first visit (Uptime Kuma, Portainer, Open WebUI, New API, n8n) have no initial account; open them soon after installing and complete the registration.
+- 3x-ui's initial user name and password are generated randomly on first start and appear only once, in the container log: in the getting-started guide click **Read the initial user name and password**, and the panel reads that line with a single read-only query. After the container has been recreated the log no longer contains it; in that case reset them in a terminal on the host with the command given in the guide.
+
+If the address does not open, first check whether the listen address is `127.0.0.1` (reachable only from the host itself; set up a reverse proxy, or change it to `0.0.0.0` under **Edit settings**), then check whether the host firewall and the cloud provider's security group allow that port.
+
+### What do “Restricted” and “Unreachable” mean on the “Environment” page?
+
+**Environment** on the host page and **Apps → Environment** send a batch of read-only requests from this host and look at how each service answers:
+
+- **Model APIs** (OpenAI, Anthropic, Google Gemini, xAI, DeepSeek): the request is sent without a key. An answer of “missing key” means **Available**; add a key and you can call it. A refusal based on the country or region of the egress means **Restricted**; use a host in another region, or route through a gateway such as LiteLLM or New API.
+- **Websites and streaming** (Google, YouTube, Netflix, Disney+, TikTok, Facebook, X, the ChatGPT web app and others): **Available** if the site opens normally; **Restricted** if it refuses or redirects to a “not available in your region” page. For YouTube and Netflix the region you land in is shown as well; Netflix is judged with a non-original title, and “Originals only” means that region's catalog is not open to this address.
+- **Unreachable**: no connection within 8 seconds; the network may be blocking it, or the host may not have `curl`.
+- **Uncertain**: the connection worked, but the answer is none of the above, so no conclusion can be drawn.
+
+Only the way each service responds is checked here; no account is signed in. Each provider's web app and subscription sign-in have their own region and risk-control rules, so neither an available API nor a site that opens guarantees that an account will work. The same page also lists which AI CLI tools are installed on the host (Claude Code, Codex CLI, Gemini CLI and others) and the runtimes; versions are read from the installation directories, and these programs are never executed.
+
+### What are the type and risk score under “Egress IP”? How accurate are they?
+
+Websites see the host's egress address. What type it is and whether it has a bad record affect whether you get restricted and how often you have to pass human verification:
+
+- **Type**: data center, residential broadband, business line, mobile network and so on. A VPS almost always has a data center address; streaming services often show it originals only, and subscription sign-ins for AI services are more likely to trip risk control.
+- **Proxy flag**: whether the database has marked it as a proxy or VPN exit.
+- **Risk score**: 0 to 100; the higher it is, the more abuse has been recorded for this address or its network range. Below 33 counts as low, above 66 as high.
+- Also shown: the operator (ASN), the location, whether there is an IPv6 egress, and whether traffic goes through Cloudflare WARP.
+
+The host gets this information by looking up its own egress address in a public IP database (proxycheck.io). It is for reference only: different databases may reach different conclusions, and websites' risk control does not rely on these alone. When the lookup fails, “Not found” is shown and the other checks are unaffected.
+
+### How do I track how many tokens each AI tool uses?
+
+Install LiteLLM or New API (under **AI tools** in the app catalog), point the API address of Claude Code, Codex CLI and the other tools at it, and issue a separate key for each tool or each person. The number of calls, token usage and cost per key and per model are shown in the gateway's own admin interface. Hostower itself neither proxies nor records model requests.
+
 ### How do images with fixed version tags (such as `v3.9.0`) get updated?
 
 The Containers page reads the tag list from the registry:

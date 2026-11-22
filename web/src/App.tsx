@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import {
-  Activity, Box, Gauge, LayoutDashboard, KeyRound, CircleAlert, CircleCheck, FileCode2, LayoutGrid, LogOut, OctagonPause, ScrollText,
+  Activity, Box, Ellipsis, Gauge, LayoutDashboard, KeyRound, CircleAlert, CircleCheck, FileCode2, LayoutGrid, LogOut, OctagonPause, ScrollText,
   Settings as SettingsIcon, ShieldCheck, SquareTerminal, TriangleAlert,
 } from "lucide-react";
 import { api } from "./api";
@@ -59,12 +59,13 @@ export function App() {
 }
 
 const nav = [
-  { to: "/", label: "总览", icon: LayoutGrid, end: true },
-  { to: "/run", label: "执行", icon: SquareTerminal },
-  { to: "/approvals", label: "审批", icon: ShieldCheck, count: true },
+  // main：手机底栏上直接显示的几项；其余的收进“更多”里（底栏放不下十一个）。
+  { to: "/", label: "总览", icon: LayoutGrid, end: true, main: true },
+  { to: "/run", label: "执行", icon: SquareTerminal, main: true },
+  { to: "/approvals", label: "审批", icon: ShieldCheck, count: true, main: true },
   { to: "/activity", label: "活动", icon: Activity },
   { to: "/containers", label: "容器", icon: Box },
-  { to: "/apps", label: "应用", icon: LayoutDashboard },
+  { to: "/apps", label: "应用", icon: LayoutDashboard, main: true },
   { to: "/speedtest", label: "测速", icon: Gauge },
   { to: "/snippets", label: "Snippet", icon: FileCode2 },
   { to: "/credentials", label: "凭据", icon: KeyRound },
@@ -80,6 +81,11 @@ function Shell() {
   const loc = useLocation();
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer); }, []);
+  // 手机上的“更多”：底栏放不下的页面。换页面就收起来。
+  const [more, setMore] = useState(false);
+  useEffect(() => { setMore(false); }, [loc.pathname]);
+  const secondary = [...nav.filter((n) => !n.main), { to: "/settings", label: "设置", icon: SettingsIcon }];
+  const inMore = secondary.some((n) => loc.pathname.startsWith(n.to));
   const logout = async () => {
     await api.logout().catch(() => {});
     disconnect();
@@ -94,16 +100,19 @@ function Shell() {
           <span className="brand-name">Hostower</span>
         </div>
         {nav.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => "nav-item" + (isActive || (n.to === "/" && loc.pathname.startsWith("/hosts")) ? " active" : "")}>
+          <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => "nav-item" + (n.main ? "" : " nav-sec") + (isActive || (n.to === "/" && loc.pathname.startsWith("/hosts")) ? " active" : "")}>
             <n.icon />
             <span className="t">{t(n.label)}</span>
             {n.count && pending > 0 && <span className="nav-count" aria-label={t("{n} 个待审批", { n: pending })}>{pending}</span>}
           </NavLink>
         ))}
         <div className="nav-label">{t("系统")}</div>
-        <NavLink to="/settings" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
+        <NavLink to="/settings" className={({ isActive }) => "nav-item nav-sec" + (isActive ? " active" : "")}>
           <SettingsIcon /><span className="t">{t("设置")}</span>
         </NavLink>
+        <button type="button" className={"nav-item nav-more" + (inMore || more ? " active" : "")} aria-expanded={more} aria-haspopup="menu" onClick={() => setMore((v) => !v)}>
+          <Ellipsis /><span className="t">{t("更多")}</span>
+        </button>
         <div className="side-foot">
           <div className="row" style={{ alignItems: "flex-start", gap: 2 }}>
             <SideClock />
@@ -127,6 +136,18 @@ function Shell() {
           </div>
         </div>
       </aside>
+      {more && (
+        <div className="more-overlay" onClick={() => setMore(false)}>
+          <div className="more-sheet" role="menu" aria-label={t("更多")} onClick={(e) => e.stopPropagation()}>
+            {secondary.map((n) => (
+              <NavLink key={n.to} to={n.to} role="menuitem" className={({ isActive }) => "more-item" + (isActive ? " active" : "")}>
+                <n.icon /><span>{t(n.label)}</span>
+              </NavLink>
+            ))}
+            <button type="button" className="more-item" role="menuitem" onClick={logout}><LogOut /><span>{t("退出登录")}</span></button>
+          </div>
+        </div>
+      )}
       <div className="main">
         <div className="mobile-head">
           <Logo size={26} />
