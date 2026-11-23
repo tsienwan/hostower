@@ -269,6 +269,7 @@ func (s *Server) Handler() http.Handler {
 	priv("GET /api/v1/apps", s.appCatalog)
 	priv("GET /api/v1/apps/installed", s.appInstalled)
 	priv("GET /api/v1/apps/reveal", s.appReveal)
+	priv("PUT /api/v1/apps/panel", s.appPanelSet)
 	priv("POST /api/v1/apps/install", s.appInstall)
 	priv("POST /api/v1/apps/action", s.appAction)
 	priv("POST /api/v1/apps/configure", s.appConfigure)

@@ -34,6 +34,7 @@ compose: |
 guide:
   open:
     - title: 工作流编辑器
+      panel: true
       port: "{{ .port }}"
       bind: "{{ .bind }}"
   account: 没有初始账号：第一次打开时创建所有者账号。

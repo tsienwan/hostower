@@ -60,6 +60,8 @@ type installedView struct {
 	Upstream string `json:"upstream,omitempty"`
 	// Guide 是按这个实例的参数渲染好的上手指南（访问入口、初始账号、接下来几步）。
 	Guide *apps.GuideView `json:"guide,omitempty"`
+	// Panel 是所有者给这个实例设的面板地址（没设时为空，按钮按清单和参数拼）。
+	Panel *apps.PanelSetting `json:"panel,omitempty"`
 }
 
 // installedOn 在几台主机上并行查询已安装的实例，并查各实例有没有更新（要访问 npm 和镜像仓库）。
@@ -74,6 +76,7 @@ func (s *Server) installedRecords(ctx context.Context, a kernel.Actor, hosts []s
 
 func (s *Server) installedOnOpts(ctx context.Context, a kernel.Actor, hosts []string, checkUpdates bool) []hostApps {
 	out := make([]hostApps, len(hosts))
+	panels := s.appPanels()
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 8)
 	for i, h := range hosts {
@@ -95,6 +98,9 @@ func (s *Server) installedOnOpts(ctx context.Context, a kernel.Actor, hosts []st
 					v.Known = true
 					// 主机上记的参数不合法时渲染不出来：不显示指南，别的照常。
 					v.Guide, _ = app.GuideFor(x.Record)
+					if v.Guide != nil && hasPanel(v.Guide) {
+						v.Panel = panels[h+"/"+x.Instance]
+					}
 					if !checkUpdates {
 						out[i].Installed = append(out[i].Installed, v)
 						continue

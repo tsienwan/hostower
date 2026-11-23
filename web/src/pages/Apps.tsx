@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Activity, ArrowUpCircle, Bot, Box, Check, Database, Dices, Download, Eye, Network, Package, Play, Plus, RefreshCw, RotateCw, Search,
-  ExternalLink, Globe, KeyRound, Rocket, Settings2, Shield, ShieldAlert, Sparkles, Square, SquareTerminal, Trash2, TriangleAlert,
+  ExternalLink, Globe, KeyRound, Link2, Rocket, Settings2, Shield, ShieldAlert, Sparkles, Square, SquareTerminal, Trash2, TriangleAlert,
 } from "lucide-react";
 import { api, type AIConfig, type AppAutoStatus, type AppActionName, type AppInstallTarget, type AppInstalled, type AppItem, type AppParam, type AppPlanResult, type HostApps, type Preview } from "../api";
 import { backAfterApproval, fail, toast, useRequestFinished, useStore } from "../store";
@@ -15,6 +15,7 @@ import { DockerSetup } from "../DockerSetup";
 import { cached, remember } from "../cache";
 import { ts, useT } from "../i18n";
 import { AppGuideDialog, guideUrl } from "./AppGuide";
+import { AppPanelDialog, panelEntry, panelLink } from "./AppPanel";
 import { EnvMatrix } from "./HostEnv";
 
 const icons: Record<string, typeof Bot> = { bot: Bot, sparkles: Sparkles, activity: Activity, database: Database, network: Network, box: Box, shield: Shield, terminal: SquareTerminal };
@@ -397,6 +398,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
   const [confirm, setConfirm] = useState<{ action: AppActionName; keys: string[] } | null>(null);
   const [configuring, setConfiguring] = useState<{ host: string; instance: string } | null>(null);
   const [guiding, setGuiding] = useState<string | null>(null);
+  const [paneling, setPaneling] = useState<string | null>(null);
   const [sp, setSp] = useSearchParams();
   const names = hosts.map((h) => h.name).join(",");
 
@@ -421,6 +423,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
     setSp({ tab: "installed" }, { replace: true });
   }, [data, wantHost, wantApp]); // eslint-disable-line react-hooks/exhaustive-deps
   const guided = rows.find((r) => r.key === guiding);
+  const paneled = rows.find((r) => r.key === paneling && panelEntry(r));
   const toggle = (k: string) => setSel((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
 
   const run = async (action: AppActionName, keys: string[]) => {
@@ -506,13 +509,23 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
                             : <span className={"badge " + (running === r.containers.length ? "ok" : running === 0 ? "neutral" : "warn")}>
                                 {running === r.containers.length ? t("运行中") : running === 0 ? t("已停止") : t("{a}/{b} 运行中", { a: running, b: r.containers.length })}</span>}
                           {r.containers[0]?.ports && <div className="muted mono" style={{ fontSize: 12, marginTop: 2 }}>{r.containers[0].ports}</div>}
-                          {running > 0 && r.guide?.open.filter((o) => !o.local).slice(0, 1).map((o) => {
+                          {running > 0 && !panelEntry(r) && r.guide?.open.filter((o) => !o.local).slice(0, 1).map((o) => {
                             const url = guideUrl(hosts.find((h) => h.name === r.host), o);
                             return <a key={url} className="mono app-open" href={url} target="_blank" rel="noopener noreferrer"><ExternalLink />{t("打开")}</a>;
                           })}
                         </td>
                         <td className="act">
                           <div className="row act-row">
+                            {(() => {
+                              const pe = panelEntry(r);
+                              if (!pe) return null;
+                              const l = panelLink(hosts.find((h) => h.name === r.host), pe, r.panel);
+                              if (!l.url) return <button className="btn sm" title={t("这个应用只在主机本机（127.0.0.1）监听：先设置面板地址（反向代理的域名或 SSH 隧道）")} onClick={() => setPaneling(r.key)}><ExternalLink />{t("打开面板")}</button>;
+                              return <a className={"btn sm" + (running > 0 ? "" : " disabled")} href={l.url} target="_blank" rel="noopener noreferrer"
+                                title={running === 0 ? t("应用已停止") : l.ssh ? t("经由 SSH 隧道：先在自己电脑上运行 {cmd}", { cmd: l.ssh }) : l.url}
+                                onClick={(e) => { if (running === 0) e.preventDefault(); }} aria-disabled={running === 0}><ExternalLink />{t("打开面板")}</a>;
+                            })()}
+                            {panelEntry(r) && <button className="btn ghost icon sm" title={t("面板地址：反向代理、SSH 隧道、改过的端口和路径")} aria-label={t("面板地址")} onClick={() => setPaneling(r.key)}><Link2 /></button>}
                             {r.guide && <button className="btn ghost icon sm" title={t("上手指南：访问地址、初始账号、接下来几步")} aria-label={t("上手指南")} onClick={() => setGuiding(r.key)}><Rocket /></button>}
                             {(r.update || r.rebuilt) && <button className="btn ghost icon sm" title={r.update ? t("更新到 {v}", { v: r.update }) : t("拉取新构建并重建容器")} aria-label={t("更新")} onClick={() => run("update", [r.key])}><ArrowUpCircle /></button>}
                             {r.type === "compose" && (running > 0
@@ -535,6 +548,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
           )}
       </div>
       {configuring && <AppConfigureDialog host={configuring.host} instance={configuring.instance} onClose={() => setConfiguring(null)} />}
+      {paneled && <AppPanelDialog row={paneled} title={byName.get(paneled.app)?.title ?? paneled.app} onClose={() => setPaneling(null)} onSaved={load} />}
       {guided?.guide && <AppGuideDialog host={guided.host} instance={guided.instance} app={byName.get(guided.app)} guide={guided.guide} onClose={() => setGuiding(null)} />}
       {confirm && (
         <UninstallDialog count={confirm.keys.length} compose={rows.filter((r) => confirm.keys.includes(r.key)).every((r) => r.type === "compose")}

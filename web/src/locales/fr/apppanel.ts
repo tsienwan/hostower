@@ -1,0 +1,30 @@
+// Dictionnaire français : le bouton « Ouvrir le panneau » des applications et le réglage de l'adresse du panneau (pages/AppPanel.tsx).
+const dict: Record<string, string> = {
+  "{app} 的面板地址": "Adresse du panneau de {app}",
+  "恢复默认": "Rétablir la valeur par défaut",
+  "默认按这个实例当前的监听地址和端口拼出地址，在“修改设置”里改过以后会自动跟着变。下面的设置只存在塔台里，不改主机上的任何东西；改动会写进审计。": "Par défaut, l'adresse est construite à partir de l'adresse d'écoute et du port actuels de cette instance, et suit leurs changements faits dans « Modifier les paramètres ». Les réglages ci-dessous sont enregistrés uniquement dans Hostower et ne modifient rien sur l'hôte ; chaque changement est inscrit au journal d'audit.",
+  "怎么访问": "Mode d'accès",
+  "直接访问主机": "Directement sur l'hôte",
+  "填写完整地址": "Adresse complète",
+  "经由 SSH 隧道": "Par un tunnel SSH",
+  "打开 主机地址:端口/路径。端口或路径在应用自己的页面里改过时，在下面填上新的；留空就照应用的设置。": "Ouvre adresse de l'hôte:port/chemin. Si le port ou le chemin a été modifié dans l'application elle-même, saisissez la nouvelle valeur ci-dessous ; laissez vide pour suivre les réglages de l'application.",
+  "应用前面套了反向代理、用域名访问，或者只绑在 127.0.0.1 上时，直接填浏览器里要打开的地址。不能带账号、密码或 ? 后面的参数。": "Si l'application est derrière un proxy inverse, accessible par un nom de domaine ou n'écoute que sur 127.0.0.1, saisissez l'adresse à ouvrir dans le navigateur. Elle ne peut contenir ni identifiant, ni mot de passe, ni rien après ?.",
+  "不对外开放端口：在自己电脑上运行下面这条命令建立隧道（用的是这台主机的 SSH 登录方式），按钮打开本机的端口。": "Aucun port n'est ouvert vers l'extérieur : lancez la commande ci-dessous sur votre ordinateur pour établir un tunnel (elle utilise la connexion SSH de cet hôte), et le bouton ouvre le port de votre ordinateur.",
+  "面板地址": "Adresse du panneau",
+  "网络页里反向代理到这个端口的站点：": "Sites de la page Réseau qui redirigent vers ce port :",
+  "应用端口": "Port de l'application",
+  "本地端口": "Port local",
+  "先运行": "Lancer d'abord",
+  "复制命令": "Copier la commande",
+  "按钮打开": "Le bouton ouvre",
+  "这个应用只在主机本机（127.0.0.1）监听，从外面打不开：填写完整地址或者经由 SSH 隧道。": "Cette application n'écoute que sur l'hôte lui-même (127.0.0.1) et ne peut pas être ouverte de l'extérieur : saisissez une adresse complète ou passez par un tunnel SSH.",
+  "只有所有者可以修改面板地址。": "Seul le propriétaire peut modifier l'adresse du panneau.",
+  "这个应用只在主机本机（127.0.0.1）监听：先设置面板地址（反向代理的域名或 SSH 隧道）": "Cette application n'écoute que sur l'hôte lui-même (127.0.0.1) : définissez d'abord une adresse de panneau (domaine du proxy inverse ou tunnel SSH)",
+  "打开面板": "Ouvrir le panneau",
+  "应用已停止": "L'application est arrêtée",
+  "经由 SSH 隧道：先在自己电脑上运行 {cmd}": "Par un tunnel SSH : lancez d'abord {cmd} sur votre ordinateur",
+  "面板地址：反向代理、SSH 隧道、改过的端口和路径": "Adresse du panneau : proxy inverse, tunnel SSH, port et chemin modifiés",
+  "应用面板地址": "Adresse du panneau d'application",
+};
+
+export default dict;

@@ -195,6 +195,16 @@ Under **Apps → Installed**, click the rocket icon (**Getting started**) on tha
 
 If the address does not open, first check whether the listen address is `127.0.0.1` (reachable only from the host itself; set up a reverse proxy, or change it to `0.0.0.0` under **Edit settings**), then check whether the host firewall and the cloud provider's security group allow that port.
 
+### **Open panel** opens the wrong address, or the app listens only on `127.0.0.1`
+
+Apps with a web panel (OpenList, 3x-ui, Uptime Kuma, Portainer, LiteLLM, Open WebUI, New API, n8n) have an **Open panel** button on their row under **Installed**. By default the address is built from the instance's current listen address and port, so after you change them under **Edit settings** the button follows along. When that isn't right, click the link icon next to it to set a **Panel address** (only the owner can change it; it is stored only in Hostower, changes nothing on the host, and every change is audited):
+
+- **Directly on the host**: the port or path was changed inside the app itself (for example, the port and panel path under 3x-ui's "Panel Settings"), which Hostower can't see. Enter the new port and path here.
+- **Full address**: the app sits behind a reverse proxy, is reached by a domain, or listens only on `127.0.0.1`. Enter the address the browser should open, such as `https://panel.example.com/xui/`. Sites on the Network page that already proxy to this port are listed and can be filled in with one click.
+- **Through an SSH tunnel**: if you don't want to open the port to the outside, the page gives you an `ssh -N -L local-port:127.0.0.1:app-port user@host` command. Run it on your own computer, and the button opens `http://localhost:local-port/path`.
+
+The panel address can't contain a user name, password or anything after `?` or `#`, so no credentials ever end up in the button's link.
+
 ### What do “Restricted” and “Unreachable” mean on the “Environment” page?
 
 **Environment** on the host page and **Apps → Environment** send a batch of read-only requests from this host and look at how each service answers:

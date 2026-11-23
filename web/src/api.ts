@@ -328,6 +328,7 @@ export const api = {
     return out;
   },
   appReveal: (host: string, instance: string) => call<{ output: string }>("GET", "/apps/reveal" + q({ host, instance })),
+  setAppPanel: (host: string, instance: string, panel: AppPanel) => call<{ panel: AppPanel | null }>("PUT", "/apps/panel", { host, instance, panel }),
   hostEnv: (name: string) => call<HostEnv>("GET", `/hosts/${encodeURIComponent(name)}/env`),
   appInstall: (b: AppInstallBody) => call<AppPlanResult>("POST", "/apps/install", b),
   appAction: (b: AppActionBody) => call<AppPlanResult>("POST", "/apps/action", b),
@@ -544,7 +545,7 @@ export interface AppItem {
 }
 /** 按一个实例的参数渲染好的上手指南。local 表示只在主机本机监听。 */
 export interface AppGuide {
-  open: { title: string; scheme: "http" | "https"; port: string; path: string; local?: boolean }[];
+  open: { title: string; scheme: "http" | "https"; port: string; path: string; local?: boolean; panel?: boolean; inApp?: string }[];
   account?: string; steps: string[]; reveal?: { title: string; hint?: string };
 }
 /** 文件收集：一台主机上匹配规则的文件；size 是 -1 表示主机给不出大小。 */
@@ -565,7 +566,9 @@ export interface HostEnv { tools: EnvTool[]; services: EnvService[]; sites: EnvS
 export interface AIProvider { id: string; title: string; baseUrl?: string; models?: string[]; key: "required" | "optional"; note?: string; custom?: boolean; apis?: string[] }
 export interface AIConfig { provider: string; baseUrl?: string; model?: string; smallModel?: string; secret?: string; api?: string }
 export interface AppRecord { app: string; version: string; type: "compose" | "npm"; instance: string; params?: Record<string, string>; bins?: string[]; envs?: string[]; config?: Record<string, string> }
-export interface AppInstalled extends AppRecord { containers: { name: string; state: string; status: string; ports: string }[]; update?: string; blocked?: string; rebuilt?: boolean; upstream?: string; known: boolean; guide?: AppGuide }
+export interface AppInstalled extends AppRecord { containers: { name: string; state: string; status: string; ports: string }[]; update?: string; blocked?: string; rebuilt?: boolean; upstream?: string; known: boolean; guide?: AppGuide; panel?: AppPanel }
+/** 所有者给实例设的面板地址（和服务端的 apps.PanelSetting 对应）：直接访问时覆盖端口、路径；完整地址；经由 SSH 隧道。 */
+export interface AppPanel { mode: "direct" | "url" | "ssh"; url?: string; port?: string; path?: string; localPort?: string }
 export interface HostApps { host: string; installed: AppInstalled[]; error?: string }
 export interface AppInstallTarget { host: string; instance: string; params: Record<string, string>; secrets: Record<string, string>; version?: string; ai?: AIConfig }
 export interface AppInstallBody { app: string; targets: AppInstallTarget[]; preview?: boolean }

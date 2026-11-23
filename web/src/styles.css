@@ -247,7 +247,7 @@ a.card:hover { transform: translateY(-1px); }
 .btn svg { width: 15px; height: 15px; }
 .btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong)); background: var(--accent-soft); }
 .btn:active:not(:disabled) { transform: scale(0.97); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
 .btn.primary { background: var(--primary); border-color: transparent; color: var(--accent-ink); font-weight: 600; }
 .btn.primary:hover:not(:disabled) { background: var(--primary-hover); border-color: transparent; }
 .btn.danger { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 40%, transparent); }

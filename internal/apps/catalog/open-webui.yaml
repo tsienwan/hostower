@@ -30,6 +30,7 @@ compose: |
 guide:
   open:
     - title: 聊天界面
+      panel: true
       port: "{{ .port }}"
       bind: "{{ .bind }}"
   account: 没有初始账号：第一个注册的人就是管理员，装好后尽快打开注册。

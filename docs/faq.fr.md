@@ -195,6 +195,16 @@ Sous **Applications → Installées**, cliquez sur l'icône de fusée (**Guide d
 
 Si l'adresse ne s'ouvre pas, vérifiez d'abord si l'adresse d'écoute est `127.0.0.1` (accessible uniquement depuis l'hôte lui-même ; configurez un proxy inverse ou remplacez-la par `0.0.0.0` dans **Modifier les paramètres**), puis vérifiez que le pare-feu de l'hôte et le groupe de sécurité du fournisseur cloud autorisent ce port.
 
+### **Ouvrir le panneau** ouvre une mauvaise adresse, ou l'application n'écoute que sur `127.0.0.1`
+
+Les applications dotées d'un panneau web (OpenList, 3x-ui, Uptime Kuma, Portainer, LiteLLM, Open WebUI, New API, n8n) ont un bouton **Ouvrir le panneau** sur leur ligne dans **Installées**. Par défaut, l'adresse est construite à partir de l'adresse d'écoute et du port actuels de l'instance : si vous les modifiez dans **Modifier les paramètres**, le bouton suit. Si l'adresse ne convient pas, cliquez sur l'icône de lien à côté pour définir une **Adresse du panneau** (seul le propriétaire peut la modifier ; elle est enregistrée uniquement dans Hostower, ne change rien sur l'hôte, et chaque modification est auditée) :
+
+- **Directement sur l'hôte** : le port ou le chemin a été modifié dans l'application elle-même (par exemple le port et le chemin du panneau dans les « Réglages du panneau » de 3x-ui), ce que Hostower ne voit pas. Saisissez ici le nouveau port et le nouveau chemin.
+- **Adresse complète** : l'application est derrière un proxy inverse, accessible par un nom de domaine, ou n'écoute que sur `127.0.0.1`. Saisissez l'adresse que le navigateur doit ouvrir, par exemple `https://panel.example.com/xui/`. Les sites de la page Réseau qui redirigent déjà vers ce port sont proposés et se remplissent d'un clic.
+- **Par un tunnel SSH** : si vous ne voulez pas ouvrir le port vers l'extérieur, la page fournit une commande `ssh -N -L port-local:127.0.0.1:port-app utilisateur@hôte`. Lancez-la sur votre ordinateur, et le bouton ouvre `http://localhost:port-local/chemin`.
+
+L'adresse du panneau ne peut contenir ni identifiant, ni mot de passe, ni rien après `?` ou `#` : aucun identifiant ne se retrouve jamais dans le lien du bouton.
+
 ### Que signifient « Restreint » et « Injoignable » sur la page « Environnement » ?
 
 **Environnement**, sur la page de l'hôte, et **Applications → Environnement** envoient depuis cet hôte une série de requêtes en lecture seule et observent la réponse de chaque service :

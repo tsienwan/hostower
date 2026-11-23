@@ -59,6 +59,7 @@ compose: |
 guide:
   open:
     - title: 管理界面
+      panel: true
       port: "{{ .port }}"
       path: /ui/
       bind: "{{ .bind }}"

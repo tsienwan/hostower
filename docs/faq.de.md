@@ -195,6 +195,16 @@ Klicken Sie unter **Apps → Installiert** in der betreffenden Zeile auf das Rak
 
 Lässt sich die Adresse nicht öffnen, prüfen Sie zuerst, ob die Listen-Adresse `127.0.0.1` ist (nur vom Host selbst aus erreichbar; richten Sie einen Reverse-Proxy ein oder ändern Sie sie unter **Einstellungen bearbeiten** auf `0.0.0.0`), und danach, ob Host-Firewall und Sicherheitsgruppe des Cloud-Anbieters diesen Port erlauben.
 
+### **Panel öffnen** öffnet die falsche Adresse, oder die App lauscht nur auf `127.0.0.1`
+
+Apps mit Web-Panel (OpenList, 3x-ui, Uptime Kuma, Portainer, LiteLLM, Open WebUI, New API, n8n) haben in ihrer Zeile unter **Installiert** eine Schaltfläche **Panel öffnen**. Standardmäßig wird die Adresse aus der aktuellen Listen-Adresse und dem Port der Instanz gebildet; ändern Sie diese unter **Einstellungen bearbeiten**, folgt die Schaltfläche automatisch. Passt das nicht, klicken Sie auf das Link-Symbol daneben und legen eine **Panel-Adresse** fest (nur der Eigentümer kann sie ändern; sie wird nur in Hostower gespeichert, ändert nichts auf dem Host, und jede Änderung wird protokolliert):
+
+- **Direkt auf dem Host**: Port oder Pfad wurden in der App selbst geändert (zum Beispiel Port und Panel-Pfad in den „Panel-Einstellungen“ von 3x-ui), was Hostower nicht sieht. Tragen Sie hier den neuen Port und Pfad ein.
+- **Vollständige Adresse**: Die App liegt hinter einem Reverse-Proxy, wird über eine Domain erreicht oder lauscht nur auf `127.0.0.1`. Tragen Sie die Adresse ein, die der Browser öffnen soll, etwa `https://panel.example.com/xui/`. Sites auf der Netzwerkseite, die bereits auf diesen Port weiterleiten, werden angeboten und lassen sich mit einem Klick übernehmen.
+- **Über einen SSH-Tunnel**: Wenn Sie den Port nicht nach außen öffnen möchten, zeigt die Seite einen Befehl `ssh -N -L lokaler-Port:127.0.0.1:App-Port benutzer@host`. Führen Sie ihn auf Ihrem eigenen Rechner aus; die Schaltfläche öffnet dann `http://localhost:lokaler-Port/pfad`.
+
+Die Panel-Adresse darf keinen Benutzernamen, kein Passwort und nichts nach `?` oder `#` enthalten – im Link der Schaltfläche landen also nie Zugangsdaten.
+
 ### Was bedeuten „Eingeschränkt“ und „Nicht erreichbar“ auf der Seite „Umgebung“?
 
 **Umgebung** auf der Host-Seite und **Apps → Umgebung** senden von diesem Host aus eine Reihe rein lesender Anfragen und werten aus, wie die einzelnen Dienste antworten:

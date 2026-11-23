@@ -32,6 +32,10 @@ type GuideLink struct {
 	Path   string `yaml:"path"`
 	// Bind 是监听地址（一般写 {{ .bind }}）；渲染出来是 127.0.0.1 时，页面提示只能在主机本机访问。
 	Bind string `yaml:"bind"`
+	// Panel 表示这是应用的网页面板：“已安装”列表上的“打开面板”按钮打开它。一个应用最多一个。
+	Panel bool `yaml:"panel"`
+	// InApp 说明端口或路径是在应用自己的页面里改的（Hostower 看不到）：页面提示改过以后在“面板地址”里填上。
+	InApp string `yaml:"inApp"`
 }
 
 // GuideReveal 是一条从主机上读初始账号的只读命令。
@@ -57,6 +61,9 @@ type OpenView struct {
 	Path   string `json:"path"`
 	// Local 表示只在主机本机监听：要配反向代理或 SSH 隧道才能从外面打开。
 	Local bool `json:"local,omitempty"`
+	// Panel 表示这是应用的网页面板（“打开面板”按钮用它）。
+	Panel bool   `json:"panel,omitempty"`
+	InApp string `json:"inApp,omitempty"`
 }
 
 // RevealView 是“读取初始账号”按钮上的文字；命令本身不给页面。
@@ -126,7 +133,8 @@ func (a *App) GuideFor(rec Record) (*GuideView, error) {
 		if path == "" {
 			path = "/"
 		}
-		v.Open = append(v.Open, OpenView{Title: l.Title, Scheme: scheme, Port: port, Path: path, Local: bind == "127.0.0.1" || bind == "localhost" || bind == "::1"})
+		v.Open = append(v.Open, OpenView{Title: l.Title, Scheme: scheme, Port: port, Path: path,
+			Local: bind == "127.0.0.1" || bind == "localhost" || bind == "::1", Panel: l.Panel, InApp: l.InApp})
 	}
 	if v.Account, err = guideText(a.Name, g.Account, vals); err != nil {
 		return nil, err
@@ -168,7 +176,11 @@ func (a *App) checkGuide() error {
 	if a.Type != TypeCompose && len(g.Open) > 0 {
 		return errors.New("只有容器应用的上手指南能写访问入口")
 	}
+	panels := 0
 	for _, l := range g.Open {
+		if l.Panel {
+			panels++
+		}
 		if l.Title == "" || l.Port == "" {
 			return errors.New("上手指南的访问入口需要 title 和 port")
 		}
@@ -178,6 +190,9 @@ func (a *App) checkGuide() error {
 		if l.Path != "" && !guidePathRe.MatchString(l.Path) {
 			return fmt.Errorf("上手指南的路径 %q 不合法", l.Path)
 		}
+	}
+	if panels > 1 {
+		return errors.New("上手指南里最多一个网页面板（panel）")
 	}
 	if r := g.Reveal; r != nil && (r.Title == "" || strings.TrimSpace(r.Command) == "" || strings.ContainsAny(r.Command, "\n\r")) {
 		return errors.New("上手指南的 reveal 需要 title 和单行的 command")

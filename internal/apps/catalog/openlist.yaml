@@ -39,6 +39,7 @@ compose: |
 guide:
   open:
     - title: 文件列表和管理后台
+      panel: true
       port: "{{ .port }}"
       bind: "{{ .bind }}"
   account: 用户名 admin，密码是安装时选的应用密钥。

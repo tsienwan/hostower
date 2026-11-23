@@ -24,6 +24,8 @@ guide:
   open:
     - title: 管理面板
       port: "2053"
+      panel: true
+      inApp: 面板的端口和路径在 3x-ui 自己的“面板设置”里改，Hostower 看不到；改过以后在“面板地址”里填上新的端口和路径。
   account: 第一次启动时随机生成一组用户名和密码，只在容器日志里出现一次。点下面的按钮读出来。
   reveal:
     title: 读取初始用户名和密码
