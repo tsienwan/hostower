@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Ban, ExternalLink, FileText, Globe, KeyRound, Lock, Plus, RefreshCw, Settings2, Shield, ShieldCheck, ShieldOff, Trash2, TriangleAlert } from "lucide-react";
 import { api, type F2BConfig, type NetPort, type NetSite, type NetworkView, type Preview, type AppPlanResult, type SiteForm, type SiteKind, type SiteServer, type SiteTLS } from "../api";
-import { fail } from "../store";
+import { backAfterApproval, fail, onHost, useRequestFinished } from "../store";
 import { Empty, Modal } from "../ui";
 import { Select } from "../controls";
 import { PreviewPanel } from "../shared";
@@ -34,7 +34,7 @@ function PlanDialog({ title, send, onClose, children, ready = true }: {
       const r = await send(false);
       const reqs = Array.isArray(r.requests) ? r.requests : [];
       onClose();
-      if (reqs[0]) nav(`/requests/${reqs[0].id}`);
+      if (reqs[0]) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
   return (
@@ -78,6 +78,8 @@ export function NetworkPanel({ host }: { host: string }) {
     api.hostNetwork(host).then((r) => setData(remember("net:" + host, r))).catch((e) => setError(e.message)).finally(() => setLoading(false));
   }, [host]);
   useEffect(() => { load(); }, [load]);
+  // 批准后回到这一页：放行端口、改站点等执行完就重新查一遍。
+  useRequestFinished(load, onHost(host));
   useEffect(() => {
     if (presetPort && data) { setDialog("site"); const n = new URLSearchParams(sp); n.delete("port"); setSp(n, { replace: true }); }
   }, [presetPort, data, sp, setSp]);

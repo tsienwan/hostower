@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ChevronDown, ChevronRight, CornerLeftUp, Cpu, Gauge, Download, File, Folder, FolderSearch, HardDrive, MemoryStick, Pencil, RefreshCw, Search, Server, ShieldAlert, SquareTerminal, Trash2, TriangleAlert, Upload } from "lucide-react";
 import { api, type ContainerStat, type FileEntry, type Hardware, type ProcStat, type Req, type Retention, type Sample, type SpeedConfig } from "../api";
 import { cached, remember } from "../cache";
-import { fail, refreshHosts, toast, useStore } from "../store";
+import { backAfterApproval, fail, onHost, refreshHosts, toast, useRequestFinished, useStore } from "../store";
 import { HostForm } from "../HostForm";
 import { SpeedtestDialog } from "./Speedtest";
 import { ContainerDetailDialog } from "./Containers";
@@ -285,7 +285,7 @@ function Files({ host }: { host: string }) {
         made.push((await api.uploadFile(host, path, f.name, info.id)).id);
       }
     } catch (e) { fail(e); } finally { setSending(null); }
-    if (made.length === 1) nav(`/requests/${made[0]}`);
+    if (made.length === 1) nav(`/requests/${made[0]}`, { state: backAfterApproval });
     else if (made.length > 1) { toast(t("已生成 {n} 个上传请求，批准后写入主机", { n: made.length })); nav("/approvals"); }
   };
   const onDrop = (e: React.DragEvent) => {
@@ -306,6 +306,8 @@ function Files({ host }: { host: string }) {
       .catch((e) => { if (n === seq.current) { setError(e.message); setEntries([]); } });
   }, [host]);
   useEffect(() => { load("/"); }, [load]);
+  // 批准后回到这一页：上传或改的文件写完，重新列一遍当前目录。
+  useRequestFinished(() => load(path), (r) => (r.kind === "file.write" || r.input?.kind === "upload") && onHost(host)(r));
 
   const open = (p: string) => {
     setDraft(null);
@@ -334,7 +336,7 @@ function Files({ host }: { host: string }) {
     setBusy(true);
     try {
       const r = await api.writeFile(host, file.path, draft, intent);
-      nav(`/requests/${r.id}`);
+      nav(`/requests/${r.id}`, { state: backAfterApproval });
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
 
@@ -583,7 +585,7 @@ function ProcessCard({ host, executor, agent, procs, online }: { host: string; e
   const steady = useSteadyOrder(sorter.sorted, (p) => p.pid, sorter.sort ? sorter.sort.key + sorter.sort.dir : "");
   const act = async (action: "install" | "remove") => {
     setBusy(true);
-    try { nav(`/requests/${(await api.hostAgent(host, action)).id}`); } catch (e) { fail(e); } finally { setBusy(false); }
+    try { nav(`/requests/${(await api.hostAgent(host, action)).id}`, { state: backAfterApproval }); } catch (e) { fail(e); } finally { setBusy(false); }
   };
   const bundled = !!archs?.length;
   const outdated = !!agent && !!version && agent !== version;
@@ -596,7 +598,7 @@ function ProcessCard({ host, executor, agent, procs, online }: { host: string; e
     switching: t("正在切换采集方式…"),
   }[job.phase];
   const jobBtn = job && (
-    <Link className="btn sm" to={`/requests/${job.id}`} title={job.phase === "approval" ? t("请求还在等批准，点开去批准") : t("点开看这次请求的详情")}>
+    <Link className="btn sm" to={`/requests/${job.id}`} state={backAfterApproval} title={job.phase === "approval" ? t("请求还在等批准，点开去批准") : t("点开看这次请求的详情")}>
       {job.phase === "approval" ? <ShieldAlert /> : <RefreshCw className="spin" />}{jobLabel}
     </Link>
   );

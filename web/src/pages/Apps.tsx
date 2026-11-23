@@ -7,7 +7,7 @@ import {
   ExternalLink, Globe, KeyRound, Rocket, Settings2, Shield, ShieldAlert, Sparkles, Square, SquareTerminal, Trash2, TriangleAlert,
 } from "lucide-react";
 import { api, type AIConfig, type AppAutoStatus, type AppActionName, type AppInstallTarget, type AppInstalled, type AppItem, type AppParam, type AppPlanResult, type HostApps, type Preview } from "../api";
-import { fail, toast, useStore } from "../store";
+import { backAfterApproval, fail, toast, useRequestFinished, useStore } from "../store";
 import { Empty, LevelBadge, Modal, ago } from "../ui";
 import { Select } from "../controls";
 import { PreviewPanel } from "../shared";
@@ -205,7 +205,7 @@ function InstallDialog({ app, initialHost, onClose }: { app: AppItem; initialHos
       const r = await api.appInstall(body);
       const reqs = Array.isArray(r.requests) ? r.requests : [];
       if (r.error) toast(ts(r.error), "err");
-      if (reqs.length === 1) nav(`/requests/${reqs[0].id}`);
+      if (reqs.length === 1) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
       else { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals"); }
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
@@ -406,6 +406,8 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
     api.appsInstalledAll(names.split(",")).then((r) => setData(remember("apps:installed", r))).catch(fail).finally(() => setLoading(false));
   }, [names]);
   useEffect(() => { load(); }, [load]);
+  // 批准后回到这一页：装好、更新完、卸载完就重新查一遍。
+  useRequestFinished(load);
 
   const rows = (data ?? []).flatMap((h) => h.installed.map((x) => ({ ...x, host: h.host, key: h.host + "/" + x.instance })));
   const errors = (data ?? []).filter((h) => h.error);
@@ -427,7 +429,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
       const r = await api.appAction({ action, targets });
       const reqs = Array.isArray(r.requests) ? r.requests : [];
       setSel([]);
-      if (reqs.length === 1) nav(`/requests/${reqs[0].id}`);
+      if (reqs.length === 1) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
       else { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals"); }
     } catch (e) { fail(e); }
   };
@@ -566,6 +568,7 @@ function AutoUpdateCard({ onChecked }: { onChecked: () => void }) {
   const [waitSince, setWaitSince] = useState<number | null>(null);
   const load = useCallback(() => api.appAuto().then(setSt).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
+  useRequestFinished(load);
   useEffect(() => {
     if (waitSince === null) return;
     const started = Date.now();
@@ -615,7 +618,7 @@ export function AppUninstallDialog({ host, instance, onClose }: { host: string; 
         const r = await api.appAction({ action: purge ? "purge" : "uninstall", targets: [{ host, instance }] });
         onClose();
         const reqs = Array.isArray(r.requests) ? r.requests : [];
-        if (reqs[0]) nav(`/requests/${reqs[0].id}`);
+        if (reqs[0]) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
       } catch (e) { fail(e); }
     }} />
   );
@@ -674,7 +677,7 @@ export function AppConfigureDialog({ host, instance, onClose }: { host: string; 
       const r = await api.appConfigure(body);
       const reqs = Array.isArray(r.requests) ? r.requests : [];
       onClose();
-      if (reqs[0]) nav(`/requests/${reqs[0].id}`);
+      if (reqs[0]) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
   const pv: Preview | null = preview?.targets ? { level: preview.level!, targets: preview.targets } : null;

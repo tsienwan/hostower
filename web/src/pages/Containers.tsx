@@ -6,7 +6,7 @@ import { askConfirm } from "../dialogs";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowUpCircle, Box, Copy, Download, FileText, Info, Pencil, Search, KeyRound, Layers, LogIn, Play, Plus, RefreshCw, RotateCw, Square, Trash2, TriangleAlert, Upload } from "lucide-react";
 import { api, type AppInstalled, type Container, type ImageNews, type ContainerAction, type ContainerDetail, type ContainerStat, type Image, type Registry } from "../api";
-import { fail, toast, useStore } from "../store";
+import { backAfterApproval, fail, onHost, toast, useRequestFinished, useStore } from "../store";
 import { Empty, Modal, Pager, SortTh, Sparkline, bytes, usePaged, useSort } from "../ui";
 import { Select } from "../controls";
 import { cached, remember } from "../cache";
@@ -58,12 +58,14 @@ export function Containers() {
   }, [host]);
   // 换主机时先显示这台主机上次的结果（没有就是空），后台再取最新的：容器列表要经 SSH 现查，远端主机上要等一会儿。
   useEffect(() => { setData(host ? cached<ContainersData>("containers:" + host) ?? null : null); load(); }, [load, host]);
+  // 批准后回到这一页：这台主机上的操作执行完就重新查一遍。
+  useRequestFinished(load, onHost(host));
 
   /** 提交一个动作：生成请求后跳到请求页，在那里看判级、批准和输出。 */
   const act = async (a: Omit<ContainerAction, "host">) => {
     try {
       const r = await api.containerAction({ host, ...a });
-      nav(`/requests/${r.id}`);
+      nav(`/requests/${r.id}`, { state: backAfterApproval });
     } catch (e) { fail(e); }
   };
 
@@ -112,7 +114,7 @@ export function Containers() {
                 onEdit={(p) => { if (p.app) setDialog({ app: p.app }); else { setPreset(p); setDialog("deploy"); } }}
                 onUninstallApp={(inst) => setDialog({ app: inst, uninstall: true })}
                 updates={updates} appInfo={appInfo}
-                onUpdateApp={async (inst) => { try { const r = await api.appAction({ action: "update", targets: [{ host, instance: inst }] }); const q = Array.isArray(r.requests) ? r.requests : []; if (q[0]) nav(`/requests/${q[0].id}`); } catch (e) { fail(e); } }} />
+                onUpdateApp={async (inst) => { try { const r = await api.appAction({ action: "update", targets: [{ host, instance: inst }] }); const q = Array.isArray(r.requests) ? r.requests : []; if (q[0]) nav(`/requests/${q[0].id}`, { state: backAfterApproval }); } catch (e) { fail(e); } }} />
 
               <div className="card">
                 <div className="card-head wrap">

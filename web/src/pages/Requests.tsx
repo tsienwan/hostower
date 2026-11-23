@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Activity, ArrowLeft, Ban, Check, ChevronRight, Fingerprint, KeyRound, Rocket, ShieldAlert, ShieldCheck, ShieldX, Square, TriangleAlert } from "lucide-react";
 import { api, ApiError, type Finding, type Req, type Target } from "../api";
-import { fail, seedOutput, toast, upsertRequest, useOutput, useStore } from "../store";
+import { backAfterApproval, fail, seedOutput, toast, upsertRequest, useOutput, useStore } from "../store";
 import { verify } from "../verify";
 import { Empty, LevelBadge, Modal, StateBadge, TargetIcon, ago, b64text, bytes, duration, levelMeta, stamp as clock, targetText } from "../ui";
 import { t, ts, useT } from "../i18n";
@@ -16,7 +16,8 @@ function hostsLabel(r: Req): string {
   return n === 1 ? r.targets[0].host : t("{host} 等 {n} 台", { host: r.targets[0].host, n });
 }
 
-function RequestTable({ rows }: { rows: Req[] }) {
+/** back：点开后批准完回到这个列表（审批页用：批完一个接着批下一个）。 */
+function RequestTable({ rows, back }: { rows: Req[]; back?: boolean }) {
   const t = useT();
   const nav = useNavigate();
   return (
@@ -27,7 +28,7 @@ function RequestTable({ rows }: { rows: Req[] }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="click" onClick={() => nav(`/requests/${r.id}`)}>
+            <tr key={r.id} className="click" onClick={() => nav(`/requests/${r.id}`, back ? { state: backAfterApproval } : undefined)}>
               <td><LevelBadge level={r.level} /></td>
               <td className="req-action">
                 <div className="mono ellipsis">{summary(r)}</div>
@@ -69,7 +70,7 @@ export function Approvals() {
           <div className="card">
             {pending.length === 0
               ? <Empty icon={<ShieldCheck />} title={t("没有等待批准的操作")}>{t("只读操作会自动执行；变更和高危操作会出现在这里。")}</Empty>
-              : <RequestTable rows={pending} />}
+              : <RequestTable rows={pending} back />}
           </div>
         </div>
       </div>
@@ -429,6 +430,10 @@ export function ApprovalCard({ r, title, lead }: { r: Req; title?: string; lead?
   const confirmOK = !l2 || typed.trim() === r.confirm;
   const [, tick] = useState(0);
   useEffect(() => { const timer = setInterval(() => tick((n) => n + 1), 15000); return () => clearInterval(timer); }, []);
+  // 从别的页面提交过来的（带了 backAfterApproval）：批准或拒绝之后回到那一页，结果在那一页上看。
+  const nav = useNavigate();
+  const loc = useLocation();
+  const goBack = r.kind !== "terminal" && loc.key !== "default" && !!(loc.state as { back?: boolean } | null)?.back;
   const minsLeft = r.expiresAt ? Math.max(0, Math.ceil((Date.parse(r.expiresAt) - Date.now()) / 60000)) : null;
 
   const approve = async () => {
@@ -437,7 +442,8 @@ export function ApprovalCard({ r, title, lead }: { r: Req; title?: string; lead?
       // 高危操作：当场用 Passkey 或动态码验证身份。开发模式的令牌会话由服务端按开发模式处理。
       if (l2 && !boot.devSession) await verify({ l2: true });
       upsertRequest(await api.approve(r.id, r.digest, typed));
-      if (r.kind !== "terminal") toast(t("已批准，开始执行"));
+      if (r.kind !== "terminal") toast(goBack ? t("已批准，开始执行。进度和结果在“活动”里也能看到") : t("已批准，开始执行"));
+      if (goBack) nav(-1);
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
   const deny = async () => {
@@ -445,6 +451,7 @@ export function ApprovalCard({ r, title, lead }: { r: Req; title?: string; lead?
     try {
       upsertRequest(await api.deny(r.id, reason));
       setDenying(false);
+      if (goBack) { toast(t("已拒绝")); nav(-1); }
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
 

@@ -94,6 +94,7 @@ const dict: Record<string, string> = {
   "输出超过上限，只保留了开头部分。": "Output exceeded the limit; only the beginning was kept.",
 
   "已批准，开始执行": "Approved, starting run",
+  "已批准，开始执行。进度和结果在“活动”里也能看到": "Approved, starting run. Progress and results are also in Activity",
   "等待批准": "Awaiting approval",
   "{name} 请求在 {n} 台主机上执行高危操作": "{name} requests a high-risk operation on {n} host(s)",
   "{name} 请求在 {n} 台主机上执行变更操作": "{name} requests a change on {n} host(s)",

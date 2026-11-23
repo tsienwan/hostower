@@ -5,7 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Download, FileUp, FolderSearch, Search, TriangleAlert, Upload, X } from "lucide-react";
 import { api, type CollectHost, type Host } from "../api";
-import { fail, toast, useStore } from "../store";
+import { backAfterApproval, fail, toast, useStore } from "../store";
 import { Empty, bytes } from "../ui";
 import { ts, useT } from "../i18n";
 
@@ -79,7 +79,7 @@ function Distribute() {
       const r = await api.fileDistribute({ hosts, dir: dir.trim(), files: staged });
       if (r.error) toast(ts(r.error), "err");
       const reqs = r.requests ?? [];
-      if (reqs.length === 1) nav(`/requests/${reqs[0].id}`);
+      if (reqs.length === 1) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
       else if (reqs.length > 1) { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals"); }
     } catch (e) { fail(e); } finally { setBusy(false); }
   };

@@ -1,5 +1,5 @@
 // 全局状态：主机、请求和实时事件。一条 WebSocket 多路复用所有实时数据。
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { api, type Bootstrap, type Group, type Host, type HostStatus, type Req } from "./api";
 import { clearCache } from "./cache";
 
@@ -87,6 +87,33 @@ export async function refreshHosts() {
 export async function refreshRequests() {
   const { requests } = await api.requests();
   set({ requests });
+}
+
+/**
+ * 跳到请求页时带上它：批准或拒绝之后自动回到提交它的那一页，不用再从头找回来。
+ * 用法：nav(`/requests/${id}`, { state: backAfterApproval })。
+ */
+export const backAfterApproval = { back: true } as const;
+
+/** 涉及这台主机的请求。给 useRequestFinished 用。 */
+export const onHost = (host: string) => (r: Req) => r.targets.some((tg) => tg.host === host);
+
+/**
+ * 有请求执行结束（成功或失败）时调用 reload：批准后回到原来的页面，结果出来时页面自己刷新。
+ * match 给了就只看符合它的请求。
+ */
+export function useRequestFinished(reload: () => void, match?: (r: Req) => boolean) {
+  const reqs = useStore((s) => s.requests);
+  const seen = useRef<Map<string, string> | null>(null);
+  const cb = useRef({ reload, match });
+  cb.current = { reload, match };
+  useEffect(() => {
+    const prev = seen.current;
+    seen.current = new Map(reqs.map((r) => [r.id, r.state]));
+    if (!prev) return;
+    const { reload, match } = cb.current;
+    if (reqs.some((r) => (r.state === "done" || r.state === "failed") && prev.get(r.id) !== r.state && (!match || match(r)))) reload();
+  }, [reqs]);
 }
 
 export function upsertRequest(r: Req) {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Download, RefreshCw, ShieldAlert, TriangleAlert } from "lucide-react";
 import { api, type DockerStatus, type Req } from "./api";
-import { fail, useStore } from "./store";
+import { backAfterApproval, fail, useStore } from "./store";
 import { ts, useT } from "./i18n";
 
 /** 服务端“安装 Docker”请求的意图（固定写法），用来在请求列表里认出它。 */
@@ -43,7 +43,7 @@ export function DockerSetup({ host, onReady }: { host: string; onReady?: (ready:
   const what = info.status.docker ? t("{host} 上有 Docker，但没有 Docker Compose v2（docker compose 命令）。", { host }) : t("{host} 上没有安装 Docker。", { host });
   const install = async () => {
     setBusy(true);
-    try { nav(`/requests/${(await api.installDocker(host)).id}`); } catch (e) { fail(e); } finally { setBusy(false); }
+    try { nav(`/requests/${(await api.installDocker(host)).id}`, { state: backAfterApproval }); } catch (e) { fail(e); } finally { setBusy(false); }
   };
   return (
     <div className="note warn docker-setup">
@@ -56,7 +56,7 @@ export function DockerSetup({ host, onReady }: { host: string; onReady?: (ready:
         {!info.blocked && !info.status.root && <span className="hint">{t("装好后，登录账号还要加进 docker 组才能用（容器页会给出命令）。")}</span>}
       </div>
       {pending
-        ? <Link className="btn sm" to={`/requests/${pending.id}`}>{pending.state === "pending" ? <ShieldAlert /> : <RefreshCw className="spin" />}{pending.state === "pending" ? t("等待批准") : t("正在安装…")}</Link>
+        ? <Link className="btn sm" to={`/requests/${pending.id}`} state={backAfterApproval}>{pending.state === "pending" ? <ShieldAlert /> : <RefreshCw className="spin" />}{pending.state === "pending" ? t("等待批准") : t("正在安装…")}</Link>
         : !info.blocked && <button className="btn sm primary" disabled={busy} onClick={install}><Download />{t("安装 Docker")}</button>}
     </div>
   );

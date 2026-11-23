@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Bot, Check, ChevronDown, ChevronUp, Columns3, Eye, Play, Sigma, TriangleAlert } from "lucide-react";
 import { api, type AppInstalled, type HostApps, type HostEnv, type Preview, type Req } from "../api";
-import { fail, useOutput, useStore } from "../store";
+import { backAfterApproval, fail, useOutput, useStore } from "../store";
 import { Empty, LevelBadge, Modal, ago } from "../ui";
 import { PreviewPanel } from "../shared";
 import { cached, remember } from "../cache";
@@ -262,7 +262,7 @@ function TaskForm({ crews }: { crews: Record<string, HostCrew> }) {
     try {
       const r = await api.agentTask(body);
       const reqs = (r as { requests?: Req[] }).requests ?? [];
-      if (reqs[0]) nav(`/requests/${reqs[0].id}`);
+      if (reqs[0]) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
   return (
@@ -346,7 +346,7 @@ function TaskCard({ r }: { r: Req }) {
             <span className="mono">{tg.host}</span>
           </span>
         ))}
-        {r.state === "pending" && <button className="btn sm" onClick={() => nav(`/requests/${r.id}`)}>{t("去批准")}</button>}
+        {r.state === "pending" && <button className="btn sm" onClick={() => nav(`/requests/${r.id}`, { state: backAfterApproval })}>{t("去批准")}</button>}
       </div>
       {open && (
         <div className="agent-compare">
@@ -377,7 +377,7 @@ function SummaryDialog({ r, onClose }: { r: Req; onClose: () => void }) {
     try {
       const res = await api.agentSummary({ from: r.id, host, agent, prompt: prompt.trim() });
       const reqs = (res as { requests?: Req[] }).requests ?? [];
-      if (reqs[0]) nav(`/requests/${reqs[0].id}`);
+      if (reqs[0]) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
   return (
