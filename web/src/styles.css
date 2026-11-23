@@ -978,7 +978,8 @@ h1, h2, h3, .brand-name, .stat-value, .metric-val { letter-spacing: -0.022em; }
 .agent-picks { display: flex; flex-wrap: wrap; gap: 8px; }
 .agent-pick { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-2); font: inherit; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
 .agent-pick.on { border-color: var(--primary); background: var(--accent-soft); color: var(--text); font-weight: 600; }
-.agent-face { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 11.5px; font-weight: 700; flex: none; }
+/* 圆标里的字母：按大写字母的实际高度上下裁齐再居中，不受各系统字体上下留白不同的影响（不支持 text-box 的浏览器退回按行高居中）。 */
+.agent-face { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 11.5px; font-weight: 700; flex: none; line-height: 1; text-align: center; font-variant-numeric: normal; letter-spacing: 0; text-box: trim-both cap alphabetic; }
 .agent-face.sm { width: 20px; height: 20px; font-size: 10.5px; }
 .agent-face.xs { width: 14px; height: 14px; font-size: 8.5px; margin-right: 4px; }
 .agent-task { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); display: flex; flex-direction: column; gap: 8px; }
