@@ -77,7 +77,12 @@ function useReducedMotion() {
 
 // ---------- 协作图 ----------
 
-const W = 1000, H = 540, CX = W / 2, CY = H / 2 + 6;
+const W = 1000, H = 560, CX = W / 2, CY = H / 2;
+// 主机画成圆：R 是圆的半径，RING 是外面那圈负载环的半径。
+const R = 26, RING = R + 6, RING_LEN = 2 * Math.PI * RING;
+// 助手排在圆的右侧、网关排在左侧（角度，度）。
+const petAngle = (k: number) => (-25 + k * 30) * Math.PI / 180;
+const gwAngle = (k: number) => (205 - k * 30) * Math.PI / 180;
 
 function CrewMap({ crews }: { crews: Record<string, HostCrew> }) {
   const t = useT();
@@ -134,7 +139,10 @@ function CrewMap({ crews }: { crews: Record<string, HostCrew> }) {
         {shown.map((h) => {
           const p = at.get(h.name)!;
           const active = flows.some((f) => f.host === h.name);
-          return <path key={h.name} id={`crew-edge-${h.name}`} d={`M${CX},${CY} L${p.x},${p.y}`} className={"crew-edge" + (active ? " active" : "") + (!h.status.online && h.status.known ? " off" : "")} />;
+          // 线停在负载环外面，不压住主机的圆；包裹沿线飞到环边上。
+          const dx = p.x - CX, dy = p.y - CY, len = Math.hypot(dx, dy) || 1;
+          const ex = p.x - (dx / len) * (RING + 3), ey = p.y - (dy / len) * (RING + 3);
+          return <path key={h.name} id={`crew-edge-${h.name}`} d={`M${CX},${CY} L${ex},${ey}`} className={"crew-edge" + (active ? " active" : "") + (!h.status.online && h.status.known ? " off" : "")} />;
         })}
         {/* 助手 → 网关 的模型调用 */}
         {links.map((l, i) => {
@@ -182,20 +190,36 @@ function CrewMap({ crews }: { crews: Record<string, HostCrew> }) {
           const crew = crews[h.name];
           const off = !h.status.online && h.status.known;
           const doing = busyAgents.get(h.name);
+          const waiting = pending.has(h.name);
+          const active = flows.some((f) => f.host === h.name);
+          const cpu = off || !h.status.online ? undefined : h.status.latest?.cpu;
+          const load = cpu === undefined ? "" : cpu >= 90 ? " crit" : cpu >= 70 ? " warn" : "";
+          // 圆下面的第二行：状态不只靠颜色，也写成字。
+          const sub = off ? t("离线") : waiting ? t("等待批准") : cpu !== undefined ? `CPU ${Math.round(cpu)}%` : "";
           return (
-            <g key={h.name} transform={`translate(${p.x},${p.y})`} className={"crew-host" + (off ? " off" : "") + (pending.has(h.name) ? " waiting" : "") + (flows.some((f) => f.host === h.name) ? " active" : "")}>
-              <title>{h.name + " · " + (off ? t("离线") : t("在线")) + (pending.has(h.name) ? " · " + t("等待批准") : "")}</title>
-              <rect x="-62" y="-20" width="124" height="40" rx="12" className="crew-host-box" />
-              <circle cx="-48" cy="0" r="4" className={"crew-dot" + (off ? " off" : "")} />
-              <text x="-38" y="4" className="crew-host-name">{h.name.length > 13 ? h.name.slice(0, 12) + "…" : h.name}</text>
-              {pending.has(h.name) && <g transform="translate(58,-18)" className="crew-wait"><circle r="9" /><text y="4">?</text></g>}
-              {off && <text x="56" y="4" className="crew-off-label">{t("离线")}</text>}
+            <g key={h.name} transform={`translate(${p.x},${p.y})`} className={"crew-host" + (off ? " off" : "") + (waiting ? " waiting" : "") + (active ? " active" : "")}>
+              <title>{h.name + " · " + (off ? t("离线") : t("在线")) + (cpu !== undefined ? ` · CPU ${cpu.toFixed(1)}%` : "") + (waiting ? " · " + t("等待批准") : "")}</title>
+              {/* 负载环：弧长是 CPU 利用率，70% 以上变黄、90% 以上变红 */}
+              <circle r={RING} className="crew-load-track" />
+              {cpu !== undefined && <circle r={RING} className={"crew-load" + load} transform="rotate(-90)" strokeDasharray={`${(RING_LEN * Math.min(100, Math.max(0, cpu))) / 100} ${RING_LEN}`} />}
+              {active && <circle r={RING + 7} className="crew-host-spin" />}
+              <circle r={R} className="crew-host-box" />
+              {/* 圆里是一台两层的小服务器，指示灯：在线绿色、执行中闪蓝色、离线灰色 */}
+              <g className="crew-server">
+                <rect x="-11" y="-10" width="22" height="8" rx="2" />
+                <rect x="-11" y="2" width="22" height="8" rx="2" />
+                <circle cx="6" cy="-6" r="1.7" className={"crew-led" + (off ? " off" : "")} />
+                <circle cx="6" cy="6" r="1.7" className={"crew-led" + (off ? " off" : "")} />
+              </g>
+              <text y={R + 21} className="crew-host-name">{h.name.length > 16 ? h.name.slice(0, 15) + "…" : h.name}</text>
+              {sub && <text y={R + 36} className="crew-host-sub">{sub}</text>}
+              {waiting && <g transform={`translate(0,${-RING - 13})`} className="crew-wait"><circle r="9" /><text y="4">?</text></g>}
               {/* 助手：一圈小圆脸，正在干活的会上下晃、头上冒“…” */}
               {(crew?.agents ?? []).map((a, k) => {
                 const meta = agents.find((g) => g.id === a.id)!;
                 const thinking = doing?.has(a.id);
                 return (
-                  <g key={a.id} transform={`translate(${-44 + k * 26},34)`} className={"crew-pet" + (thinking ? " thinking" : "")}>
+                  <g key={a.id} transform={`translate(${Math.cos(petAngle(k)) * (RING + 14)},${Math.sin(petAngle(k)) * (RING + 14)})`} className={"crew-pet" + (thinking ? " thinking" : "")}>
                     <title>{meta.title + (a.version ? " " + a.version : "") + (a.model ? " · " + a.model : "")}</title>
                     <g className="crew-pet-body">
                       <circle r="11" fill={meta.color} />
@@ -214,7 +238,7 @@ function CrewMap({ crews }: { crews: Record<string, HostCrew> }) {
               })}
               {/* 网关：小六边形 */}
               {(crew?.gateways ?? []).map((g, k) => (
-                <g key={g.instance} transform={`translate(${44 - k * 26},34)`} className={"crew-gw" + (g.running ? "" : " off")}>
+                <g key={g.instance} transform={`translate(${Math.cos(gwAngle(k)) * (RING + 14)},${Math.sin(gwAngle(k)) * (RING + 14)})`} className={"crew-gw" + (g.running ? "" : " off")}>
                   <title>{(gateways[g.app]?.title ?? g.app) + " · " + g.instance + " · " + (g.running ? t("运行中") : t("已停止"))}</title>
                   <path d="M-11,0 L-5.5,-9.5 L5.5,-9.5 L11,0 L5.5,9.5 L-5.5,9.5 Z" />
                   <text y="3.5">{gateways[g.app]?.short ?? "GW"}</text>
@@ -278,7 +302,7 @@ function TaskForm({ crews }: { crews: Record<string, HostCrew> }) {
         </div>
         <div className="field">
           <label htmlFor="ag-prompt">{t("任务")}</label>
-          <textarea id="ag-prompt" className="input" rows={4} maxLength={4000} placeholder={t("例如：检查这台主机上 nginx 的配置和最近的错误日志，有问题就说明原因和改法，不要改动任何文件。")} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+          <textarea id="ag-prompt" className="textarea" rows={4} maxLength={4000} placeholder={t("例如：检查这台主机上 nginx 的配置和最近的错误日志，有问题就说明原因和改法，不要改动任何文件。")} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
         </div>
         <div className="form-grid">
           <div className="field">
@@ -397,7 +421,7 @@ function SummaryDialog({ r, onClose }: { r: Req; onClose: () => void }) {
         </div>
         <div className="field">
           <label htmlFor="sum-prompt">{t("要它做什么")}</label>
-          <textarea id="sum-prompt" className="input" rows={4} maxLength={4000} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+          <textarea id="sum-prompt" className="textarea" rows={4} maxLength={4000} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
         </div>
       </div>
     </Modal>

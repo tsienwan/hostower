@@ -907,7 +907,8 @@ h1, h2, h3, .brand-name, .stat-value, .metric-val { letter-spacing: -0.022em; }
 /* Agent 协作：协作图。线、包裹、小助手和网关都用状态色，动效在“减少动态效果”时全部停下。 */
 .crew-wrap { display: flex; flex-direction: column; gap: 10px; }
 .crew-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
-.crew-map { width: 100%; min-width: 680px; height: auto; display: block; overflow: visible; }
+/* 最大按原尺寸（1000 宽）显示、居中：宽屏上不跟着放大，图标和字保持正常大小；窄屏照常缩小，再窄就横向滚动。 */
+.crew-map { width: 100%; max-width: 1000px; min-width: 680px; margin: 0 auto; height: auto; display: block; overflow: visible; }
 .crew-edge { fill: none; stroke: color-mix(in srgb, var(--text) 14%, transparent); stroke-width: 1.5; }
 .crew-edge.active { stroke: color-mix(in srgb, var(--primary) 55%, transparent); stroke-width: 2; stroke-dasharray: 6 6; animation: crew-dash 0.9s linear infinite; }
 .crew-edge.off { stroke-dasharray: 2 6; opacity: 0.5; }
@@ -929,10 +930,21 @@ h1, h2, h3, .brand-name, .stat-value, .metric-val { letter-spacing: -0.022em; }
 .crew-host.active .crew-host-box { stroke: var(--primary); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--primary) 45%, transparent)); }
 .crew-host.waiting .crew-host-box { stroke: var(--warn); stroke-dasharray: 5 4; }
 .crew-host.off { opacity: 0.55; }
+/* 主机名和状态字带一圈底色描边：连线从字下面穿过时也看得清 */
+.crew-host-name, .crew-host-sub { text-anchor: middle; paint-order: stroke; stroke: var(--raised); stroke-width: 4px; stroke-linejoin: round; }
 .crew-host-name { font-size: 12.5px; fill: var(--text); font-weight: 600; font-family: var(--mono, monospace); }
-.crew-dot { fill: var(--ok); }
-.crew-dot.off { fill: var(--text-3); }
-.crew-off-label { font-size: 10.5px; fill: var(--text-3); }
+.crew-host-sub { font-size: 11px; fill: var(--text-3); font-family: var(--mono, monospace); }
+.crew-host.waiting .crew-host-sub { fill: var(--warn); }
+.crew-load-track { fill: none; stroke: color-mix(in srgb, var(--text) 9%, transparent); stroke-width: 4; }
+.crew-load { fill: none; stroke: var(--ok); stroke-width: 4; stroke-linecap: round; transition: stroke-dasharray 0.6s var(--ease); }
+.crew-load.warn { stroke: var(--warn); }
+.crew-load.crit { stroke: var(--crit); }
+.crew-host-spin { fill: none; stroke: var(--primary); stroke-width: 1.5; stroke-dasharray: 6 9; transform-box: fill-box; transform-origin: center; animation: crew-spin 5s linear infinite; }
+.crew-server rect { fill: none; stroke: var(--text-2); stroke-width: 1.4; }
+.crew-led { fill: var(--ok); }
+.crew-led.off { fill: var(--text-3); }
+.crew-host.active .crew-led { fill: var(--primary); animation: crew-led 0.8s steps(2, jump-none) infinite; }
+@keyframes crew-led { 50% { opacity: 0.25; } }
 .crew-wait circle { fill: var(--warn); animation: crew-pulse 1.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 .crew-wait text { fill: #000; font-size: 12px; font-weight: 700; text-anchor: middle; }
 @keyframes crew-pulse { 50% { transform: scale(1.18); } }
@@ -952,7 +964,7 @@ h1, h2, h3, .brand-name, .stat-value, .metric-val { letter-spacing: -0.022em; }
 .crew-gw.off path { stroke: var(--text-3); fill: var(--raised); }
 .crew-gw text { font-size: 8.5px; font-weight: 700; fill: var(--text); text-anchor: middle; }
 .crew-map.still .crew-edge.active, .crew-map.still .crew-link path, .crew-map.still .crew-tower-ring, .crew-map.still .crew-wait circle,
-.crew-map.still .crew-pet-body, .crew-map.still .crew-eye, .crew-map.still .crew-bubble circle { animation: none !important; }
+.crew-map.still .crew-pet-body, .crew-map.still .crew-eye, .crew-map.still .crew-bubble circle, .crew-map.still .crew-host-spin, .crew-map.still .crew-led { animation: none !important; }
 .crew-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--text-2); }
 .crew-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .crew-legend i { display: inline-block; flex: none; }
