@@ -4,6 +4,10 @@
 
 **Ein selbst gehosteter Kontrollturm für Ihre Server.** Eine einzelne Person oder ein kleines Team sieht alle Hosts an einem Ort und kann auf ihnen handeln. Jede Änderung durchläuft eine deterministische Risikoprüfung und eine Genehmigung durch einen Menschen und hinterlässt einen überprüfbaren Audit-Nachweis.
 
+![Agent-Zusammenarbeit: Der Turm verteilt Aufgaben an KI-Coding-Assistenten auf mehreren Hosts](docs/images/screenshots/en/crew.gif)
+
+KI-Coding-Assistenten auf Ihren Hosts folgen denselben Regeln: Jede Aufgabe wird nach Risiko eingestuft, von einem Menschen genehmigt und auditiert.
+
 Der Name setzt sich aus host + tower zusammen: Ein Leuchtturm sieht jedes Schiff auf dem Wasser und weist ihm den Weg.
 
 Aktuelle Version: **v0.4.2** (siehe [CHANGELOG.en.md](CHANGELOG.en.md)). Solange keine externe Sicherheitsprüfung abgeschlossen ist, betreiben Sie Hostower in einem privaten Netzwerk oder hinter einem Reverse-Proxy, der Benutzer authentifiziert.

@@ -4,6 +4,10 @@
 
 **Une tour de contrôle auto-hébergée pour vos serveurs.** Une personne seule ou une petite équipe voit tous ses hôtes au même endroit et agit sur eux. Chaque modification passe par une évaluation déterministe du risque et une approbation humaine, et laisse une piste d'audit vérifiable.
 
+![Carte de collaboration des agents : la tour distribue des tâches aux assistants de code IA de plusieurs hôtes](docs/images/screenshots/en/crew.gif)
+
+Les assistants de code IA installés sur vos hôtes suivent les mêmes règles : chaque tâche est évaluée, approuvée par une personne et auditée.
+
 Le nom vient de host + tower : un phare voit chaque navire sur l'eau et le guide.
 
 Version actuelle : **v0.4.2** (voir [CHANGELOG.en.md](CHANGELOG.en.md)). Tant que le projet n'a pas passé d'audit de sécurité externe, faites-le tourner sur un réseau privé ou derrière un proxy inverse qui authentifie les utilisateurs.

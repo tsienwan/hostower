@@ -4,6 +4,10 @@
 
 **A self-hosted control tower for your servers.** One person or a small team can see every host in one place and act on them. Every change goes through a deterministic risk check and a human approval, and leaves a verifiable audit trail.
 
+![Agent collaboration map: the tower dispatching tasks to AI coding assistants on several hosts](docs/images/screenshots/en/crew.gif)
+
+AI coding assistants on your hosts work under the same rules: every task is risk-checked, approved by a person and audited.
+
 The name is host + tower: a lighthouse sees every ship on the water and guides them.
 
 Current version: **v0.4.2** (see [CHANGELOG.en.md](CHANGELOG.en.md)). Until it has passed an external security review, run it on a private network or behind a reverse proxy that authenticates users.
