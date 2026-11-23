@@ -4,6 +4,18 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.4.2
+
+### Improved
+
+- Hosts on the collaboration map are now circles like the control tower: the arc of the outer load ring is CPU usage (yellow above 70%, red above 90%), the small server lights inside show online, running or offline, and the line under the name spells out CPU or "Waiting for approval" / "Offline"; assistants sit on the right of the circle and gateways on the left, and links stop outside the ring.
+- The collaboration map is shown at most at its natural size and centered, so icons and text no longer grow on wide screens.
+
+### Fixed
+
+- The task and summary boxes were only one line tall with the text squeezed together; they are multi-line again.
+- The letter inside an assistant's round badge sat off-center with some system fonts.
+
 ## v0.4.1
 
 ### Improved
