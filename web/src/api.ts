@@ -151,15 +151,16 @@ async function call<T>(method: string, path: string, body?: unknown, raw?: boole
   try {
     res = await send();
   } catch {
-    // 页面放久了，浏览器复用的连接可能已经被网络中间设备悄悄断掉，第一次请求会直接失败；
-    // 只读请求重试一次就会换一条新连接。会改东西的请求不自动重试，免得重复执行。
+    // 页面放久了，浏览器连接池里的几条空闲连接可能都已经被网络中间设备悄悄断掉，每用到一条就失败一次；
+    // 电脑刚唤醒时网络也要过一会儿才通。只读请求隔一会儿再试，最多三次。会改东西的请求不自动重试，免得重复执行。
     if (method !== "GET") throw new ApiError(0, t("无法连接塔台"));
-    await new Promise((r) => setTimeout(r, 300));
-    try {
-      res = await send();
-    } catch {
-      throw new ApiError(0, t("无法连接塔台"));
+    let ok: Response | undefined;
+    for (const wait of [300, 1000, 2500]) {
+      await new Promise((r) => setTimeout(r, wait));
+      try { ok = await send(); break; } catch { /* 再试 */ }
     }
+    if (!ok) throw new ApiError(0, t("无法连接塔台"));
+    res = ok;
   }
   const text = await res.text();
   let data: unknown = null;

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Cpu, Info, Link2, Plus, Search, Server, ShieldAlert, ShieldCheck, SquareTerminal, TriangleAlert } from "lucide-react";
 import { api, type Host, type SelfStatus, type VerifyResult } from "../api";
 import { useStore } from "../store";
-import { SortTh, useSort, Empty, Sparkline, Usage, bytes, pctText, poll, rate, uptime } from "../ui";
+import { SortTh, useSort, Empty, Sparkline, Usage, bytes, pctText, lastOnly, poll, rate, uptime } from "../ui";
 import { CountUp } from "../fx";
 import { cached, remember } from "../cache";
 import { HostForm } from "../HostForm";
@@ -235,7 +235,8 @@ function SelfCard() {
   const [self, setSelf] = useState<SelfStatus | null>(() => cached<SelfStatus>("self") ?? null);
   useEffect(() => {
     let on = true;
-    const load = () => api.self().then((r) => on && setSelf(remember("self", r))).catch(() => {});
+    const next = lastOnly();
+    const load = () => { const fresh = next(); api.self().then((r) => on && fresh() && setSelf(remember("self", r))).catch(() => {}); };
     load();
     const stop = poll(load, 5000);
     return () => { on = false; stop(); };

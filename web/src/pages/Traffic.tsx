@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Activity, Settings2, TriangleAlert } from "lucide-react";
 import { api, type DayTraffic, type HostTraffic, type Quota, type QuotaMode, type QuotaStatus, type TrafficView } from "../api";
 import { fail, toast, useStore } from "../store";
-import { Modal, SortTh, bytes, pctText, poll, useSort } from "../ui";
+import { Modal, SortTh, bytes, lastOnly, pctText, poll, useSort } from "../ui";
 import { Select } from "../controls";
 import { askConfirm } from "../dialogs";
 import { useT } from "../i18n";
@@ -58,7 +58,11 @@ export function TrafficCard({ host, status }: { host: string; status?: QuotaStat
   const [tick, setTick] = useState(0);
   useEffect(() => {
     let on = true;
-    const load = () => api.hostTraffic(host).then((v) => { if (on) { setView(v); setErr(""); } }).catch((e) => on && setErr(String(e?.message ?? e)));
+    const next = lastOnly();
+    const load = () => {
+      const fresh = next();
+      api.hostTraffic(host).then((v) => { if (on && fresh()) { setView(v); setErr(""); } }).catch((e) => { if (on && fresh()) setErr(String(e?.message ?? e)); });
+    };
     load();
     const stop = poll(load, 60_000);
     return () => { on = false; stop(); };
@@ -298,7 +302,8 @@ export function TrafficRanking() {
   const [list, setList] = useState<HostTraffic[] | null>(null);
   useEffect(() => {
     let on = true;
-    const load = () => api.trafficRanking().then((r) => on && setList(r.hosts)).catch(() => {});
+    const next = lastOnly();
+    const load = () => { const fresh = next(); api.trafficRanking().then((r) => on && fresh() && setList(r.hosts)).catch(() => {}); };
     load();
     const stop = poll(load, 60_000);
     return () => { on = false; stop(); };

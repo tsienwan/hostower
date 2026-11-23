@@ -388,6 +388,16 @@ export function SortTh<T>({ s, k, desc, children, className, style }: { s: Sorte
  * 页面在后台时浏览器会推迟定时器，电脑睡眠唤醒后要等一个周期才会刷新，期间出错的提示会一直挂着。
  * 返回清理函数，直接交给 useEffect。
  */
+/**
+ * 同一张卡片的刷新可能同时有几次在路上（切回页面、实时连接恢复、定时器各触发一次）。
+ * 只认最后发出的那次：先发出、后失败的旧请求不能把新结果盖成报错。
+ * 用法：const fresh = next(); api.x().then((v) => fresh() && …)。
+ */
+export function lastOnly(): () => () => boolean {
+  let n = 0;
+  return () => { const id = ++n; return () => id === n; };
+}
+
 export function poll(load: () => void, ms: number): () => void {
   const timer = setInterval(load, ms);
   const onShow = () => { if (document.visibilityState === "visible") load(); };

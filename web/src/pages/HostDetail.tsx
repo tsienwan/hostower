@@ -12,7 +12,7 @@ import { NetworkPanel } from "./Network";
 import { TrafficCard } from "./Traffic";
 import { EnvPanel } from "./HostEnv";
 import { BinaryPreview, TextPreview, previewKind, textKinds, type PreviewKind } from "../preview";
-import { Empty, LevelBadge, Pager, poll, SortTh, Sparkline, StateBadge, TrendChart, Usage, ago, bytes, stamp, rate, uptime, usePaged, useSort, useSteadyOrder, type Series } from "../ui";
+import { Empty, LevelBadge, Pager, lastOnly, poll, SortTh, Sparkline, StateBadge, TrendChart, Usage, ago, bytes, stamp, rate, uptime, usePaged, useSort, useSteadyOrder, type Series } from "../ui";
 import { lang, ts, useT } from "../i18n";
 
 // days 是这个范围覆盖多少天：超过 15 分钟级数据的保留时长的范围不显示。
@@ -64,9 +64,13 @@ export function HostDetail() {
     setPastErr("");
     // 刷新失败（网络断了、SSH 隧道掉了、电脑休眠过）时保留已经画出来的数据，只提示加载失败，
     // 不要把图表清空成“还没有足够的历史”。
-    const load = () => api.hostMetrics(name, range)
-      .then((r) => { if (on) { setPast(r.samples); setPastErr(""); } })
-      .catch((e) => { if (on) { setPast((p) => p ?? []); setPastErr(e instanceof Error ? e.message : String(e)); } });
+    const next = lastOnly();
+    const load = () => {
+      const fresh = next();
+      api.hostMetrics(name, range)
+        .then((r) => { if (on && fresh()) { setPast(r.samples); setPastErr(""); } })
+        .catch((e) => { if (on && fresh()) { setPast((p) => p ?? []); setPastErr(e instanceof Error ? e.message : String(e)); } });
+    };
     load();
     const stop = poll(load, 60_000);
     return () => { on = false; stop(); };
