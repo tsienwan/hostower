@@ -4,6 +4,13 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.4.1
+
+### Improved
+
+- After approving or denying, you are taken back to the page the operation was submitted from (host details, containers, apps, network, files, Agents) instead of having to find it again from the overview; approving from the Approvals list returns to the list so you can approve the next one. Run, Snippets and opening a terminal still stay on the request page to show the output.
+- Back on the original page, the container list, installed apps, network settings and file list refresh by themselves when the related request finishes; updating the enhanced collector first shows "Installing…" and then the new version.
+
 ## v0.4.0
 
 ### Added
