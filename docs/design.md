@@ -1,6 +1,6 @@
 # Hostower 设计方案
 
-> 本文描述 Hostower v0.4.2 **当前的设计和实现**。每一节开头先说结论；功能一览见 [README](../README.zh-CN.md#功能)，威胁与对策见[威胁模型](threat-model.md)。
+> 本文描述 Hostower v0.4.3 **当前的设计和实现**。每一节开头先说结论；功能一览见 [README](../README.zh-CN.md#功能)，威胁与对策见[威胁模型](threat-model.md)。
 
 ## 一、定位与设计原则
 

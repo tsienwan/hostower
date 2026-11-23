@@ -4,6 +4,17 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.4.3
+
+### Added
+
+- Apps with a web panel under Apps → Installed (OpenList, 3x-ui, Uptime Kuma, Portainer, LiteLLM, Open WebUI, New API, n8n) get an **Open panel** button that opens it in a new tab. The address is built from the instance's current listen address and port, so it follows changes made in **Edit settings**; if the app only listens on 127.0.0.1 you are asked to set a panel address first.
+- The **Panel address** next to it can be set per instance: override the port and path (for example the panel port and path changed inside 3x-ui), enter a full address (sites on the Network page that already reverse-proxy to that port are listed and fill in with one click), or go through an SSH tunnel (the page shows an `ssh -N -L` command and the button opens the local port). Only the owner can change it; it does not touch the host, every change is audited, and the address cannot contain a username, password, query or fragment.
+
+### Fixed
+
+- After a page sat open for a long time or the computer woke from sleep, the traffic card sometimes showed "Cannot reach the tower" until the page was reloaded.
+
 ## v0.4.2
 
 ### Improved
