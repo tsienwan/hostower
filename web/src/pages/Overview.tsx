@@ -56,6 +56,7 @@ export function Overview() {
   const dayAgo = Date.now() - 86400_000;
   const today = requests.filter((r) => Date.parse(r.createdAt) > dayAgo);
   const todayFailed = today.filter((r) => r.state === "failed").length;
+  const todayDone = today.filter((r) => r.state === "done").length;
 
   return (
     <>
@@ -83,15 +84,22 @@ export function Overview() {
               <div className="stat-label">{t("待审批")}</div>
               <div className="stat-line">
                 <div className="stat-value"><CountUp value={pending} /></div>
-                <div className="stat-foot">{pending > 0 ? <><span className="dot warn" />{t("等你批准")}</> : t("没有等待中的操作")}</div>
+                <div className="stat-foot">{pending > 0 ? <><span className="dot warn" />{t("等你批准")}</> : <><span className="dot ok" />{t("无需处理")}</>}</div>
               </div>
             </Link>
             <Link to="/activity" className="card stat">
               <div className="stat-icon"><SquareTerminal /></div>
               <div className="stat-label">{t("近 24 小时操作")}</div>
               <div className="stat-line">
-                <div className="stat-value"><CountUp value={today.length} /></div>
-                <div className="stat-foot">{todayFailed > 0 ? <><span className="dot crit" />{t("{n} 次失败", { n: todayFailed })}</> : t("没有失败")}</div>
+                <div className="stat-value"><CountUp value={today.length} /><small>{t("次")}</small></div>
+                {/* 数字是总数，旁边只说结果：有失败报失败，全部成功说全部成功，还有没做完的就说成功了几次；一次都没有就不写。 */}
+                <div className="stat-foot">
+                  {todayFailed > 0 ? <><span className="dot crit" />{t("{n} 次失败", { n: todayFailed })}</>
+                    : today.length === 0 ? null
+                    : todayDone === today.length ? <><span className="dot ok" />{t("全部成功")}</>
+                    : todayDone > 0 ? <><span className="dot ok" />{t("{n} 次成功", { n: todayDone })}</>
+                    : t("尚未完成")}
+                </div>
               </div>
             </Link>
             <Link to="/audit" className="card stat">
