@@ -41,7 +41,7 @@ A rule engine assigns the level: a shell parser splits pipes, `&&`, command subs
 | Credentials | SSH credentials, registry logins and app secrets stored centrally with envelope encryption; everywhere else only `ref:<name>` appears |
 | Audit | Hash chain, database triggers against tampering, a JSONL file copy, offline verification; optional archive-then-prune |
 | Sign-in | Passkeys, passwords (with optional authenticator codes), OIDC single sign-on; L2 approvals require re-verification on the spot |
-| Notifications and chat | Telegram, Feishu/Lark, Discord, email; Telegram direct-message commands (status, submit, emergency pause — never approve) |
+| Notifications and chat | Telegram, Feishu/Lark, Discord, email; offline, traffic, disk, memory and CPU alerts with recovery notices; Telegram direct-message commands (status, submit, emergency pause — never approve) |
 | Speed test | Latency, download and upload, with optional traceroutes that guess the carrier route (China Telecom CN2 GIA/GT, China Unicom 9929/4837, China Mobile CMIN2/CMI) |
 | Deployment | A single static binary; a default image and a host-mode image; signed self-update |
 | Interface | Simplified Chinese, Traditional Chinese, English, Japanese, Korean, French, German; light and dark themes |

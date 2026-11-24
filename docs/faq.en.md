@@ -10,6 +10,7 @@ The most common problems and tips when connecting hosts, installing Docker and i
 - [Sites, certificates and Fail2ban](#sites-certificates-and-fail2ban)
 - [Enhanced collector](#enhanced-collector)
 - [Traffic quotas](#traffic-quotas)
+- [Resource alerts](#resource-alerts)
 - [Updating Hostower](#updating-hostower)
 
 ---
@@ -330,6 +331,22 @@ Network rates now use the same rule as monthly traffic and only count uplink int
 ### I didn't get a traffic alert
 
 When an alert percentage (80%, 95% and 100% by default) is reached, or the quota is projected to be exceeded at the current rate, a notification goes to channels subscribed to "Traffic alert level reached" and "Projected to exceed traffic quota"; each level is sent once per period. Existing channels get both ticked on upgrade; if you unticked them, tick them again under "Settings → Notifications & bot". The projection needs at least a full day of data in the period.
+
+---
+
+## Resource alerts
+
+### When are disk, memory and CPU alerts sent?
+
+Hostower decides from the samples it already collects; it does not run anything extra on the host:
+
+- **Disk**: any mount point above 90% for 5 minutes;
+- **Memory**: usage above 90% for 5 minutes (buffers and cache do not count as used);
+- **CPU**: usage above 90% for 10 minutes.
+
+A single dip below 90% restarts the timer. Once an alert is sent, the same thing is not reported again until usage falls back (disk below 85%, memory and CPU below 80%) and stays there for 5 minutes; then a recovery notice is sent. Nothing is judged while a host is offline, and restarting the panel does not resend alerts that have not recovered. These thresholds are fixed and cannot be changed.
+
+Notifications go to channels subscribed to "Disk almost full", "High memory usage" and "High CPU usage". Existing channels get all three ticked on upgrade; untick them under "Settings → Notifications & bot" if you do not want them.
 
 ---
 

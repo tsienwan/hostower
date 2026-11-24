@@ -95,6 +95,8 @@ type Hub struct {
 	hostState map[string]*hostTrack
 	// trafficSent 是已经发过的流量告警（主机|周期|档位），数据库里也有一份，重启后不重发。
 	trafficSent map[string]bool
+	// resState 是资源告警（磁盘、内存、CPU）的跟踪状态，键是“主机|种类”。
+	resState map[string]*resTrack
 }
 
 type hostTrack struct {
@@ -115,7 +117,7 @@ const (
 func New(db *sql.DB, sec *secrets.Store, log *slog.Logger, base func() string) (*Hub, error) {
 	h := &Hub{db: db, secrets: sec, log: log, base: base,
 		status: map[string]*Status{}, sent: map[string][]time.Time{}, recent: map[string]time.Time{},
-		queue: make(chan Message, queueSize), reqState: map[string]kernel.State{}, hostState: map[string]*hostTrack{}, trafficSent: map[string]bool{}}
+		queue: make(chan Message, queueSize), reqState: map[string]kernel.State{}, hostState: map[string]*hostTrack{}, trafficSent: map[string]bool{}, resState: map[string]*resTrack{}}
 	return h, h.load()
 }
 
@@ -667,11 +669,15 @@ func (h *Hub) onHosts(all map[string]metrics.Status) {
 	for name := range h.hostState {
 		if _, ok := all[name]; !ok {
 			delete(h.hostState, name)
+			h.forgetResourcesLocked(name)
 		}
 	}
 	for name, st := range all {
 		if st.Quota != nil {
 			h.checkTrafficLocked(name, st.Quota)
+		}
+		if st.Known {
+			h.checkResourcesLocked(name, st, now)
 		}
 	}
 }

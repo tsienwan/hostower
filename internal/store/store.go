@@ -224,6 +224,17 @@ CREATE TABLE traffic_alerts (
 UPDATE notify_channels SET body = json_insert(json_insert(body, '$.events[#]', 'traffic.quota'), '$.events[#]', 'traffic.forecast')
 WHERE json_type(body, '$.events') = 'array';
 `,
+	// v16：资源告警（磁盘、内存、CPU）。resource_alerts 是已经告警、还没恢复的项，面板重启后不重发；已有的通知渠道加上三个新事件。
+	`
+CREATE TABLE resource_alerts (
+	host TEXT    NOT NULL,
+	kind TEXT    NOT NULL,
+	ts   INTEGER NOT NULL,
+	PRIMARY KEY (host, kind)
+) WITHOUT ROWID;
+UPDATE notify_channels SET body = json_insert(json_insert(json_insert(body, '$.events[#]', 'host.disk'), '$.events[#]', 'host.memory'), '$.events[#]', 'host.cpu')
+WHERE json_type(body, '$.events') = 'array';
+`,
 }
 
 // SchemaVersion 是当前代码认识的结构版本。
