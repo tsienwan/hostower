@@ -240,6 +240,27 @@ La page « Collaboration Agent » permet de confier la même tâche (par exemple
 
 La carte de collaboration, en haut de la page, montre en direct ce que la tour envoie à chaque hôte (les couleurs distinguent les tâches Agent, la distribution de fichiers, l'installation d'applications et les autres commandes), quel assistant est en train de réfléchir et par quelle instance LiteLLM / New API chaque assistant appelle les modèles. Lorsque l'option système « Réduire les animations » est activée, les animations de la carte s'arrêtent.
 
+### Comment connecter Claude Code ou Codex à Hostower via MCP ? L'IA peut-elle approuver ses propres demandes ?
+
+1. Émettez un jeton dans « Paramètres → Sécurité → Accès MCP » (un par assistant ; son nom apparaît dans les demandes et dans l'audit). Le jeton n'est affiché qu'une fois : enregistrez-le.
+2. Configurez l'assistant avec ce jeton. La page des paramètres donne des exemples avec votre adresse déjà remplie :
+   - Claude Code : `claude mcp add --transport http hostower https://hostower.example.com/mcp --header "Authorization: Bearer <jeton>"`
+   - Codex : ajoutez à `~/.codex/config.toml`
+     ```toml
+     [mcp_servers.hostower]
+     url = "https://hostower.example.com/mcp"
+     bearer_token_env_var = "HOSTOWER_MCP_TOKEN"
+     ```
+
+     puis placez le jeton dans la variable d'environnement `HOSTOWER_MCP_TOKEN` avant de lancer Codex.
+3. Demandez ensuite simplement à l'assistant « regarde le disque de web-1 » ou « redémarre nginx sur web-1 ».
+
+Les commandes soumises par l'assistant sont classées comme d'habitude : celles en lecture seule (L0) s'exécutent aussitôt et le résultat revient à l'assistant ; les autres deviennent des demandes qui attendent votre approbation dans « Approbations », pendant que l'assistant attend le résultat avec `get_request` ; L3 est toujours refusé. L'assistant n'a aucun outil pour approuver, ouvrir un terminal, lire ou écrire des fichiers ou modifier les paramètres, et ne voit pas les demandes soumises par d'autres. Dans le détail des demandes et dans l'audit, l'initiateur est le nom du jeton et l'entrée est `mcp`.
+
+- L'assistant doit tourner à un endroit qui peut joindre l'adresse de Hostower : si le panneau n'est accessible qu'en local ou sur votre réseau interne, l'assistant doit l'être aussi.
+- Révoquez le jeton au même endroit quand vous n'en avez plus besoin ; « Révoquer toutes les sessions » dans « Sécurité » révoque aussi tous les jetons MCP.
+- La sortie des commandes en lecture seule passe par le fournisseur d'IA (ce qui ressemble à un identifiant est masqué au préalable). Si vous ne le souhaitez pas, n'émettez pas de jeton. Pour ce qu'un jeton divulgué permet ou non, voir le [modèle de menaces](threat-model.md#mcp-入口) (en chinois).
+
 ### Comment mesurer le nombre de tokens consommés par chaque outil IA ?
 
 Installez LiteLLM ou New API (dans **Outils IA** du catalogue d'applications), faites pointer l'adresse d'API de Claude Code, Codex CLI et des autres outils vers cette passerelle, puis attribuez une clé distincte à chaque outil ou à chaque personne. Le nombre d'appels, la consommation de tokens et le coût par clé et par modèle se consultent dans l'interface d'administration de la passerelle elle-même. Hostower ne relaie ni n'enregistre les requêtes aux modèles.

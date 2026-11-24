@@ -444,6 +444,14 @@ const dict: Record<string, string> = {
   "安装 Docker 需要 root，或者登录账号能免密 sudo": "Installing Docker needs root, or passwordless sudo for the login account",
   "不认识这台主机的系统（{a}），请按 Docker 官方文档手动安装": "Unrecognized OS on this host ({a}); please install Docker manually following its official docs",
   "不认识这台主机的系统，请按 Docker 官方文档手动安装": "Unrecognized OS on this host; please install Docker manually following its official docs",
+  "签发 MCP 令牌 {a}": "Issued MCP token {a}",
+  "吊销 MCP 令牌 {a}": "Revoked MCP token {a}",
+  "令牌名称要 1 到 40 个字符，只能用字母、数字、点、横线和下划线": "Token names must be 1 to 40 characters of letters, digits, dots, hyphens and underscores",
+  "已经有同名的令牌": "A token with that name already exists",
+  "有效期要在 1 到 365 天之间，或者选永久": "The validity must be 1 to 365 days, or no expiry",
+  "令牌太多了，先吊销不用的": "Too many tokens; revoke the ones you no longer use first",
+  "写审计失败，没有签发": "Writing the audit log failed; nothing was issued",
+  "令牌不存在": "Token not found",
 };
 
 export default dict;

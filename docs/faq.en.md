@@ -240,6 +240,27 @@ The “Agent collaboration” page lets you dispatch the same task (for example 
 
 The collaboration map at the top of the page shows live what the tower is sending to which host (colors distinguish Agent tasks, file distribution, app installs and other commands), which assistant is thinking, and which LiteLLM / New API instance each assistant calls models through. When the system's “reduce motion” setting is on, the map's animations stop.
 
+### How do I connect Claude Code or Codex to Hostower over MCP? Can the AI approve its own requests?
+
+1. Issue a token under “Settings → Security → MCP access” (one per assistant; its name appears in requests and the audit log). The token is shown only once, so save it.
+2. Configure the assistant with it. The settings page shows ready-made examples with your address filled in:
+   - Claude Code: `claude mcp add --transport http hostower https://hostower.example.com/mcp --header "Authorization: Bearer <token>"`
+   - Codex: add this to `~/.codex/config.toml`
+     ```toml
+     [mcp_servers.hostower]
+     url = "https://hostower.example.com/mcp"
+     bearer_token_env_var = "HOSTOWER_MCP_TOKEN"
+     ```
+
+     and put the token in the `HOSTOWER_MCP_TOKEN` environment variable before starting Codex.
+3. Then just ask the assistant things like “check the disk on web-1” or “restart nginx on web-1”.
+
+Commands the assistant submits are classified as usual: read-only ones (L0) run right away and the result goes back to the assistant; everything else becomes a request that waits for your approval under “Approvals”, while the assistant waits for the result with `get_request`; L3 is always refused. The assistant has no tools to approve, open terminals, read or write files or change settings, and cannot see requests submitted by others. In request details and the audit log, the initiator is the token name and the entry is `mcp`.
+
+- The assistant must run somewhere that can reach Hostower's address: if the panel is only reachable locally or on your LAN, so must the assistant be.
+- Revoke the token in the same place when you no longer need it; “Revoke all sessions” under “Security” revokes all MCP tokens too.
+- The output of read-only commands passes through the AI provider (anything that looks like a credential is masked first). If you don't want that, don't issue a token. For what a leaked token can and cannot do, see the [threat model](threat-model.md#mcp-入口) (Chinese).
+
 ### How do I track how many tokens each AI tool uses?
 
 Install LiteLLM or New API (under **AI tools** in the app catalog), point the API address of Claude Code, Codex CLI and the other tools at it, and issue a separate key for each tool or each person. The number of calls, token usage and cost per key and per model are shown in the gateway's own admin interface. Hostower itself neither proxies nor records model requests.

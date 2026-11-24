@@ -1,0 +1,31 @@
+// 法文词典：MCP 接入（pages/MCP.tsx）。
+const dict: Record<string, string> = {
+  "MCP 接入": "Accès MCP",
+  "让 Claude Code、Codex 这类 AI 助手查看主机、提交请求": "Permettre à des assistants IA comme Claude Code ou Codex de consulter les hôtes et de soumettre des demandes",
+  "签发令牌": "Émettre un jeton",
+  "每个 AI 助手用一个令牌，名称会出现在请求和审计里。令牌只显示一次，签发前要先验证身份。": "Un jeton par assistant IA ; son nom apparaît dans les demandes et dans l'audit. Le jeton n'est affiché qu'une fois et vous devez confirmer votre identité avant de l'émettre.",
+  "令牌名称": "Nom du jeton",
+  "签发": "Émettre",
+  "名称只能用字母、数字、点、横线和下划线，最多 40 个字符": "Le nom ne peut contenir que des lettres, chiffres, points, tirets et traits de soulignement (40 caractères max.)",
+  "令牌 {name} 已签发。它只显示这一次，关掉这个提示就再也看不到了；丢了就吊销重新签发。": "Le jeton {name} a été émis. Il n'est affiché que cette fois et ne pourra plus être consulté une fois ce message fermé ; en cas de perte, révoquez-le et émettez-en un nouveau.",
+  "我已保存好": "Je l'ai enregistré",
+  "代表 {user} 发起": "Agit pour {user}",
+  "永久有效": "Sans expiration",
+  "{time} 到期": "Expire le {time}",
+  "最后使用 {time}": "Dernière utilisation {time}",
+  "还没用过": "Jamais utilisé",
+  "吊销": "Révoquer",
+  "吊销后，用令牌 {name} 的 AI 助手立刻连不上 Hostower。": "Une fois révoqué, l'assistant IA qui utilise le jeton {name} ne peut plus se connecter à Hostower.",
+  "已吊销": "Révoqué",
+  "启动 Codex 之前：": "Avant de lancer Codex :",
+  "AI 助手能做": "Possible pour l'assistant IA",
+  "列出主机、看指标、预估一条命令的风险等级": "Lister les hôtes, lire les métriques, estimer le niveau de risque d'une commande",
+  "提交命令：只读的（L0）直接执行，其他的生成请求，等你在这里批准": "Soumettre des commandes : celles en lecture seule (L0) s'exécutent aussitôt, les autres deviennent des demandes qui attendent votre approbation ici",
+  "查询、取消自己提交的请求": "Consulter et annuler ses propres demandes",
+  "AI 助手不能做": "Impossible pour l'assistant IA",
+  "批准任何请求（L1、L2 都要回网页批准，L3 一律拒绝）": "Approuver une demande (L1 et L2 s'approuvent sur la page web ; L3 est toujours refusé)",
+  "开终端、读写文件、改凭据、暂停或恢复执行、改设置": "Ouvrir un terminal, lire ou écrire des fichiers, modifier les identifiants, suspendre ou reprendre l'exécution, modifier les paramètres",
+  "看到别人提交的请求": "Voir les demandes soumises par d'autres",
+};
+
+export default dict;

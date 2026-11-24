@@ -224,6 +224,19 @@ CREATE TABLE traffic_alerts (
 UPDATE notify_channels SET body = json_insert(json_insert(body, '$.events[#]', 'traffic.quota'), '$.events[#]', 'traffic.forecast')
 WHERE json_type(body, '$.events') = 'array';
 `,
+	// v16：MCP 令牌。所有者在网页上签发，给外部 AI 助手连 /mcp 用；只存令牌的 SHA-256 摘要，令牌本体只在签发时显示一次。
+	// expires_at 为空表示永久；last_used_at 为空表示还没用过。
+	`
+CREATE TABLE mcp_tokens (
+	id           TEXT PRIMARY KEY,
+	user_id      TEXT NOT NULL REFERENCES users (id),
+	name         TEXT NOT NULL UNIQUE,
+	token_hash   TEXT NOT NULL UNIQUE,
+	created_at   TEXT NOT NULL,
+	expires_at   TEXT NOT NULL DEFAULT '',
+	last_used_at TEXT NOT NULL DEFAULT ''
+);
+`,
 }
 
 // SchemaVersion 是当前代码认识的结构版本。

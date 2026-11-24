@@ -224,8 +224,8 @@ const dict: Record<string, string> = {
   "设置分区": "Einstellungsbereiche",
   "通用": "Allgemein",
   "通知与机器人": "Benachrichtigungen & Bot",
-  "所有已登录的会话（包括你自己的）立刻失效，需要重新登录；聊天账号的绑定也一起解除。":
-    "Alle angemeldeten Sitzungen (auch Ihre) enden sofort und müssen sich neu anmelden; die Chat-Verknüpfung wird ebenfalls aufgehoben.",
+  "所有已登录的会话（包括你自己的）立刻失效，需要重新登录；聊天账号的绑定和 MCP 令牌也一起解除。":
+    "Alle angemeldeten Sitzungen (auch Ihre) enden sofort und müssen sich neu anmelden; die Chat-Verknüpfung und die MCP-Tokens werden ebenfalls aufgehoben.",
   // ---------- Chat-Befehle ----------
   "有效期要在 1 到 365 天之间": "Die Gültigkeit muss zwischen 1 und 365 Tagen liegen",
   "正在连接": "Verbinde",

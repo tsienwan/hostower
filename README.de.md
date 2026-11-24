@@ -14,7 +14,7 @@ Aktuelle Version: **v0.4.3** (siehe [CHANGELOG.en.md](CHANGELOG.en.md)). Solange
 
 ## So funktioniert es
 
-Jeder Vorgang – ob aus der Weboberfläche, der Kommandozeile oder dem Chatbot – nimmt denselben Weg:
+Jeder Vorgang – ob aus der Weboberfläche, der Kommandozeile, dem Chatbot oder einem MCP-Client – nimmt denselben Weg:
 
 ```
 entry → gateway (authentication, origin check, rate limit) → security kernel: classify → approve → execute → audit → executor → host
@@ -38,6 +38,7 @@ Die Stufe vergibt eine Regel-Engine: Ein Shell-Parser zerlegt Pipes, `&&`, Befeh
 | Betrieb | Befehle mit gestreamter Ausgabe ausführen; Stapel, schrittweise Ausführung (rolling), Probeläufe, Abbruch bei Fehler; parametrisierte Snippets; ein interaktives Terminal (als L2 genehmigt, vollständig aufgezeichnet); Dateien durchsuchen, suchen, ansehen, bearbeiten, hochladen und herunterladen; Dateien auf mehrere Hosts verteilen und Dateien nach Namensmuster von mehreren Hosts einsammeln |
 | Container und Apps | Container und Images verwalten, per Image bereitstellen oder aktualisieren, bei Registries anmelden; ein App-Katalog (Docker-Compose-Apps und npm-CLI-Tools, darunter OpenList, LiteLLM, Open WebUI und Ollama), der nach der Installation Zugriffsadresse, anfängliches Konto und erste Schritte nennt; für jeden Host prüfen, welchen Typ und Risikowert die Ausgangs-IP hat (IPv4 und IPv6 getrennt), welcher Region ihn die KI-Dienste zuordnen und welche Signale ihrer Risikoprüfung es gibt, ob er Modell-APIs wie OpenAI, Claude und Gemini nutzen kann, ob sich Websites wie Google, YouTube und Netflix öffnen lassen und in welcher Region, und welche KI-CLI-Tools installiert sind; Docker über die Oberfläche auf Hosts installieren, denen es fehlt |
 | Agent-Kollaboration | Dieselbe Aufgabe an Claude Code, Codex CLI oder Gemini CLI auf mehreren Hosts vergeben, die Ergebnisse nebeneinander vergleichen und dann einen davon zusammenfassen lassen; die Kollaborationskarte zeigt live die ausgehenden Vorgänge, welche Assistenten gerade nachdenken und die Modellaufrufe über ein Gateway |
+| MCP-Zugang | KI-Assistenten wie Claude Code und Codex verbinden sich per MCP mit einem vom Eigentümer ausgestellten Token, um Hosts aufzulisten, Metriken zu lesen, Risikostufen abzuschätzen, Befehle einzureichen und Ergebnisse abzurufen; Anfragen werden wie gewohnt eingestuft, L1 und L2 genehmigt ein Mensch auf der Webseite, die KI kann nie genehmigen |
 | Zugangsdaten | SSH-Zugangsdaten, Registry-Anmeldungen und App-Geheimnisse zentral mit Envelope-Verschlüsselung gespeichert; überall sonst erscheint nur `ref:<name>` |
 | Audit | Hash-Kette, Datenbank-Trigger gegen Manipulation, eine JSONL-Dateikopie, Offline-Prüfung; optional Archivieren und anschließendes Bereinigen |
 | Anmeldung | Passkeys, Passwörter (optional mit Authenticator-Codes), OIDC-Single-Sign-On; L2-Genehmigungen erfordern eine erneute Bestätigung an Ort und Stelle |

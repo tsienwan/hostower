@@ -240,6 +240,27 @@ Auf der Seite „Agent-Kollaboration“ können Sie dieselbe Aufgabe (zum Beispi
 
 Die Kollaborationskarte oben auf der Seite zeigt live, was der Tower an welchen Host sendet (Farben unterscheiden Agent-Aufgaben, Dateiverteilung, App-Installation und andere Befehle), welcher Assistent gerade nachdenkt und über welche LiteLLM- bzw. New-API-Instanz die Assistenten Modelle aufrufen. Ist in den Systemeinstellungen „Bewegung reduzieren“ aktiviert, halten die Animationen der Karte an.
 
+### Wie verbinde ich Claude Code oder Codex per MCP mit Hostower? Kann die KI ihre eigenen Anfragen genehmigen?
+
+1. Stellen Sie unter „Einstellungen → Sicherheit → MCP-Zugang“ ein Token aus (eines pro Assistent; sein Name erscheint in Anfragen und im Audit). Das Token wird nur einmal angezeigt – speichern Sie es.
+2. Hinterlegen Sie es im Assistenten. Die Einstellungsseite zeigt fertige Beispiele mit Ihrer Adresse:
+   - Claude Code: `claude mcp add --transport http hostower https://hostower.example.com/mcp --header "Authorization: Bearer <Token>"`
+   - Codex: in `~/.codex/config.toml` ergänzen
+     ```toml
+     [mcp_servers.hostower]
+     url = "https://hostower.example.com/mcp"
+     bearer_token_env_var = "HOSTOWER_MCP_TOKEN"
+     ```
+
+     und vor dem Start von Codex das Token in die Umgebungsvariable `HOSTOWER_MCP_TOKEN` legen.
+3. Danach können Sie den Assistenten einfach bitten: „Sieh dir die Festplatte von web-1 an“ oder „Starte nginx auf web-1 neu“.
+
+Befehle des Assistenten werden wie gewohnt eingestuft: reine Lesebefehle (L0) laufen sofort, das Ergebnis geht an den Assistenten zurück; alles andere wird zu einer Anfrage, die unter „Genehmigungen“ auf Sie wartet, während der Assistent mit `get_request` auf das Ergebnis wartet; L3 wird immer abgelehnt. Der Assistent hat keine Werkzeuge zum Genehmigen, Öffnen von Terminals, Lesen oder Schreiben von Dateien oder Ändern von Einstellungen und sieht keine Anfragen anderer. In den Anfragedetails und im Audit ist der Auslöser der Token-Name und der Zugang `mcp`.
+
+- Der Assistent muss dort laufen, wo er die Adresse von Hostower erreicht: Ist das Panel nur lokal oder im internen Netz erreichbar, muss es der Assistent auch sein.
+- Widerrufen Sie das Token an derselben Stelle, wenn Sie es nicht mehr brauchen; „Alle Sitzungen widerrufen“ unter „Sicherheit“ widerruft auch alle MCP-Tokens.
+- Die Ausgabe von Lesebefehlen läuft über den KI-Anbieter (was wie Zugangsdaten aussieht, wird vorher maskiert). Wenn Sie das nicht möchten, stellen Sie kein Token aus. Was ein geleaktes Token kann und nicht kann, steht im [Bedrohungsmodell](threat-model.md#mcp-入口) (auf Chinesisch).
+
 ### Wie erfasse ich, wie viele Tokens die einzelnen KI-Tools verbrauchen?
 
 Installieren Sie LiteLLM oder New API (im App-Katalog unter **KI-Tools**), lassen Sie die API-Adresse von Claude Code, Codex CLI und den anderen Tools darauf zeigen und stellen Sie für jedes Tool oder jede Person einen eigenen Schlüssel aus. Anzahl der Aufrufe, Token-Verbrauch und Kosten pro Schlüssel und pro Modell sehen Sie in der Verwaltungsoberfläche des Gateways selbst. Hostower selbst leitet Modellanfragen weder weiter noch zeichnet es sie auf.

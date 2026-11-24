@@ -89,7 +89,9 @@ type Server struct {
 	origin  string
 	secure  bool
 	limiter *limiter
-	bot     *chatBot
+	// mcpLimiter 按 MCP 令牌限速。
+	mcpLimiter *limiter
+	bot        *chatBot
 	// 应用市场：内置目录，以及查 npm 最新版本（检测命令行工具的更新）。
 	apps        *apps.Catalog
 	appRegistry *apps.Registry
@@ -104,7 +106,7 @@ func New(o Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{Options: o, origin: u.Scheme + "://" + u.Host, secure: u.Scheme == "https", limiter: newLimiter(20, time.Minute)}
+	s := &Server{Options: o, origin: u.Scheme + "://" + u.Host, secure: u.Scheme == "https", limiter: newLimiter(20, time.Minute), mcpLimiter: newLimiter(mcpPerMinute, time.Minute)}
 	s.bot = newChatBot(s)
 	if s.apps, err = apps.Builtin(); err != nil {
 		return nil, fmt.Errorf("内置应用目录：%w", err)
@@ -287,6 +289,14 @@ func (s *Server) Handler() http.Handler {
 	priv("GET /api/v1/terminal/{id}/ws", s.terminalWS)
 	priv("GET /api/v1/terminal/{id}/recording", s.terminalRecording)
 	priv("GET /api/v1/stream", s.stream)
+	priv("GET /api/v1/mcp/tokens", s.mcpTokens)
+	priv("POST /api/v1/mcp/tokens", s.mcpTokenCreate)
+	priv("DELETE /api/v1/mcp/tokens/{id}", s.mcpTokenRevoke)
+
+	// MCP 入口：外部 AI 助手用 MCP 令牌连进来，只能查看和提交，批准仍然在网页上。
+	mux.Handle("POST /mcp", s.apiMCP(s.mcpServe))
+	mux.Handle("GET /mcp", s.apiMCP(s.mcpNoStream))
+	mux.Handle("DELETE /mcp", s.apiMCP(s.mcpNoStream))
 
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "接口不存在")
@@ -321,9 +331,60 @@ func (s *Server) api(h http.HandlerFunc, needAuth bool) http.Handler {
 
 // apiN 和 api 一样，只是请求体上限可调（镜像包上传用）。
 func (s *Server) apiN(h http.HandlerFunc, needAuth bool, limit int64) http.Handler {
+	mode := authNone
+	if needAuth {
+		mode = authSession
+	}
+	return s.guard(h, mode, limit)
+}
+
+// apiMCP 是 MCP 入口的包装：同一套请求体上限和来源校验，只是认证用 MCP 令牌而不是会话 Cookie。
+func (s *Server) apiMCP(h http.HandlerFunc) http.Handler {
+	return s.guard(h, authMCP, 1<<20)
+}
+
+type authMode int
+
+const (
+	authNone    authMode = iota // 不需要登录
+	authSession                 // 网页会话（Cookie）
+	authMCP                     // MCP 令牌（Authorization: Bearer），只给 /mcp 用
+)
+
+// guard 是所有接口共用的包装：限制请求体、校验来源、认证。
+func (s *Server) guard(h http.HandlerFunc, mode authMode, limit int64) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		r.Body = http.MaxBytesReader(w, r.Body, limit)
+		if mode == authMCP {
+			// MCP 客户端不是浏览器，不带 Origin；带了就必须是本站（防 DNS 重绑定，MCP 规范也这样要求）。
+			// 认证只认请求头里的令牌，浏览器跨站发不出这个头，也就不需要 X-Hostower。不读 Cookie。
+			if o := r.Header.Get("Origin"); o != "" && o != s.origin {
+				writeErr(w, http.StatusForbidden, "来源校验失败")
+				return
+			}
+			tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+			t, err := s.Auth.LookupMCPToken(strings.TrimSpace(tok))
+			if !ok || err != nil || t.Role != "owner" {
+				// 认证失败按来源限速，免得被拿来试令牌。
+				if !s.limiter.allow("mcp:" + s.clientIP(r)) {
+					w.Header().Set("Retry-After", "60")
+					writeErr(w, http.StatusTooManyRequests, "尝试过于频繁，请稍后再试")
+					return
+				}
+				w.Header().Set("WWW-Authenticate", `Bearer realm="hostower"`)
+				writeErr(w, http.StatusUnauthorized, "MCP 令牌无效或已过期")
+				return
+			}
+			if !s.mcpLimiter.allow(t.ID) {
+				w.Header().Set("Retry-After", "60")
+				writeErr(w, http.StatusTooManyRequests, "调用太频繁了，请一分钟后再试")
+				return
+			}
+			r = r.WithContext(context.WithValue(r.Context(), mcpKey{}, t))
+			h(w, r)
+			return
+		}
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			// 写请求必须来自本站页面：校验 Origin，并要求一个表单发不出来的自定义头。
 			if r.Header.Get("Origin") != s.origin || r.Header.Get("X-Hostower") != "1" {
@@ -331,7 +392,7 @@ func (s *Server) apiN(h http.HandlerFunc, needAuth bool, limit int64) http.Handl
 				return
 			}
 		}
-		if needAuth {
+		if mode == authSession {
 			var token string
 			if c, err := r.Cookie(cookieName); err == nil {
 				token = c.Value
