@@ -4,6 +4,23 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.0
+
+### Added
+
+- **MCP access**: AI assistants such as Claude Code and Codex can connect to the panel's `/mcp` over MCP (Model Context Protocol) to list hosts and metrics, estimate a command's level, submit commands, and check or cancel the requests they submitted. Their commands are classified as usual: read-only ones run directly, the rest wait for a person to approve them in the web UI. The AI cannot approve, and there are no terminal, file, credential or settings tools. The owner issues tokens under **Settings → Security → MCP access**; a token is shown once, can have an expiry and can be revoked at any time. Every call is audited with the entry `mcp`.
+- **Resource alerts**: a notification is sent when any mount point is above 90% for 5 minutes, memory is above 90% for 5 minutes, or CPU is above 90% for 10 minutes, and a recovery notice once it has stayed below the recovery line for 5 minutes, so it does not flap around the threshold. It only uses the samples already collected and runs nothing new on the host; existing notification channels subscribe to the three new events automatically, and alerts are not resent after a panel restart.
+
+### Improved
+
+- The script downloaded on first visit (and the first visit after each upgrade) dropped from about 2.5 MB to about 250 KB: only the current language's dictionary is downloaded, and static files are sent compressed.
+- The "Runs, last 24h" and "Pending approval" cards on the overview now state the outcome (All succeeded, N failed, All clear) instead of following the number with "No failures" / "Nothing waiting".
+- The egress column of the environment table labels both IPv4 and IPv6, with the IP on hover; previously only v6 was labeled, which looked as if hosts had IPv6 only.
+
+### Fixed
+
+- A thin line briefly appeared when switching to the Snippets page.
+
 ## v0.4.3
 
 ### Added

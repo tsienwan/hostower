@@ -10,7 +10,7 @@ Les assistants de code IA installés sur vos hôtes suivent les mêmes règles :
 
 Le nom vient de host + tower : un phare voit chaque navire sur l'eau et le guide.
 
-Version actuelle : **v0.4.3** (voir [CHANGELOG.en.md](CHANGELOG.en.md)). Tant que le projet n'a pas passé d'audit de sécurité externe, faites-le tourner sur un réseau privé ou derrière un proxy inverse qui authentifie les utilisateurs.
+Version actuelle : **v0.5.0** (voir [CHANGELOG.en.md](CHANGELOG.en.md)). Tant que le projet n'a pas passé d'audit de sécurité externe, faites-le tourner sur un réseau privé ou derrière un proxy inverse qui authentifie les utilisateurs.
 
 ## Fonctionnement
 
@@ -71,10 +71,10 @@ Sur un serveur Linux avec Docker et Docker Compose v2, lancez en root (ou avec u
 bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
 ```
 
-Pour installer une version précise, ajoutez son étiquette (par exemple `v0.4.3`) :
+Pour installer une version précise, ajoutez son étiquette (par exemple `v0.5.0`) :
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.4.3
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.5.0
 ```
 
 Pour installer l’image mode hôte (elle gère aussi la machine qui l’exécute, en mode privilégié), ajoutez `--host` :
@@ -105,10 +105,10 @@ Les images officielles sont publiées sur GitHub Container Registry pour linux/a
 
 | Image | Usage |
 | --- | --- |
-| `ghcr.io/tsienwan/hostower:0.4.3` | Image par défaut : sans root, système de fichiers racine en lecture seule, sans shell. Gère les hôtes par SSH (y compris la machine qui l’exécute, ajoutée comme un hôte SSH ordinaire). Recommandée. |
-| `ghcr.io/tsienwan/hostower:0.4.3-host` | Image mode hôte : gère aussi la machine qui l’exécute comme hôte `local` intégré. S’exécute en mode privilégié — les commandes sur cette machine s’exécutent en root. |
+| `ghcr.io/tsienwan/hostower:0.5.0` | Image par défaut : sans root, système de fichiers racine en lecture seule, sans shell. Gère les hôtes par SSH (y compris la machine qui l’exécute, ajoutée comme un hôte SSH ordinaire). Recommandée. |
+| `ghcr.io/tsienwan/hostower:0.5.0-host` | Image mode hôte : gère aussi la machine qui l’exécute comme hôte `local` intégré. S’exécute en mode privilégié — les commandes sur cette machine s’exécutent en root. |
 
-`0` et `latest` (ou `0-host` et `latest-host`) pointent toujours vers la dernière version ; en production, fixez une version précise comme `0.4.3`.
+`0` et `latest` (ou `0-host` et `latest-host`) pointent toujours vers la dernière version ; en production, fixez une version précise comme `0.5.0`.
 
 ### 1. Démarrer
 
