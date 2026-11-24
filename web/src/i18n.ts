@@ -12,15 +12,36 @@ export const languages: readonly { code: string; label: string }[] = registry.la
 export type Lang = string;
 export type LangMode = Lang | "system";
 
-// 词典按文件拆开，构建时自动合并：locales/en/overview.ts、locales/en/common.ts……
-const modules = import.meta.glob("./locales/*/*.ts", { eager: true }) as Record<string, { default: Record<string, string> }>;
-const dicts: Record<string, Record<string, string>> = {};
-const serverDicts: Record<string, Record<string, string>> = {};
-for (const [path, mod] of Object.entries(modules)) {
-  const [, , lang, file] = path.split("/");
-  // 文件名以 server 开头的词典专门翻译服务端返回的文字（见下面的 ts）。
-  if (file.startsWith("server")) serverDicts[lang] = { ...serverDicts[lang], ...mod.default };
-  else dicts[lang] = { ...dicts[lang], ...mod.default };
+// 词典按文件拆开：locales/en/overview.ts、locales/en/common.ts……
+// 构建时每种语言打成一个单独的文件（见 vite.config.ts），只下载当前语言和它要退到的语言；
+// 中文是原文，不用下载任何词典。全部打进主程序的话，首次打开要多下好几 MB。
+type Dict = Record<string, string>;
+const loaders = import.meta.glob("./locales/*/*.ts") as Record<string, () => Promise<{ default: Dict }>>;
+const dicts: Record<string, Dict> = {};
+const serverDicts: Record<string, Dict> = {};
+const loading: Record<string, Promise<void>> = {};
+
+function loadOne(code: string): Promise<void> {
+  if (!loading[code]) {
+    const files = Object.entries(loaders).filter(([path]) => path.split("/")[2] === code);
+    loading[code] = Promise.all(files.map(async ([path, load]) => {
+      const mod = await load();
+      const file = path.split("/")[3];
+      // 文件名以 server 开头的词典专门翻译服务端返回的文字（见下面的 ts）。
+      if (file.startsWith("server")) serverDicts[code] = { ...serverDicts[code], ...mod.default };
+      else dicts[code] = { ...dicts[code], ...mod.default };
+    })).then(() => { delete templateCache[code]; }).catch(() => {
+      // 下载失败（网络断了、刚升级过旧文件已经不在）：这次先显示原文，下次切换语言时再试。
+      delete loading[code];
+    });
+  }
+  return loading[code];
+}
+
+/** 下载某种语言和它要退到的语言的词典。 */
+function loadLang(code: Lang): Promise<void> {
+  const fb = fallback(code);
+  return Promise.all([loadOne(code), fb ? loadOne(fb) : null]).then(() => undefined);
 }
 
 const LANG_KEY = "hostower.lang";
@@ -61,11 +82,18 @@ function changed() {
   listeners.forEach((l) => l());
 }
 
+let switching = 0;
+
+/** 切换语言：先把词典下载好再切，免得界面先闪一下中文。连着切几次时只认最后一次。 */
 export function setLang(next: LangMode) {
-  langMode = next;
   if (next === "system") localStorage.removeItem(LANG_KEY);
   else localStorage.setItem(LANG_KEY, next);
-  changed();
+  const mine = ++switching;
+  loadLang(next === "system" ? systemLang() : next).then(() => {
+    if (mine !== switching) return;
+    langMode = next;
+    changed();
+  });
 }
 
 /** 翻译。键是中文原文；占位符写成 {名字}。 */
@@ -130,12 +158,14 @@ export function timeZoneOffset(tz: string = timeZone()): string {
   } catch { return "UTC"; }
 }
 
-export function initI18n() {
+/** 启动时调用；返回的 Promise 在当前语言的词典下载好以后完成，之后再渲染界面。 */
+export function initI18n(): Promise<void> {
   document.documentElement.lang = lang();
   window.addEventListener("storage", (e) => {
-    if (e.key === LANG_KEY) { langMode = readLang(); changed(); }
+    if (e.key === LANG_KEY) { const next = readLang(); loadLang(next === "system" ? systemLang() : next).then(() => { langMode = next; changed(); }); }
     if (e.key === TZ_KEY) { tzMode = localStorage.getItem(TZ_KEY) || "system"; formatter = null; changed(); }
   });
+  return loadLang(lang());
 }
 
 // ---------- 服务端返回的文字 ----------

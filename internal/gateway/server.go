@@ -428,6 +428,7 @@ func (s *Server) static() http.Handler {
 		})
 	}
 	files := http.FileServerFS(s.Web)
+	gz := &gzipFiles{fsys: s.Web}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := strings.TrimPrefix(r.URL.Path, "/")
 		if p == "" {
@@ -440,6 +441,9 @@ func (s *Server) static() http.Handler {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else {
 			w.Header().Set("Cache-Control", "no-cache")
+		}
+		if gz.serve(w, r, p) {
+			return
 		}
 		r2 := r.Clone(r.Context())
 		r2.URL.Path = "/" + p
