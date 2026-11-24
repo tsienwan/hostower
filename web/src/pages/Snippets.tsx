@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowDown, ArrowUp, Copy, FileCode2, Pencil, Play, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { api, type Level, type Preview, type Snippet, type SnippetParam } from "../api";
 import { fail, toast, useStore } from "../store";
+import { cached, remember } from "../cache";
 import { PreviewPanel, StrategyFields, TargetPicker, type StrategyValue } from "../shared";
 import { Empty, LevelBadge, Modal, useDebounced } from "../ui";
 import { Select } from "../controls";
@@ -18,11 +19,12 @@ export function Snippets() {
   const t = useT();
   const { name } = useParams();
   const nav = useNavigate();
-  const [list, setList] = useState<Snippet[] | null>(null);
+  // 再次进来先显示上次的列表，后台刷新；第一次加载完成前什么都不画，免得闪出一张空的列表卡片。
+  const [list, setList] = useState<Snippet[] | null>(() => cached<Snippet[]>("snippets") ?? null);
   const [editing, setEditing] = useState<{ spec: Snippet; create: boolean } | null>(null);
   const [yaml, setYaml] = useState<Snippet | null>(null);
 
-  const load = useCallback(() => api.snippets().then((r) => { setList(r.snippets); return r.snippets; }).catch((e) => { fail(e); return [] as Snippet[]; }), []);
+  const load = useCallback(() => api.snippets().then((r) => { setList(remember("snippets", r.snippets)); return r.snippets; }).catch((e) => { fail(e); return [] as Snippet[]; }), []);
   useEffect(() => { load(); }, [load]);
   const current = list?.find((s) => s.name === name) ?? null;
   useEffect(() => { if (list && list.length && !name && !editing) nav(`/snippets/${list[0].name}`, { replace: true }); }, [list, name, nav, editing]);
@@ -49,12 +51,12 @@ export function Snippets() {
           {editing ? (
             <Editor key={editing.spec.name + String(editing.create)} initial={editing.spec} create={editing.create} onCancel={() => setEditing(null)}
               onSaved={async (s) => { await load(); setEditing(null); nav(`/snippets/${s.name}`); }} />
-          ) : list && list.length === 0 ? (
+          ) : !list ? null : list.length === 0 ? (
             <div className="card"><Empty icon={<FileCode2 />} title={t("还没有 Snippet")}>{t("把常做的操作做成模板：参数有类型和校验，渲染出的命令照样要判级和审批。点右上角“新建 Snippet”开始。")}</Empty></div>
           ) : (
             <div className="split even">
               <div className="card sticky-col">
-                {(list ?? []).map((s) => (
+                {list.map((s) => (
                   <div key={s.name} className={"list-item" + (s.name === name ? " active" : "")} onClick={() => nav(`/snippets/${s.name}`)}>
                     <div className="row"><span className="grow ellipsis" style={{ fontWeight: 560 }}>{s.title}</span><LevelBadge level={s.level} /></div>
                     <div className="muted ellipsis" style={{ fontSize: 12 }}>{s.description || s.name}</div>
