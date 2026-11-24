@@ -357,6 +357,9 @@ export const api = {
   setChatBot: (b: { enabled: boolean; channel: string; ttlDays: number }) => call<ChatBot>("PUT", "/chatbot", b),
   chatPair: () => call<ChatBot>("POST", "/chatbot/pair"),
   chatUnbind: () => call<ChatBot>("DELETE", "/chatbot/binding"),
+  mcpTokens: () => call<{ tokens: MCPToken[]; endpoint: string }>("GET", "/mcp/tokens"),
+  mcpTokenCreate: (name: string, days: number) => call<{ token: string; info: MCPToken; endpoint: string }>("POST", "/mcp/tokens", { name, days }),
+  mcpTokenRevoke: (id: string) => call("DELETE", `/mcp/tokens/${encodeURIComponent(id)}`),
   update: () => call<UpdateStatus>("GET", "/system/update"),
   setUpdate: (auto: boolean) => call<UpdateStatus>("PUT", "/system/update", { auto }),
   checkUpdate: () => call<UpdateStatus>("POST", "/system/update/check"),
@@ -441,6 +444,9 @@ async function getCredential(options: unknown): Promise<string> {
   if (!cred) throw new ApiError(0, t("Passkey 验证被取消"));
   return JSON.stringify((cred as PublicKeyCredential).toJSON());
 }
+
+/** MCP 令牌（外部 AI 助手连 /mcp 用）。令牌本体只在签发时返回一次。expiresAt 没有表示永久。 */
+export type MCPToken = { id: string; userId: string; userName: string; name: string; createdAt: string; expiresAt?: string; lastUsedAt?: string };
 
 /** 聊天命令（Telegram 机器人）的设置、绑定和运行状态。 */
 export type ChatBot = {

@@ -1,0 +1,31 @@
+// 英文词典：MCP 接入（pages/MCP.tsx）。
+const dict: Record<string, string> = {
+  "MCP 接入": "MCP access",
+  "让 Claude Code、Codex 这类 AI 助手查看主机、提交请求": "Let AI assistants such as Claude Code and Codex view hosts and submit requests",
+  "签发令牌": "Issue a token",
+  "每个 AI 助手用一个令牌，名称会出现在请求和审计里。令牌只显示一次，签发前要先验证身份。": "Use one token per AI assistant; its name appears in requests and the audit log. The token is shown only once, and you verify your identity before it is issued.",
+  "令牌名称": "Token name",
+  "签发": "Issue",
+  "名称只能用字母、数字、点、横线和下划线，最多 40 个字符": "Names may only contain letters, digits, dots, hyphens and underscores, up to 40 characters",
+  "令牌 {name} 已签发。它只显示这一次，关掉这个提示就再也看不到了；丢了就吊销重新签发。": "Token {name} has been issued. It is shown only this once and cannot be viewed again after you close this notice; if you lose it, revoke it and issue a new one.",
+  "我已保存好": "I've saved it",
+  "代表 {user} 发起": "Acts for {user}",
+  "永久有效": "No expiry",
+  "{time} 到期": "Expires {time}",
+  "最后使用 {time}": "Last used {time}",
+  "还没用过": "Never used",
+  "吊销": "Revoke",
+  "吊销后，用令牌 {name} 的 AI 助手立刻连不上 Hostower。": "Once revoked, the AI assistant using token {name} can no longer connect to Hostower.",
+  "已吊销": "Revoked",
+  "启动 Codex 之前：": "Before starting Codex:",
+  "AI 助手能做": "AI assistants can",
+  "列出主机、看指标、预估一条命令的风险等级": "List hosts, read metrics, and estimate a command's risk level",
+  "提交命令：只读的（L0）直接执行，其他的生成请求，等你在这里批准": "Submit commands: read-only ones (L0) run right away; others become requests that wait for your approval here",
+  "查询、取消自己提交的请求": "Check and cancel the requests they submitted",
+  "AI 助手不能做": "AI assistants cannot",
+  "批准任何请求（L1、L2 都要回网页批准，L3 一律拒绝）": "Approve any request (L1 and L2 are approved on the web page; L3 is always refused)",
+  "开终端、读写文件、改凭据、暂停或恢复执行、改设置": "Open terminals, read or write files, change credentials, pause or resume execution, change settings",
+  "看到别人提交的请求": "See requests submitted by others",
+};
+
+export default dict;

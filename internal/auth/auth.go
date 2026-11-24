@@ -455,9 +455,12 @@ func (s *Service) Logout(sess *Session) {
 	s.db.Exec("DELETE FROM sessions WHERE token_hash = ?", sess.TokenHash)
 }
 
-// RevokeAll 吊销所有会话（紧急开关）。
+// RevokeAll 吊销所有会话（紧急开关）。MCP 令牌也一起吊销。
 func (s *Service) RevokeAll() error {
 	_, err := s.db.Exec("DELETE FROM sessions")
+	if _, e := s.db.Exec("DELETE FROM mcp_tokens"); err == nil {
+		err = e
+	}
 	s.mu.Lock()
 	s.verified = map[string]time.Time{}
 	s.l2 = map[string]time.Time{}

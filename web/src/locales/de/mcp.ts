@@ -1,0 +1,31 @@
+// 德文词典：MCP 接入（pages/MCP.tsx）。
+const dict: Record<string, string> = {
+  "MCP 接入": "MCP-Zugang",
+  "让 Claude Code、Codex 这类 AI 助手查看主机、提交请求": "KI-Assistenten wie Claude Code und Codex Hosts ansehen und Anfragen einreichen lassen",
+  "签发令牌": "Token ausstellen",
+  "每个 AI 助手用一个令牌，名称会出现在请求和审计里。令牌只显示一次，签发前要先验证身份。": "Ein Token pro KI-Assistent; sein Name erscheint in Anfragen und im Audit. Das Token wird nur einmal angezeigt, vor dem Ausstellen bestätigen Sie Ihre Identität.",
+  "令牌名称": "Token-Name",
+  "签发": "Ausstellen",
+  "名称只能用字母、数字、点、横线和下划线，最多 40 个字符": "Der Name darf nur Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche enthalten (höchstens 40 Zeichen)",
+  "令牌 {name} 已签发。它只显示这一次，关掉这个提示就再也看不到了；丢了就吊销重新签发。": "Token {name} wurde ausgestellt. Es wird nur dieses eine Mal angezeigt und ist nach dem Schließen dieses Hinweises nicht mehr abrufbar; geht es verloren, widerrufen Sie es und stellen ein neues aus.",
+  "我已保存好": "Ich habe es gespeichert",
+  "代表 {user} 发起": "Handelt für {user}",
+  "永久有效": "Ohne Ablauf",
+  "{time} 到期": "Läuft ab am {time}",
+  "最后使用 {time}": "Zuletzt verwendet {time}",
+  "还没用过": "Noch nie verwendet",
+  "吊销": "Widerrufen",
+  "吊销后，用令牌 {name} 的 AI 助手立刻连不上 Hostower。": "Nach dem Widerruf kann sich der KI-Assistent mit dem Token {name} sofort nicht mehr mit Hostower verbinden.",
+  "已吊销": "Widerrufen",
+  "启动 Codex 之前：": "Vor dem Start von Codex:",
+  "AI 助手能做": "KI-Assistenten können",
+  "列出主机、看指标、预估一条命令的风险等级": "Hosts auflisten, Metriken lesen, die Risikostufe eines Befehls abschätzen",
+  "提交命令：只读的（L0）直接执行，其他的生成请求，等你在这里批准": "Befehle einreichen: reine Lesebefehle (L0) laufen sofort, alle anderen werden zu Anfragen, die hier auf Ihre Genehmigung warten",
+  "查询、取消自己提交的请求": "Eigene Anfragen abfragen und abbrechen",
+  "AI 助手不能做": "KI-Assistenten können nicht",
+  "批准任何请求（L1、L2 都要回网页批准，L3 一律拒绝）": "Anfragen genehmigen (L1 und L2 werden auf der Webseite genehmigt; L3 wird immer abgelehnt)",
+  "开终端、读写文件、改凭据、暂停或恢复执行、改设置": "Terminals öffnen, Dateien lesen oder schreiben, Zugangsdaten ändern, Ausführung pausieren oder fortsetzen, Einstellungen ändern",
+  "看到别人提交的请求": "Anfragen anderer sehen",
+};
+
+export default dict;

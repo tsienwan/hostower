@@ -42,6 +42,8 @@
 8. **调用方不能自报身份**：`kernel.Actor` 只由网关在认证之后构造。不要从请求体里读角色、等级或入口。
    聊天入口（`gateway/chatbot.go`）也一样：网关核对发消息的 Telegram 账号就是网页上用配对码绑定的那个，才构造 `Entry: "chat"`、`CanApprove: false` 的 Actor，
    之后照常走 `Submit*`。不要给聊天入口加批准、恢复执行、开终端、改设置的命令，也不要让它接受群组或未绑定账号的消息。
+   MCP 入口（`gateway/mcp.go`）也一样：网关核对 MCP 令牌有效、签发人仍然是所有者，才构造 `Kind: AI`、`Entry: "mcp"`、`CanApprove: false` 的 Actor；
+   它只认 `Authorization` 头里的令牌、不认 Cookie。不要给它加批准、拒绝、开终端、读写文件、凭据、暂停恢复、改设置的工具，也不要让它看到别人提交的请求。
 9. **模拟执行器只在开发模式注册**：`sim` 不能在非 `--dev` 下可用；`--dev` 不能在非回环地址上启动。
 10. **默认按公网设防**：新接口必须经过 `gateway.api`（来源校验、会话、请求体上限）。
     远端内容（命令输出、文件名、日志）一律按纯文本渲染，前端不要用 `dangerouslySetInnerHTML`。

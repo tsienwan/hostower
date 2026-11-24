@@ -14,7 +14,7 @@ Version actuelle : **v0.4.3** (voir [CHANGELOG.en.md](CHANGELOG.en.md)). Tant qu
 
 ## Fonctionnement
 
-Chaque opération — depuis l'interface web, la ligne de commande ou le bot de messagerie — suit le même chemin :
+Chaque opération — depuis l'interface web, la ligne de commande, le bot de messagerie ou un client MCP — suit le même chemin :
 
 ```
 entrée → passerelle (authentification, vérification de l'origine, limitation de débit) → noyau de sécurité : classification → approbation → exécution → audit → exécuteur → hôte
@@ -38,6 +38,7 @@ Le niveau est attribué par un moteur de règles : un analyseur shell découpe l
 | Opérations | Exécution de commandes avec sortie en continu ; lots, exécutions progressives, simulations, arrêt à la première erreur ; Snippets paramétrés ; un terminal interactif (approuvé en L2, entièrement enregistré) ; parcourir, rechercher, prévisualiser, modifier, téléverser et télécharger des fichiers ; distribuer des fichiers vers plusieurs hôtes et collecter des fichiers depuis plusieurs hôtes selon un motif de nom |
 | Conteneurs et applications | Gestion des conteneurs et des images, déploiement ou mise à jour à partir d'une image, connexion aux registres ; un catalogue d'applications (applications Docker Compose et outils en ligne de commande npm, dont OpenList, LiteLLM, Open WebUI et Ollama) qui indique, une fois l'application installée, l'adresse d'accès, le compte initial et les premières étapes ; vérification, pour chaque hôte, du type et du score de risque de l'IP de sortie (IPv4 et IPv6 séparément), de la région que lui attribuent les services d'IA et de leurs signaux de contrôle des risques, de l'accès aux API de modèles telles qu'OpenAI, Claude et Gemini, de l'accessibilité de sites comme Google, YouTube et Netflix et de la région attribuée, ainsi que des outils IA en ligne de commande installés ; installation de Docker depuis l'interface sur les hôtes qui ne l'ont pas |
 | Collaboration Agent | Confier la même tâche à Claude Code, Codex CLI ou Gemini CLI sur plusieurs hôtes, comparer les résultats côte à côte, puis charger l'un d'eux de la synthèse ; la carte de collaboration montre en direct les opérations envoyées, les assistants en train de réfléchir et les appels de modèles passant par une passerelle |
+| Accès MCP | Des assistants IA comme Claude Code ou Codex se connectent via MCP avec un jeton émis par le propriétaire pour lister les hôtes, lire les métriques, estimer le niveau de risque, soumettre des commandes et récupérer les résultats ; les demandes sont classées comme d'habitude, L1 et L2 sont approuvées par une personne sur la page web, et l'IA ne peut jamais approuver |
 | Identifiants | Identifiants SSH, connexions aux registres et secrets des applications stockés de façon centralisée avec chiffrement par enveloppe ; partout ailleurs, seul `ref:<name>` apparaît |
 | Audit | Chaîne de hachage, déclencheurs de base de données contre la falsification, copie dans un fichier JSONL, vérification hors ligne ; archivage puis purge en option |
 | Connexion | Passkeys, mots de passe (avec codes d'authentification en option), authentification unique OIDC ; les approbations L2 exigent une nouvelle vérification sur le moment |

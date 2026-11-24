@@ -14,7 +14,7 @@ Current version: **v0.4.3** (see [CHANGELOG.en.md](CHANGELOG.en.md)). Until it h
 
 ## How it works
 
-Every operation — from the web UI, the command line or the chat bot — takes the same path:
+Every operation — from the web UI, the command line, the chat bot or an MCP client — takes the same path:
 
 ```
 entry → gateway (authentication, origin check, rate limit) → security kernel: classify → approve → execute → audit → executor → host
@@ -38,6 +38,7 @@ A rule engine assigns the level: a shell parser splits pipes, `&&`, command subs
 | Operations | Run commands with streaming output; batches, rolling runs, dry runs, stop on error; parameterized Snippets; an interactive terminal (approved as L2, fully recorded); browse, search, preview, edit, upload and download files; distribute files to multiple hosts, and collect files from multiple hosts by file-name pattern |
 | Containers and apps | Manage containers and images, deploy or update by image, log in to registries; an app catalog (Docker Compose apps and npm CLI tools, including OpenList, LiteLLM, Open WebUI and Ollama) that gives you the address, initial account and first steps once an app is installed; checks each host's egress IP type and risk score (IPv4 and IPv6 separately), which region AI services place it in and their risk-control signals, whether it can use model APIs such as OpenAI, Claude and Gemini, whether sites such as Google, YouTube and Netflix open and in which region, and which AI CLI tools it has installed; install Docker from the UI on hosts that lack it |
 | Agent collaboration | Dispatch the same task to Claude Code, Codex CLI or Gemini CLI on several hosts, compare the results side by side, then have one of them summarize; the collaboration map shows live the operations being sent out, which assistants are thinking and the model calls made through a gateway |
+| MCP access | AI assistants such as Claude Code and Codex connect over MCP with an owner-issued token to list hosts, read metrics, estimate risk levels, submit commands and fetch results; requests are classified as usual, L1 and L2 are approved by a person on the web page, and the AI can never approve |
 | Credentials | SSH credentials, registry logins and app secrets stored centrally with envelope encryption; everywhere else only `ref:<name>` appears |
 | Audit | Hash chain, database triggers against tampering, a JSONL file copy, offline verification; optional archive-then-prune |
 | Sign-in | Passkeys, passwords (with optional authenticator codes), OIDC single sign-on; L2 approvals require re-verification on the spot |

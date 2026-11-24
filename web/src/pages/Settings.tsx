@@ -10,6 +10,7 @@ import { Select } from "../controls";
 import { NotifySettings } from "./Notify";
 import { ChatBotSettings } from "./ChatBot";
 import { OIDCSettings } from "./OIDC";
+import { MCPSettings } from "./MCP";
 import { LoginSecurity } from "./Security";
 import { langSetting, languages, setLang, setTimeZone, systemTimeZone, timeZoneOffset, timeZoneSetting, timeZones, ts, useT, type LangMode } from "../i18n";
 
@@ -93,6 +94,7 @@ export function SettingsPage() {
             <section className="settings-section" hidden={tab !== "security"}>
                 <LoginSecurity />
                 <OIDCSettings owner={boot.user?.role === "owner"} />
+                <MCPSettings owner={boot.user?.role === "owner"} />
 
                 <div className="card">
                   <div className="card-head"><h2>{t("紧急开关")}</h2></div>
@@ -104,7 +106,7 @@ export function SettingsPage() {
                         : <button className="btn danger" disabled={busy} onClick={() => setConfirm("pause")}><OctagonPause />{t("暂停全部执行")}</button>}</div>
                     </div>
                     <div className="setting-row">
-                      <div><div className="setting-name">{t("吊销所有会话")}</div><div className="setting-desc">{t("所有已登录的会话（包括你自己的）立刻失效，需要重新登录；聊天账号的绑定也一起解除。")}</div></div>
+                      <div><div className="setting-name">{t("吊销所有会话")}</div><div className="setting-desc">{t("所有已登录的会话（包括你自己的）立刻失效，需要重新登录；聊天账号的绑定和 MCP 令牌也一起解除。")}</div></div>
                       <div><button className="btn danger" disabled={busy} onClick={() => setConfirm("revoke")}><UserX />{t("吊销所有会话")}</button></div>
                     </div>
                   </div>

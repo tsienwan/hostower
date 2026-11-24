@@ -241,6 +241,27 @@ visudo -c
 
 頁面上方的協作圖即時顯示塔台在給哪台主機下發什麼（顏色區分 Agent 任務、分發檔案、安裝應用和其他命令）、哪個助手正在思考、助手經由哪台 LiteLLM / New API 呼叫模型。系統設定了「減少動態效果」時，圖上的動畫會停下。
 
+### 怎麼讓 Claude Code、Codex 透過 MCP 連上 Hostower？AI 會不會自己核准？
+
+1. 在「設定 → 安全 → MCP 接入」簽發一個權杖（每個助手一個，名稱會出現在請求和稽核裡）。權杖只顯示一次，先存好。
+2. 把它設定進助手。設定頁裡有填好存取位址的範例：
+   - Claude Code：`claude mcp add --transport http hostower https://hostower.example.com/mcp --header "Authorization: Bearer <權杖>"`
+   - Codex：在 `~/.codex/config.toml` 裡加上
+     ```toml
+     [mcp_servers.hostower]
+     url = "https://hostower.example.com/mcp"
+     bearer_token_env_var = "HOSTOWER_MCP_TOKEN"
+     ```
+
+     啟動 Codex 之前把權杖放進環境變數 `HOSTOWER_MCP_TOKEN`。
+3. 之後就可以對助手說「看看 web-1 的磁碟」「重新啟動 web-1 上的 nginx」。
+
+助手提交的指令照常判級：唯讀的（L0）直接執行，結果回給助手；其他的產生請求，在「審核」裡等你核准，助手用 `get_request` 等結果；L3 一律拒絕。助手沒有核准、開啟終端機、讀寫檔案、變更設定的工具，也看不到別人提交的請求。在請求詳情和稽核裡，發起人是權杖名稱，入口是 `mcp`。
+
+- 助手要在能存取到 Hostower 存取位址的地方執行：面板只在本機或內網能開啟時，助手也得在本機或內網。
+- 不用了就在同一個地方撤銷；「安全」裡的「撤銷所有工作階段」也會把所有 MCP 權杖一併撤銷。
+- 唯讀指令的輸出會經過 AI 服務商（輸出裡看起來像憑據的內容會先遮蔽）。不想這樣就不要簽發權杖。權杖外洩的影響見[威脅模型](threat-model.md#mcp-入口)（簡體中文）。
+
 ### 想統計各個 AI 工具用了多少 token，怎麼做？
 
 安裝一個 LiteLLM 或 New API（應用目錄的「AI 工具」裡），讓 Claude Code、Codex CLI 等工具的介面位址都指到它，再給每個工具或每個人單獨發一個密鑰。每個密鑰、每個模型的呼叫次數、token 用量和花費在閘道自己的管理介面裡看。Hostower 本身不代理也不記錄模型請求。

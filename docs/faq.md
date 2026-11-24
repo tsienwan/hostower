@@ -241,6 +241,27 @@ visudo -c
 
 上面的协作图实时显示塔台在给哪台主机下发什么（颜色区分 Agent 任务、分发文件、安装应用和其他命令）、哪个助手正在思考、助手经由哪台 LiteLLM / New API 调用模型。系统设置了“减少动态效果”时，图上的动画会停下。
 
+### 怎么让 Claude Code、Codex 通过 MCP 连上 Hostower？AI 会不会自己批准？
+
+1. 在“设置 → 安全 → MCP 接入”签发一个令牌（每个助手一个，名称会出现在请求和审计里）。令牌只显示一次，先存好。
+2. 把它配进助手。设置页里有填好访问地址的示例：
+   - Claude Code：`claude mcp add --transport http hostower https://hostower.example.com/mcp --header "Authorization: Bearer <令牌>"`
+   - Codex：在 `~/.codex/config.toml` 里加上
+     ```toml
+     [mcp_servers.hostower]
+     url = "https://hostower.example.com/mcp"
+     bearer_token_env_var = "HOSTOWER_MCP_TOKEN"
+     ```
+
+     启动 Codex 之前把令牌放进环境变量 `HOSTOWER_MCP_TOKEN`。
+3. 之后就可以对助手说“看看 web-1 的磁盘”“重启 web-1 上的 nginx”。
+
+助手提交的命令照常判级：只读的（L0）直接执行，结果回给助手；其他的生成请求，在“审批”里等你批准，助手用 `get_request` 等结果；L3 一律拒绝。助手没有批准、开终端、读写文件、改设置的工具，也看不到别人提交的请求。在请求详情和审计里，发起人是令牌名称，入口是 `mcp`。
+
+- 助手要在能访问到 Hostower 访问地址的地方运行：面板只在本机或内网能打开时，助手也得在本机或内网。
+- 不用了就在同一个地方吊销；“安全”里的“吊销所有会话”也会把所有 MCP 令牌一起吊销。
+- 只读命令的输出会经过 AI 服务商（输出里看起来像凭据的内容会先遮蔽）。不想这样就不要签发令牌。令牌泄漏的影响见[威胁模型](threat-model.md#mcp-入口)。
+
 ### 想统计各个 AI 工具用了多少 token，怎么做？
 
 装一个 LiteLLM 或 New API（应用目录的“AI 工具”里），让 Claude Code、Codex CLI 等工具的接口地址都指到它，再给每个工具或每个人单独发一个密钥。每个密钥、每个模型的调用次数、token 用量和花费在网关自己的管理界面里看。Hostower 本身不代理也不记录模型请求。

@@ -120,6 +120,9 @@ const dict: Record<string, string> = {
   "Ookla 许可协议": "Ookla 사용권",
   "修改用户名": "사용자 이름 변경",
   "重新连接主机": "호스트 다시 연결",
+  "MCP 调用": "MCP 호출",
+  "签发 MCP 令牌": "MCP 토큰 발급",
+  "吊销 MCP 令牌": "MCP 토큰 폐기",
 };
 
 export default dict;

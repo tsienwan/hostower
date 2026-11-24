@@ -19,6 +19,7 @@ const typeNames: Record<string, string> = {
   "query": "只读查询", "upload.stored": "暂存上传的文件", "system.panel.updated": "修改面板设置",
   "system.audit.routine": "审计范围", "system.retention": "指标保留时长", "host.traffic_quota": "设置流量配额", "host.traffic_quota.removed": "取消流量配额", "speedtest.retention": "测速保留规则", "speedtest.deleted": "删除测速记录", "speedtest.routes": "测速追踪目标", "speedtest.geo": "测速节点地区查询", "speedtest.ookla": "Ookla 许可协议", "auth.username.changed": "修改用户名", "apps.autoupdate": "应用自动发起更新", "app.panel": "应用面板地址", "system.restart": "重启 Hostower", "audit.archived": "审计归档", "audit.retention": "审计归档条件", "auth.oidc.updated": "OIDC 设置", "notify.channel.created": "新建通知渠道", "notify.channel.updated": "修改通知渠道", "notify.channel.deleted": "删除通知渠道", "notify.test": "测试通知", "system.update.auto": "自动更新开关", "system.update.requested": "手动更新", "system.update.applied": "已更新", "system.update.rejected": "更新被拒绝",
   "chat.command": "聊天命令", "chat.bound": "绑定聊天账号", "chat.unbound": "解除聊天绑定", "chat.binding.expired": "聊天绑定过期", "chat.bind.failed": "聊天绑定失败", "chat.config.updated": "修改聊天命令设置", "chat.pair.started": "生成配对码",
+  "mcp.call": "MCP 调用", "mcp.token.created": "签发 MCP 令牌", "mcp.token.revoked": "吊销 MCP 令牌",
   "inventory.host.created": "新增主机", "inventory.host.updated": "修改主机", "inventory.host.deleted": "删除主机",
   "secret.updated": "写入凭据", "secret.deleted": "删除凭据", "hostkey.forgotten": "清除主机公钥", "host.reconnected": "重新连接主机",
 };

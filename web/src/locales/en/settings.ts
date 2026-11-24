@@ -230,8 +230,8 @@ const dict: Record<string, string> = {
   "设置分区": "Settings sections",
   "通用": "General",
   "通知与机器人": "Notifications & bot",
-  "所有已登录的会话（包括你自己的）立刻失效，需要重新登录；聊天账号的绑定也一起解除。":
-    "Every signed-in session (including yours) ends immediately and must sign in again; the chat account binding is removed too.",
+  "所有已登录的会话（包括你自己的）立刻失效，需要重新登录；聊天账号的绑定和 MCP 令牌也一起解除。":
+    "Every signed-in session (including yours) ends immediately and must sign in again; the chat account binding and MCP tokens are removed too.",
   // ---------- 聊天命令 ----------
   "有效期要在 1 到 365 天之间": "The validity must be between 1 and 365 days",
   "正在连接": "Connecting",

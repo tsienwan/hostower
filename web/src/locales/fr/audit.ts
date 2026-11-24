@@ -120,6 +120,9 @@ const dict: Record<string, string> = {
   "Ookla 许可协议": "Licence Ookla",
   "修改用户名": "Changer le nom d’utilisateur",
   "重新连接主机": "Hôte reconnecté",
+  "MCP 调用": "Appel MCP",
+  "签发 MCP 令牌": "Jeton MCP émis",
+  "吊销 MCP 令牌": "Jeton MCP révoqué",
 };
 
 export default dict;
