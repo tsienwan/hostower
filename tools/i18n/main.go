@@ -296,7 +296,8 @@ func goSource() (keys map[string]bool, errTexts map[string]string) {
 		}
 		p = filepath.ToSlash(p)
 		if d.IsDir() {
-			if p == "web/node_modules" || p == ".git" || p == "internal/i18n" || p == "tools" {
+			// .claude 下面是 AI 助手的本地工作区（其他分支的检出），不属于这个检出的代码。
+			if p == "web/node_modules" || p == ".git" || p == ".claude" || p == "internal/i18n" || p == "tools" {
 				return filepath.SkipDir
 			}
 			return nil
