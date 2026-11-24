@@ -10,6 +10,7 @@ Les problèmes les plus courants et quelques conseils pour connecter des hôtes,
 - [Sites, certificats et Fail2ban](#sites-certificats-et-fail2ban)
 - [Collecteur avancé](#collecteur-avancé)
 - [Quotas de trafic](#quotas-de-trafic)
+- [Alertes de ressources](#alertes-de-ressources)
 - [Mettre à jour Hostower](#mettre-à-jour-hostower)
 
 ---
@@ -330,6 +331,22 @@ Les débits réseau suivent désormais la même règle que le trafic mensuel et 
 ### Je n'ai pas reçu d'alerte de trafic
 
 Quand un seuil d'alerte (80 %, 95 % et 100 % par défaut) est atteint, ou que le quota sera dépassé au rythme actuel, une notification part vers les canaux abonnés à « Seuil d'alerte de trafic atteint » et « Dépassement du quota de trafic prévu » ; chaque seuil n'est envoyé qu'une fois par période. Les canaux existants sont cochés automatiquement lors de la mise à jour ; si vous les avez décochés, recochez-les dans « Paramètres → Notifications et bot ». La prévision attend au moins une journée complète de données dans la période.
+
+---
+
+## Alertes de ressources
+
+### Quand les alertes de disque, de mémoire et de CPU sont-elles envoyées ?
+
+Hostower se fonde sur les échantillons qu'il collecte déjà ; il n'exécute rien de plus sur l'hôte :
+
+- **Disque** : un point de montage au-dessus de 90 % pendant 5 minutes ;
+- **Mémoire** : utilisation au-dessus de 90 % pendant 5 minutes (les tampons et le cache ne comptent pas comme utilisés) ;
+- **CPU** : utilisation au-dessus de 90 % pendant 10 minutes.
+
+Un seul passage sous 90 % remet le compteur à zéro. Une fois l'alerte envoyée, le même problème n'est plus signalé tant que l'utilisation n'est pas redescendue (disque sous 85 %, mémoire et CPU sous 80 %) et restée ainsi 5 minutes ; une notification de retour à la normale part alors. Rien n'est évalué pendant qu'un hôte est hors ligne, et redémarrer le panneau ne renvoie pas les alertes encore en cours. Ces seuils sont fixes et ne peuvent pas être modifiés.
+
+Les notifications partent vers les canaux abonnés à « Disque presque plein », « Utilisation de la mémoire élevée » et « Utilisation du CPU élevée ». Les canaux existants sont cochés automatiquement lors de la mise à jour ; décochez-les dans « Paramètres → Notifications et bot » si vous n'en voulez pas.
 
 ---
 

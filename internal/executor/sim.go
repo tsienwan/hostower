@@ -77,6 +77,10 @@ func (s *Sim) host(h inventory.Host) *simHost {
 		os:      oses[idx],
 		kernel:  kernels[idx],
 	}
+	// sim_disk 把根分区的使用率固定成给定的百分比，用来演示磁盘告警。
+	if v, err := strconv.ParseFloat(h.Vars["sim_disk"], 64); err == nil && v > 0 && v < 100 {
+		sh.diskUse = v / 100
+	}
 	sh.files = map[string][]byte{
 		"/etc/hostname":            []byte(h.Name + "\n"),
 		"/etc/os-release":          []byte(fmt.Sprintf("PRETTY_NAME=%q\nID=linux\n", sh.os)),

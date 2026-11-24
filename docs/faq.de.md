@@ -10,6 +10,7 @@ Die häufigsten Probleme und Tipps beim Anbinden von Hosts, beim Installieren vo
 - [Sites, Zertifikate und Fail2ban](#sites-zertifikate-und-fail2ban)
 - [Erweiterter Collector](#erweiterter-collector)
 - [Traffic-Kontingente](#traffic-kontingente)
+- [Ressourcenalarme](#ressourcenalarme)
 - [Hostower aktualisieren](#hostower-aktualisieren)
 
 ---
@@ -330,6 +331,22 @@ Netzwerkraten folgen jetzt derselben Regel wie der Monats-Traffic und zählen nu
 ### Ich habe keine Traffic-Warnung erhalten
 
 Wird eine Warnschwelle (standardmäßig 80 %, 95 % und 100 %) erreicht oder wird das Kontingent beim aktuellen Tempo voraussichtlich überschritten, geht eine Benachrichtigung an die Kanäle, die „Traffic-Warnschwelle erreicht“ und „Traffic-Kontingent wird voraussichtlich überschritten“ abonniert haben; jede Stufe wird pro Zeitraum nur einmal gesendet. Bestehende Kanäle bekommen beim Update beide Häkchen; falls Sie sie entfernt haben, setzen Sie sie unter „Einstellungen → Benachrichtigungen & Bot“ erneut. Die Prognose braucht mindestens einen vollen Tag Daten im Zeitraum.
+
+---
+
+## Ressourcenalarme
+
+### Wann werden Alarme für Festplatte, Speicher und CPU gesendet?
+
+Hostower entscheidet anhand der Messwerte, die es ohnehin erfasst; auf dem Host wird nichts zusätzlich ausgeführt:
+
+- **Festplatte**: ein Einhängepunkt 5 Minuten lang über 90 %;
+- **Speicher**: Auslastung 5 Minuten lang über 90 % (Puffer und Cache zählen nicht als belegt);
+- **CPU**: Auslastung 10 Minuten lang über 90 %.
+
+Fällt der Wert zwischendurch einmal unter 90 %, beginnt die Zeitmessung neu. Nach einem Alarm wird dasselbe nicht erneut gemeldet, bis die Auslastung wieder sinkt (Festplatte unter 85 %, Speicher und CPU unter 80 %) und 5 Minuten dort bleibt; dann folgt eine Entwarnung. Solange ein Host offline ist, wird nichts bewertet, und ein Neustart des Panels sendet noch offene Alarme nicht erneut. Die Schwellen sind fest und lassen sich nicht ändern.
+
+Die Benachrichtigungen gehen an Kanäle, die „Festplatte fast voll“, „Hohe Speicherauslastung“ und „Hohe CPU-Auslastung“ abonniert haben. Bestehende Kanäle bekommen beim Update alle drei Häkchen; entfernen Sie sie unter „Einstellungen → Benachrichtigungen & Bot“, wenn Sie sie nicht möchten.
 
 ---
 

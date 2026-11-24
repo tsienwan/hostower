@@ -41,7 +41,7 @@ Le niveau est attribué par un moteur de règles : un analyseur shell découpe l
 | Identifiants | Identifiants SSH, connexions aux registres et secrets des applications stockés de façon centralisée avec chiffrement par enveloppe ; partout ailleurs, seul `ref:<name>` apparaît |
 | Audit | Chaîne de hachage, déclencheurs de base de données contre la falsification, copie dans un fichier JSONL, vérification hors ligne ; archivage puis purge en option |
 | Connexion | Passkeys, mots de passe (avec codes d'authentification en option), authentification unique OIDC ; les approbations L2 exigent une nouvelle vérification sur le moment |
-| Notifications et messagerie | Telegram, Feishu/Lark, Discord, e-mail ; commandes Telegram en message privé (état, soumission, pause d'urgence — jamais d'approbation) |
+| Notifications et messagerie | Telegram, Feishu/Lark, Discord, e-mail ; alertes hors ligne, trafic, disque, mémoire et CPU avec retour à la normale ; commandes Telegram en message privé (état, soumission, pause d'urgence — jamais d'approbation) |
 | Test de débit | Latence, téléchargement et envoi, avec des traceroutes optionnels qui devinent la route de l'opérateur (China Telecom CN2 GIA/GT, China Unicom 9929/4837, China Mobile CMIN2/CMI) |
 | Déploiement | Un binaire statique unique ; une image par défaut et une image en mode hôte ; mise à jour automatique signée |
 | Interface | Chinois simplifié, chinois traditionnel, anglais, japonais, coréen, français, allemand ; thèmes clair et sombre |

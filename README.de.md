@@ -41,7 +41,7 @@ Die Stufe vergibt eine Regel-Engine: Ein Shell-Parser zerlegt Pipes, `&&`, Befeh
 | Zugangsdaten | SSH-Zugangsdaten, Registry-Anmeldungen und App-Geheimnisse zentral mit Envelope-Verschlüsselung gespeichert; überall sonst erscheint nur `ref:<name>` |
 | Audit | Hash-Kette, Datenbank-Trigger gegen Manipulation, eine JSONL-Dateikopie, Offline-Prüfung; optional Archivieren und anschließendes Bereinigen |
 | Anmeldung | Passkeys, Passwörter (optional mit Authenticator-Codes), OIDC-Single-Sign-On; L2-Genehmigungen erfordern eine erneute Bestätigung an Ort und Stelle |
-| Benachrichtigungen und Chat | Telegram, Feishu/Lark, Discord, E-Mail; Telegram-Direktnachrichtenbefehle (Status, Einreichen, Notfallpause – niemals Genehmigen) |
+| Benachrichtigungen und Chat | Telegram, Feishu/Lark, Discord, E-Mail; Alarme für Offline, Traffic, Festplatte, Speicher und CPU mit Entwarnung; Telegram-Direktnachrichtenbefehle (Status, Einreichen, Notfallpause – niemals Genehmigen) |
 | Geschwindigkeitstest | Latenz, Download und Upload, mit optionalen Traceroutes, die die Carrier-Route abschätzen (China Telecom CN2 GIA/GT, China Unicom 9929/4837, China Mobile CMIN2/CMI) |
 | Bereitstellung | Ein einzelnes statisches Binärprogramm; ein Standard-Image und ein Host-Modus-Image; signierte Selbstaktualisierung |
 | Oberfläche | Vereinfachtes Chinesisch, traditionelles Chinesisch, Englisch, Japanisch, Koreanisch, Französisch, Deutsch; helles und dunkles Design |

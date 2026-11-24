@@ -62,6 +62,7 @@ hosts:
     addr: 198.51.100.200
     executor: sim
     tags: [home, storage]
+    vars: { sim_disk: "93" }
 groups:
   all:     { selector: "*" }
   safe:    { selector: "* and not sensitivity:high" }
