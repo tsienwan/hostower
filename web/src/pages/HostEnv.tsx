@@ -337,7 +337,9 @@ export function EnvMatrix() {
                       <td><Link to={`/hosts/${encodeURIComponent(h.name)}?tab=env`} style={{ fontWeight: 560 }}>{h.name}</Link>
                         {errs[h.name] && <div className="crit" style={{ fontSize: 12 }}>{ts(errs[h.name])}</div>}
                         {!h.status.online && <div className="muted" style={{ fontSize: 12 }}>{t("离线")}</div>}</td>
-                      <td className="mono">{ep?.country ?? <span className="muted">—</span>}{e?.egress.v6 && <span className="badge neutral" style={{ marginLeft: 6 }} title={e.egress.v6.ip}>v6</span>}</td>
+                      {/* 两种出口都标出来：国家、IP 类型和风险分取 IPv4（没有 IPv4 时取 IPv6）；只标一个“v6”会被看成只有 IPv6。 */}
+                      <td className="mono">{ep?.country ?? <span className="muted">—</span>}
+                        {(["v4", "v6"] as const).map((f) => { const x = e?.egress?.[f]; return x && <span key={f} className="badge neutral" style={{ marginLeft: 6 }} title={x.ip + (x.country ? " · " + x.country : "")}>{f}</span>; })}</td>
                       <td>{ep?.type ? ipTypeText(t, ep.type) : <span className="muted">—</span>}</td>
                       <td>{ep && ep.risk >= 0 ? <span className={"badge " + riskTone(ep.risk)}>{ep.risk} · {t(riskText(ep.risk))}</span> : <span className="muted">—</span>}</td>
                       <td>{warns > 0 ? <span className="badge warn" title={e!.risks!.filter((r) => r.state === "warn").map((r) => t(riskMeta[r.id]?.title ?? r.id)).join("\n")}><TriangleAlert />{warns}</span> : e?.risks ? <span className="badge ok"><CircleCheck /><span className="sr-only">{t("没有风控信号")}</span></span> : <span className="muted">—</span>}</td>
