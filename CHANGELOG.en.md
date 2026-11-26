@@ -4,6 +4,24 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.1
+
+### Added
+
+- Host **Network** page: when Caddy or Nginx is installed but not running, a **Start** button appears next to the status (previewed and approved as usual). Previously the page only said “Not running” and you had to run the command yourself.
+
+### Improved
+
+- Adding or removing a site now also starts Caddy or Nginx if it is not running; previously that step failed and left behind a site that could not be reached.
+- When starting or reloading Caddy or Nginx fails, the request output includes the service's recent log, so the cause is visible right away (usually another program holding port 80 or 443).
+- On the **Network** page, after you submit an install of Caddy, Nginx or Fail2ban, or enable the firewall, the button turns into “Awaiting approval” / “Installing…” and links back to that request, so it cannot be submitted twice.
+- The description of **Listen port** under **Settings → Panel** now makes clear that it is the port Hostower itself listens on; behind a reverse proxy, the port you use in the browser is the one in the public URL.
+- FAQ additions: what to check when an AI assistant cannot connect over MCP (an untrusted self-signed certificate, Codex not seeing the token environment variable), and what to do when the Sites card says “Not running”.
+
+### Fixed
+
+- When a command finished very quickly, the request stayed at “Running” on the page until a refresh.
+
 ## v0.5.0
 
 ### Added
