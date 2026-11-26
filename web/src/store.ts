@@ -138,6 +138,27 @@ let ws: WebSocket | null = null;
 let retry = 0;
 let stopped = true;
 let timer: ReturnType<typeof setTimeout> | undefined;
+// 服务端每 15 秒发一次心跳（internal/gateway 的 streamBeat）。隔这么久什么都没收到，就当连接已经断了：
+// 网络悄悄断掉（换了网络、代理重启、电脑睡过一觉）时，浏览器自己可能要过很久才发现，这期间页面会一直显示“实时连接”。
+const streamSilence = 45_000;
+let lastHeard = 0;
+let watchdog: ReturnType<typeof setInterval> | undefined;
+
+/** 放弃这条连接并安排重连。不等浏览器的 close 事件：连接已经断了的话，它可能很久都不来。 */
+function drop(sock: WebSocket) {
+  if (ws !== sock) return;
+  ws = null;
+  sock.onopen = sock.onmessage = sock.onclose = null;
+  try { sock.close(); } catch { /* 已经关了 */ }
+  set({ live: false });
+  if (stopped) return;
+  // WebSocket 被拒时浏览器不给状态码：会话过期（默认 12 小时）的话这里只会一直“正在重连”。
+  // 发一个普通请求问一下；返回 401 时 api() 会通知页面回到登录界面，也就不用再重连了。
+  refreshHosts().catch(() => {});
+  retry = Math.min(retry + 1, 6);
+  clearTimeout(timer);
+  timer = setTimeout(connect, 500 * 2 ** retry);
+}
 
 // 电脑睡眠唤醒、网络恢复、切回这个页面时：不等退避的定时器，马上重连一次。
 function reconnectNow() {
@@ -157,8 +178,12 @@ export function connect() {
   const url = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/api/v1/stream";
   const sock = new WebSocket(url);
   ws = sock;
+  lastHeard = Date.now();
+  clearInterval(watchdog);
+  watchdog = setInterval(() => { if (ws && Date.now() - lastHeard > streamSilence) drop(ws); }, 5000);
   sock.onopen = () => {
     retry = 0;
+    lastHeard = Date.now();
     set({ live: true });
     // 断线期间可能漏了事件，重连后整体刷新一次。
     refreshHosts().catch(() => {});
@@ -167,6 +192,7 @@ export function connect() {
     window.dispatchEvent(new Event("hostower:reconnected"));
   };
   sock.onmessage = (m) => {
+    lastHeard = Date.now();
     let ev: { type: string; data: unknown };
     try { ev = JSON.parse(m.data); } catch { return; }
     switch (ev.type) {
@@ -206,24 +232,16 @@ export function connect() {
         break;
     }
   };
-  sock.onclose = () => {
-    ws = null;
-    set({ live: false });
-    if (stopped) return;
-    // WebSocket 被拒时浏览器不给状态码：会话过期（默认 12 小时）的话这里只会一直“正在重连”。
-    // 发一个普通请求问一下；返回 401 时 api() 会通知页面回到登录界面，也就不用再重连了。
-    refreshHosts().catch(() => {});
-    retry = Math.min(retry + 1, 6);
-    timer = setTimeout(connect, 500 * 2 ** retry);
-  };
+  sock.onclose = () => drop(sock);
 }
 
 export function disconnect() {
   clearCache(); // 退出登录：上一个会话看过的数据不留在内存里
   outputs.clear();
-  set({ hosts: [], groups: [], hostsLoaded: false, requests: [], toasts: [] });
+  set({ hosts: [], groups: [], hostsLoaded: false, requests: [], toasts: [], live: false });
   stopped = true;
   clearTimeout(timer);
+  clearInterval(watchdog);
   ws?.close();
   ws = null;
 }

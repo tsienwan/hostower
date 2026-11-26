@@ -845,6 +845,9 @@ func (s *Server) deleteSecret(w http.ResponseWriter, r *http.Request) {
 
 // stream 是一条多路复用的 WebSocket：请求状态、流式输出、主机状态、系统事件。
 // 握手时校验 Origin（由 websocket.Accept 完成：来源必须与 Host 一致）。
+// streamBeat 是实时通道发心跳的间隔。页面超过它的三倍没收到任何消息就认为连接断了。
+var streamBeat = 15 * time.Second
+
 func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	sess := sessionOf(r)
 	c, err := websocket.Accept(w, r, nil)
@@ -857,6 +860,10 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	defer unsubscribe()
 	check := time.NewTicker(30 * time.Second)
 	defer check.Stop()
+	// 心跳：浏览器看不到协议层的 ping，网络悄悄断掉时它那头的连接会一直显示“已连接”。
+	// 定时发一条页面看得见的消息，页面隔久了收不到就自己重连（见 web/src/store.ts 的 streamSilence）。
+	beat := time.NewTicker(streamBeat)
+	defer beat.Stop()
 	token := ""
 	if ck, err := r.Cookie(cookieName); err == nil {
 		token = ck.Value
@@ -872,6 +879,13 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if err := c.Ping(ctx); err != nil {
+				return
+			}
+		case <-beat.C:
+			wctx, cancel := contextWithTimeout(ctx, 10*time.Second)
+			err := c.Write(wctx, websocket.MessageText, []byte(`{"type":"ping"}`))
+			cancel()
+			if err != nil {
 				return
 			}
 		case ev := <-events:
