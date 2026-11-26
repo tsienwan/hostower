@@ -4,6 +4,17 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.4
+
+### Improved
+
+- Returning to the overview shows the traffic ranking at once from the last data and swaps in fresh data when it arrives; it used to appear only after the request returned, leaving a gap when the panel is far away.
+- The settings page does the same: on reopening, every card appears at once instead of popping in one by one and pushing the page around.
+
+### Fixed
+
+- Opening **Approvals** from the navigation no longer shows "Back to the previous page" at the top. The button appears only when submitting several requests at once took you there automatically.
+
 ## v0.5.3
 
 ### Improved
