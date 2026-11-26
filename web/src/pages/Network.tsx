@@ -462,7 +462,10 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
   const tls = tlsOptions.some((o) => o.value === f.tls) ? f.tls : tlsOptions[0].value;
   const target = f.kind === "proxy" ? f.port > 0 : f.kind === "static" ? !!f.dir.trim() : !!f.url.trim();
   const ready = !!addr && target && (tls !== "le" || f.agree) && (tls !== "custom" || (!!f.cert.trim() && !!f.key.trim()));
-  const busy443 = tls !== "http" && st.listen.some((l) => l.port === 443) && !st.sites.some((x) => x.server === f.server && x.tls !== "http") && !(f.server === "caddy" && st.caddy.active);
+  // 站点要监听的端口：地址里写了就是它，否则 HTTPS 是 443、只用 HTTP 是 80。看得到是别的程序占着它时直接说明白。
+  const sitePort = hasPort ? Number(addr.slice(addr.lastIndexOf(":") + 1)) : tls === "http" ? 80 : 443;
+  const holder = st.listen.find((l) => l.port === sitePort && l.proc && l.proc !== f.server);
+  const busy443 = !holder && tls !== "http" && !hasPort && st.listen.some((l) => l.port === 443) && !st.sites.some((x) => x.server === f.server && x.tls !== "http") && !(f.server === "caddy" && st.caddy.active);
   const send = (preview: boolean) => api.hostSites(host, { action: "add", ...f, address: addr, tls, dir: f.dir.trim(), url: f.url.trim(), cert: f.cert.trim(), key: f.key.trim(), email: f.email.trim(), preview });
   return (
     <PlanDialog title={t("在 {host} 上添加站点", { host })} onClose={onClose} ready={ready} send={send}>
@@ -518,6 +521,7 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
           {f.kind === "redirect" && <Check checked={f.perm} onChange={(v) => set({ perm: v })}>{t("永久跳转（301，浏览器会记住）")}</Check>}
         </div>
       </div>
+      {holder && <div className="note crit"><TriangleAlert /><span>{t("{port} 端口已经被 {proc} 占用，这样添加会失败。把地址写成带端口的形式（比如 {example}），或者先把那个程序改到别的端口。", { port: sitePort, proc: holder.proc!, example: (ip || !addr ? "app.example.com" : addr.replace(/:\d+$/, "")) + ":8443" })}</span></div>}
       {busy443 && <div className="note warn"><TriangleAlert /><span>{t("443 端口已经有程序在监听（比如 3x-ui 的 Xray）：HTTPS 站点可能起不来。")}</span></div>}
       <p className="hint">{t("写入一个单独的站点文件，先校验配置（caddy validate / nginx -t），通过才重载；校验不过会自动撤下，不影响已有的站点。")}</p>
     </PlanDialog>

@@ -79,6 +79,7 @@ const dict: Record<string, string> = {
   "这台主机上没有安装 Nginx": "這台主機上沒有安裝 Nginx",
   "Nginx 已经在运行了": "Nginx 已經在執行了",
   "登录账号不是 root，也没有 sudo：启动不了 Nginx": "登入帳號不是 root，也沒有 sudo：啟動不了 Nginx",
+  "{a} 端口已经被 {b} 占用：把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口": "{a} 連接埠已經被 {b} 佔用：把位址寫成帶連接埠的形式（例如 app.example.com:8443），或者先把那個程式改到別的連接埠",
 };
 
 export default dict;

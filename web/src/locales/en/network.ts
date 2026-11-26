@@ -158,6 +158,7 @@ const dict: Record<string, string> = {
   "启动 {name}": "Start {name}",
   "在 {host} 上启动 {name}": "Start {name} on {host}",
   "{name} 没在运行时，这台主机上的站点都打不开，证书也不会申请。起不来的话，输出里会带上它最近的日志，原因多半是 80 或 443 端口被别的程序占了。": "While {name} is not running, no site on this host can be reached and no certificate is requested. If it fails to start, the output includes its recent log; the usual cause is another program holding port 80 or 443.",
+  "{port} 端口已经被 {proc} 占用，这样添加会失败。把地址写成带端口的形式（比如 {example}），或者先把那个程序改到别的端口。": "Port {port} is already held by {proc}, so adding the site this way will fail. Write the address with a port (for example {example}), or move that program to another port first.",
 };
 
 export default dict;

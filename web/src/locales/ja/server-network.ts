@@ -79,6 +79,7 @@ const dict: Record<string, string> = {
   "这台主机上没有安装 Nginx": "このホストに Nginx は入っていません",
   "Nginx 已经在运行了": "Nginx はすでに動いています",
   "登录账号不是 root，也没有 sudo：启动不了 Nginx": "ログインアカウントは root ではなく sudo もないため、Nginx を起動できません",
+  "{a} 端口已经被 {b} 占用：把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口": "ポート {a} はすでに {b} が使っています。アドレスをポート付き（例：app.example.com:8443）で書くか、先にそのプログラムを別のポートへ移してください",
 };
 
 export default dict;

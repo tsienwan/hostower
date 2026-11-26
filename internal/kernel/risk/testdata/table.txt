@@ -445,6 +445,8 @@ L1 systemctl reload nginx
 L1 systemctl reload-or-restart nginx
 L1 systemctl reload-or-restart caddy
 L1 systemctl start caddy
+L1 busy=$({ if [ "$(id -u)" = 0 ]; then ss -Htlnp; else sudo -n ss -Htlnp; fi; } 2>/dev/null | grep -E '[:.]443[[:space:]]' | grep -v '"caddy"' | head -n 1); if [ -n "$busy" ]; then echo "$busy"; echo 'hostower: 443 端口已经被别的程序占用'; exit 1; fi; systemctl reload-or-restart caddy
+L1 { if [ "$(id -u)" = 0 ]; then systemctl reload-or-restart caddy; else sudo -n systemctl reload-or-restart caddy; fi; } || { if [ "$(id -u)" = 0 ]; then mv -f /etc/caddy/sites.d/app.example.com.caddy /etc/caddy/sites.d/app.example.com.caddy.rejected; else sudo -n mv -f /etc/caddy/sites.d/app.example.com.caddy /etc/caddy/sites.d/app.example.com.caddy.rejected; fi; if [ "$(id -u)" = 0 ]; then systemctl restart caddy; else sudo -n systemctl restart caddy; fi; echo 'hostower: 重载 Caddy 失败'; exit 1; }
 L1 systemctl start nginx
 L1 { if [ "$(id -u)" = 0 ]; then systemctl start caddy; else sudo -n systemctl start caddy; fi; } || { if [ "$(id -u)" = 0 ]; then journalctl -u caddy -n 20 --no-pager; else sudo -n journalctl -u caddy -n 20 --no-pager; fi; echo 'hostower: 启动 Caddy 失败，原因见上面的日志'; exit 1; }; echo 'hostower: Caddy 已启动'
 L1 { if [ "$(id -u)" = 0 ]; then systemctl reload-or-restart nginx; else sudo -n systemctl reload-or-restart nginx; fi; } || { if [ "$(id -u)" = 0 ]; then journalctl -u nginx -n 20 --no-pager; else sudo -n journalctl -u nginx -n 20 --no-pager; fi; echo 'hostower: 重载 Nginx 失败，原因见上面的日志'; exit 1; }; echo ok

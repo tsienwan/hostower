@@ -611,7 +611,7 @@ export interface NetworkView {
     fail2ban: { installed: boolean; active: boolean; installable: boolean; unknown: boolean; jails: F2BJail[]; config: F2BConfig | null; authLog: boolean };
     clientIp: string;
     sites: NetSite[];
-    listen: { port: number; addr: string }[];
+    listen: { port: number; addr: string; proc?: string }[];
     docker: { container: string; port: number; proto: string }[];
   };
   keep: NetPort[];

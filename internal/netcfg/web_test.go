@@ -346,3 +346,57 @@ func TestServerStart(t *testing.T) {
 		t.Error("只能启动 Caddy 或 Nginx")
 	}
 }
+
+// 站点要用的端口被别的程序占着：检测时看得到程序名就直接拒绝；看不到的，命令开头再查一次。
+// 重载失败要撤下刚写的站点并重启服务（Caddy 重载失败后会卡在“重载中”）。
+func TestSitePortBusy(t *testing.T) {
+	e := risk.New()
+	out := strings.Replace(ubuntuOut, "== listen\n", "== listen\nLISTEN 0 4096 *:443 *:* users:((\"xray-linux-amd6\",pid=222828,fd=9))\n", 1)
+	st := Parse(out, 22)
+	st.Caddy.Installed = true
+	var held *Listen
+	for i := range st.Listen {
+		if st.Listen[i].Port == 443 {
+			held = &st.Listen[i]
+		}
+	}
+	if held == nil || held.Proc != "xray-linux-amd6" {
+		t.Fatalf("应认出占着 443 的程序：%+v", st.Listen)
+	}
+	if _, _, err := SiteAddCommand(st, SiteRequest{Address: "app.example.com", Port: 3001}); err == nil || !strings.Contains(err.Error(), "443 端口已经被 xray-linux-amd6 占用") {
+		t.Errorf("443 被别的程序占着时应拒绝，得到 %v", err)
+	}
+	// 带端口的地址、只用 HTTP 的站点不受 443 影响。
+	cmd, _, err := SiteAddCommand(st, SiteRequest{Address: "app.example.com:8443", Port: 3001})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []string{`grep -E '[:.]8443[[:space:]]' | grep -v '"caddy"'`, "没有改动任何东西",
+		"systemctl reload-or-restart caddy", "app.example.com_8443.caddy.rejected", "systemctl restart caddy", "已撤下这个站点并恢复原来的配置"} {
+		if !strings.Contains(cmd, s) {
+			t.Errorf("命令里缺少 %q：\n%s", s, cmd)
+		}
+	}
+	if strings.Index(cmd, "ss -Htlnp") > strings.Index(cmd, "mkdir -p") {
+		t.Error("端口检查要在动任何文件之前")
+	}
+	if got := e.Classify(cmd).Level; got != risk.L1 {
+		t.Errorf("添加站点应是 L1，得到 %s：%+v", got, e.Classify(cmd).Findings)
+	}
+	// Caddy 自己占着 443 不算被占。
+	st.Listen = []Listen{{Port: 443, Addr: "*:443", Proc: "caddy"}}
+	if _, _, err := SiteAddCommand(st, SiteRequest{Address: "app.example.com", Port: 3001}); err != nil {
+		t.Errorf("Caddy 自己占着 443 时应能添加：%v", err)
+	}
+}
+
+// systemctl is-active 报 reloading 时进程是在的：不能当成没在运行（否则页面会给出只会卡住的“启动”）。
+func TestReloadingCountsAsRunning(t *testing.T) {
+	out := strings.Replace(ubuntuOut, "== caddy\nactive\n", "== caddy\nreloading\n", 1)
+	if out == ubuntuOut {
+		t.Skip("样例输出里没有 Caddy 的状态")
+	}
+	if st := Parse(out, 22); !st.Caddy.Active {
+		t.Error("reloading 应算在运行")
+	}
+}

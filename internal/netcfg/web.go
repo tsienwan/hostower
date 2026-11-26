@@ -342,6 +342,7 @@ func (s Site) caddyConfig(cert, key string) string {
 func caddySiteAdd(s Site, req SiteRequest) string {
 	file := SiteFile("caddy", s.Address)
 	var b strings.Builder
+	b.WriteString(portGuard(s))
 	b.WriteString(step("mkdir -p "+SitesDir, "创建 "+SitesDir+" 失败"))
 	b.WriteString(step("install -d -o caddy -g caddy /var/log/caddy", "创建日志目录 /var/log/caddy 失败"))
 	b.WriteString(`grep -qs '^import ` + SitesDir + `/' ` + Caddyfile + ` || { ` +
@@ -350,7 +351,7 @@ func caddySiteAdd(s Site, req SiteRequest) string {
 	b.WriteString(writeRoot(file, s.caddyConfig(req.Cert, req.Key), "写站点配置失败"))
 	b.WriteString("{ " + asRoot("caddy validate --config "+Caddyfile+" --adapter caddyfile") + "; } || { " +
 		asRoot("mv -f "+file+" "+file+".rejected") + "; echo 'hostower: Caddy 配置校验没通过，已撤下这个站点（地址重复或者写法不对）'; exit 1; }; ")
-	b.WriteString(reload("caddy"))
+	b.WriteString(reloadOrRollback("caddy", file))
 	return b.String()
 }
 
@@ -458,6 +459,7 @@ func nginxTest(file, fail string) string {
 func nginxSiteAdd(st Status, s Site, req SiteRequest) (string, error) {
 	file := SiteFile("nginx", s.Address)
 	var b strings.Builder
+	b.WriteString(portGuard(s))
 	if s.TLS == "le" {
 		if !st.Certbot.Installed {
 			in, err := installPkgs(st, "certbot", "安装 certbot 失败")
@@ -470,7 +472,7 @@ func nginxSiteAdd(st Status, s Site, req SiteRequest) (string, error) {
 		// 第一步：先用 HTTP 把站点开起来，Let's Encrypt 要从 80 端口访问验证文件。
 		b.WriteString(writeRoot(file, s.nginxConfig("http", "", ""), "写站点配置失败"))
 		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，已撤下这个站点（地址重复或者写法不对）"))
-		b.WriteString(reload("nginx"))
+		b.WriteString(reloadOrRollback("nginx", file))
 		mail := "--register-unsafely-without-email"
 		if req.Email != "" {
 			mail = "-m " + snippet.Quote(req.Email)
@@ -486,7 +488,7 @@ func nginxSiteAdd(st Status, s Site, req SiteRequest) (string, error) {
 		b.WriteString(writeRoot(file, s.nginxConfig(s.TLS, req.Cert, req.Key), "写站点配置失败"))
 		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，已撤下这个站点（地址重复、证书路径不对或者写法不对）"))
 	}
-	b.WriteString(reload("nginx"))
+	b.WriteString(reloadOrRollback("nginx", file))
 	return b.String(), nil
 }
 
@@ -498,6 +500,9 @@ func SiteAddCommand(st Status, req SiteRequest) (string, Site, error) {
 	s, err := st.normalize(req)
 	if err != nil {
 		return "", Site{}, err
+	}
+	if l, ok := st.portHolder(s); ok {
+		return "", Site{}, errors.New(strconv.Itoa(l.Port) + " 端口已经被 " + l.Proc + " 占用：把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口")
 	}
 	var cmd string
 	if s.Server == "caddy" {
@@ -555,6 +560,46 @@ func bring(cmd, server, fail string) string {
 // 只用 reload 的话，服务没在运行时会失败，而站点文件已经写进去了。
 func reload(server string) string {
 	return bring("systemctl reload-or-restart "+server, server, "重载 "+serverName(server)+" 失败")
+}
+
+// sitePort 是站点要监听的端口：地址里写了就是它，否则 HTTPS 是 443、只用 HTTP 是 80。
+func sitePort(s Site) int {
+	if _, port, err := net.SplitHostPort(s.Address); err == nil {
+		n, _ := strconv.Atoi(port)
+		return n
+	}
+	if s.TLS == "http" {
+		return 80
+	}
+	return 443
+}
+
+// portHolder 报告站点要用的端口是不是已经被别的程序占了（检测时看得到程序名才算数；看不到的留给 portGuard 在执行时查）。
+func (st Status) portHolder(s Site) (Listen, bool) {
+	port := sitePort(s)
+	for _, l := range st.Listen {
+		if l.Port == port && l.Proc != "" && l.Proc != s.Server {
+			return l, true
+		}
+	}
+	return Listen{}, false
+}
+
+// portGuard 在动任何文件之前再查一次：站点要用的端口被别的程序占着就停下。
+// 不查的话，配置校验能过、重载却失败（Caddy 还会卡在“重载中”），留下一个打不开的站点。
+func portGuard(s Site) string {
+	port := strconv.Itoa(sitePort(s))
+	return `busy=$({ ` + asRoot("ss -Htlnp") + `; } 2>/dev/null | grep -E '[:.]` + port + `[[:space:]]' | grep -v '"` + s.Server + `"' | head -n 1); ` +
+		`if [ -n "$busy" ]; then echo "$busy"; echo ` + snippet.Quote("hostower: "+port+" 端口已经被别的程序占用（见上一行），没有改动任何东西。把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口") + `; exit 1; fi; `
+}
+
+// reloadOrRollback 在添加站点时重载服务；失败就把刚写的站点文件撤下、打出日志、再重启一次服务回到原来的配置。
+// 重启是为了把 Caddy 从“重载中”里拉出来：它重载失败后会一直停在那个状态，之后的重载和启动都会卡住。
+func reloadOrRollback(server, file string) string {
+	name := serverName(server)
+	return "{ " + asRoot("systemctl reload-or-restart "+server) + "; } || { " + asRoot("mv -f "+file+" "+file+".rejected") + "; " +
+		asRoot("journalctl -u "+server+" -n 20 --no-pager") + "; " + asRoot("systemctl restart "+server) + "; echo " +
+		snippet.Quote("hostower: 重载 "+name+" 失败，已撤下这个站点并恢复原来的配置，原因见上面的日志") + "; exit 1; }; "
 }
 
 // ServerStartCommand 启动装好了但没在运行的 Caddy 或 Nginx。

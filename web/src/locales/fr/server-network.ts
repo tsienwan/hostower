@@ -79,6 +79,7 @@ const dict: Record<string, string> = {
   "这台主机上没有安装 Nginx": "Nginx n’est pas installé sur cet hôte",
   "Nginx 已经在运行了": "Nginx tourne déjà",
   "登录账号不是 root，也没有 sudo：启动不了 Nginx": "Le compte n’est pas root et n’a pas sudo : impossible de démarrer Nginx",
+  "{a} 端口已经被 {b} 占用：把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口": "Le port {a} est déjà occupé par {b} : écrivez l’adresse avec un port (par exemple app.example.com:8443), ou déplacez d’abord ce programme sur un autre port",
 };
 
 export default dict;

@@ -79,6 +79,7 @@ const dict: Record<string, string> = {
   "这台主机上没有安装 Nginx": "이 호스트에 Nginx가 설치되어 있지 않습니다",
   "Nginx 已经在运行了": "Nginx가 이미 실행 중입니다",
   "登录账号不是 root，也没有 sudo：启动不了 Nginx": "로그인 계정이 root가 아니고 sudo도 없어 Nginx를 시작할 수 없습니다",
+  "{a} 端口已经被 {b} 占用：把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口": "{a} 포트를 이미 {b}가 쓰고 있습니다. 주소를 포트가 붙은 형태(예: app.example.com:8443)로 쓰거나, 먼저 그 프로그램을 다른 포트로 옮기세요",
 };
 
 export default dict;

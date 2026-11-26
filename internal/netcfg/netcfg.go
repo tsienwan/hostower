@@ -50,7 +50,7 @@ const DetectCommand = `echo '== os'; cat /etc/os-release 2>/dev/null; ` +
 	`echo '== authlog'; ls /var/log/auth.log /var/log/secure 2>/dev/null; ` +
 	`echo '== client'; echo "${SSH_CONNECTION%% *}"; ` +
 	`echo '== sshd'; grep -is '^[[:space:]]*port[[:space:]]' /etc/ssh/sshd_config; ` +
-	`echo '== listen'; ss -Htln 2>/dev/null; ` +
+	`echo '== listen'; ss -Htlnp 2>/dev/null; ` +
 	`echo '== docker'; docker ps --format '{{.Names}}	{{.Ports}}' 2>/dev/null; ` +
 	`echo '== end'`
 
@@ -77,6 +77,8 @@ func (p Port) Valid() error {
 type Listen struct {
 	Port int    `json:"port"`
 	Addr string `json:"addr"`
+	// Proc 是占着这个端口的程序名。只有看得到时才有（ss 只对 root 或进程的主人显示）。
+	Proc string `json:"proc,omitempty"`
 }
 
 // DockerPort 是 Docker 直接发布到所有地址的端口：它们绕过 ufw 和 firewalld。
@@ -134,8 +136,9 @@ type Status struct {
 }
 
 var (
-	ufwRuleRe   = regexp.MustCompile(`^(\S+)\s+(ALLOW|DENY|REJECT|LIMIT)(?:\s+IN)?\s+(.+)$`)
-	dockerPubRe = regexp.MustCompile(`(?:^|,\s*)(?:0\.0\.0\.0|\[?::\]?):(\d+)->\d+/(tcp|udp)`)
+	listenProcRe = regexp.MustCompile(`users:\(\("([^"]+)"`)
+	ufwRuleRe    = regexp.MustCompile(`^(\S+)\s+(ALLOW|DENY|REJECT|LIMIT)(?:\s+IN)?\s+(.+)$`)
+	dockerPubRe  = regexp.MustCompile(`(?:^|,\s*)(?:0\.0\.0\.0|\[?::\]?):(\d+)->\d+/(tcp|udp)`)
 )
 
 // Parse 解析检测脚本的输出。sshPort 是 Hostower 连这台主机用的 SSH 端口（不知道时传 0，就用 sshd_config 里的）。
@@ -220,11 +223,11 @@ func Parse(out string, sshPort int) Status {
 		fw.Recommended = "firewalld"
 	}
 	st.Caddy.Installed = has["caddy"]
-	st.Caddy.Active = len(sec["caddy"]) > 0 && strings.TrimSpace(sec["caddy"][0]) == "active"
+	st.Caddy.Active = len(sec["caddy"]) > 0 && unitRunning(sec["caddy"][0])
 	st.Caddy.Imported = len(sec["caddy-import"]) > 0
 	st.Caddy.Installable = fw.Recommended != "" // 和防火墙一样：apt / dnf 的发行版
 	st.Nginx.Installed = has["nginx"]
-	st.Nginx.Active = len(sec["nginx"]) > 0 && strings.TrimSpace(sec["nginx"][0]) == "active"
+	st.Nginx.Active = len(sec["nginx"]) > 0 && unitRunning(sec["nginx"][0])
 	st.Nginx.Installable = st.Caddy.Installable
 	for _, server := range []string{"caddy", "nginx"} {
 		key := map[string]string{"caddy": "sites", "nginx": "nginx-sites"}[server]
@@ -278,7 +281,11 @@ func Parse(out string, sshPort int) Status {
 			continue
 		}
 		seen[n] = true
-		st.Listen = append(st.Listen, Listen{Port: n, Addr: f[3]})
+		li := Listen{Port: n, Addr: f[3]}
+		if m := listenProcRe.FindStringSubmatch(l); m != nil {
+			li.Proc = m[1]
+		}
+		st.Listen = append(st.Listen, li)
 	}
 	sort.Slice(st.Listen, func(i, j int) bool { return st.Listen[i].Port < st.Listen[j].Port })
 	dseen := map[string]bool{}
@@ -294,6 +301,13 @@ func Parse(out string, sshPort int) Status {
 		}
 	}
 	return st
+}
+
+// unitRunning 看 systemctl is-active 的输出算不算“在运行”。reloading 也算：进程在，只是正在（或卡在）重载配置；
+// 把它当成没在运行的话，页面会给出“启动”，而这时候 systemctl start 只会排在重载后面一直等。
+func unitRunning(isActive string) bool {
+	s := strings.TrimSpace(isActive)
+	return s == "active" || s == "reloading"
 }
 
 // CanRoot 报告能不能以 root 身份改系统：本来就是 root，或者有 sudo 且没被禁止提权。
