@@ -4,6 +4,12 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.3
+
+### Improved
+
+- The add-site dialog has a new **Public port** field: it shows the default as soon as the dialog opens (443 for HTTPS, 80 for HTTP only), so the port no longer has to be written into the address. When 443 is already held by another program (for example 3x-ui's Xray), the field is prefilled with a free port; switching back to the occupied port names the program holding it and offers a one-click replacement.
+
 ## v0.5.2
 
 ### Improved
