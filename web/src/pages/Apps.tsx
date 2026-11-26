@@ -40,7 +40,8 @@ const typeLabel = { compose: "容器应用", npm: "命令行工具" } as const;
 export function AppsPage() {
   const t = useT();
   const [sp, setSp] = useSearchParams();
-  const tab = sp.get("tab") === "installed" ? "installed" : sp.get("tab") === "env" ? "env" : "catalog";
+  // “已安装”最常用，排在最前、默认打开；目录和环境用 ?tab= 指定。
+  const tab = sp.get("tab") === "catalog" ? "catalog" : sp.get("tab") === "env" ? "env" : "installed";
   const [catalog, setCatalog] = useState<AppItem[] | null>(() => cached<AppItem[]>("apps:catalog") ?? null);
   const [categories, setCategories] = useState<string[]>([]);
   const [installing, setInstalling] = useState<AppItem | null>(null);
@@ -57,7 +58,7 @@ export function AppsPage() {
     if (!a) return;
     setInstallHost(sp.get("host") ?? "");
     setInstalling(a);
-    setSp({}, { replace: true });
+    setSp({ tab: "catalog" }, { replace: true });
   }, [wantInstall, byName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -65,8 +66,8 @@ export function AppsPage() {
       <div className="topbar">
         <h1>{t("应用")}</h1>
         <div className="tabs" role="tablist">
-          <button role="tab" aria-selected={tab === "catalog"} className={"tab" + (tab === "catalog" ? " active" : "")} onClick={() => setSp({})}>{t("应用目录")}</button>
-          <button role="tab" aria-selected={tab === "installed"} className={"tab" + (tab === "installed" ? " active" : "")} onClick={() => setSp({ tab: "installed" })}>{t("已安装")}</button>
+          <button role="tab" aria-selected={tab === "installed"} className={"tab" + (tab === "installed" ? " active" : "")} onClick={() => setSp({})}>{t("已安装")}</button>
+          <button role="tab" aria-selected={tab === "catalog"} className={"tab" + (tab === "catalog" ? " active" : "")} onClick={() => setSp({ tab: "catalog" })}>{t("应用目录")}</button>
           <button role="tab" aria-selected={tab === "env"} className={"tab" + (tab === "env" ? " active" : "")} onClick={() => setSp({ tab: "env" })}>{t("环境")}</button>
         </div>
       </div>
@@ -473,7 +474,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
           )}
         </div>
         {!data ? <div className="empty">{loading ? t("加载中…") : t("还没有主机")}</div>
-          : rows.length === 0 ? <Empty icon={<Package />} title={t("还没有通过应用市场安装的应用")} />
+          : rows.length === 0 ? <Empty icon={<Package />} title={t("还没有通过应用市场安装的应用")}><button className="btn primary sm" onClick={() => setSp({ tab: "catalog" })}><Search />{t("应用目录")}</button></Empty>
           : (
             <div className="table-wrap">
               <table className="table app-table">
