@@ -1465,6 +1465,8 @@ button.tag:hover { background: color-mix(in srgb, var(--text) 10%, transparent);
 /* 主机详情 · 硬件：磁盘清单默认收起 */
 .hw-more { display: flex; align-items: center; gap: 8px; width: 100%; padding: 12px 24px; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; font-size: 13px; color: var(--text-2); cursor: pointer; text-align: left; }
 .hw-more:hover { background: var(--hover); color: var(--text); }
+/* 整条通栏的按钮：焦点框画在里面、淡一些，不然会在卡片外面套一圈很粗的蓝框。 */
+.hw-more:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 35%, transparent); outline-offset: -4px; border-radius: 10px; background: var(--hover); color: var(--text); }
 .hw-more svg { width: 16px; height: 16px; color: var(--text-3); transition: transform 0.2s var(--ease); }
 .hw-more.open .chev { transform: rotate(180deg); }
 .hw-more .num { color: var(--text-3); }
