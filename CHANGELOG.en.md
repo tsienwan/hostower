@@ -4,6 +4,17 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.6
+
+### Added
+
+- The Network tab supports Tailscale: one-click install (official package repository), join a network, change settings (name on the network, DNS, subnet routes, Tailscale SSH), disconnect and log out, and it shows the host's private address and network. Joining works by logging in from the browser (the request output gives the login link) or with an auth key stored as an app secret; the key never appears in commands, requests or the audit log. All of these are high-risk operations (L2) that require re-verification on approval; when Hostower itself reaches the host over Tailscale, disconnect and log out are not offered.
+- A site's reverse proxy can forward to another host: when adding a site, **Forward to** can be another host from the inventory, or an IPv4 address or host name. Use a host with a good route as the entry point for a service on another host; when that host has joined Tailscale its private address is listed, and the hop between the two is encrypted.
+
+### Improved
+
+- The **Disks** row on the host page no longer draws a thick blue frame around the whole card when it has keyboard focus.
+
 ## v0.5.5
 
 ### Added
