@@ -140,7 +140,7 @@ func metadataOnly(c *command) bool {
 	return false
 }
 
-var criticalUnitRe = regexp.MustCompile(`^(ssh|sshd|firewalld|ufw|nftables|iptables|netfilter-persistent|fail2ban|networking|network|NetworkManager|systemd-networkd|systemd-resolved)(\.service|\.socket)?$`)
+var criticalUnitRe = regexp.MustCompile(`^(ssh|sshd|firewalld|ufw|nftables|iptables|netfilter-persistent|fail2ban|networking|network|NetworkManager|systemd-networkd|systemd-resolved|tailscaled)(\.service|\.socket)?$`)
 
 var destructiveSQLRe = regexp.MustCompile(`(?i)\b(drop\s+(table|database|schema|index|user)|truncate|delete\s+from|flushall|flushdb|dropdatabase)\b`)
 
@@ -281,6 +281,15 @@ func builtin(e *Engine, v *Verdict, c *command, depth int) (Level, string, strin
 			return L0, "builtin.read", "只读"
 		}
 		return L2, "firewall.change", "修改 Fail2ban 的封禁规则或服务（它管着防火墙）"
+	case "tailscale":
+		// Tailscale 决定这台主机在哪个内网里、能被谁连上：除了查看，加入、退出、改设置、对外发布端口都按高危算。
+		if set("status ip version netcheck whois")[c.sub()] {
+			return L0, "builtin.read", "只读"
+		}
+		if pos := c.pos(); c.sub() == "debug" && len(pos) == 2 && pos[1] == "prefs" {
+			return L0, "builtin.read", "只读"
+		}
+		return L2, "network.overlay", "改变这台主机的 Tailscale 组网（影响它能被谁连上）"
 	case "certbot":
 		switch c.sub() {
 		case "certificates":

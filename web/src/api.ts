@@ -337,6 +337,7 @@ export const api = {
   hostSites: (host: string, b: { action: "add" | "remove" | "install-caddy" | "install-nginx" | "start-caddy" | "start-nginx"; preview?: boolean } & Partial<SiteForm>) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/sites`, b),
   hostCerts: (host: string, b: { action: "dry-run" | "renew" | "force"; name?: string; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/certs`, b),
   hostFail2ban: (host: string, b: { action: "install" | "config" | "unban"; config?: F2BConfig; jail?: string; ip?: string; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/fail2ban`, b),
+  hostTailscale: (host: string, b: { action: "install" | "up" | "set" | "down" | "logout"; options?: TSOptions; secret?: string; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/tailscale`, b),
   hostNetLog: (host: string, q: { kind: "access" | "error" | "fail2ban"; server?: string; address?: string }) => call<{ text: string }>("GET", `/hosts/${encodeURIComponent(host)}/netlog?${new URLSearchParams(Object.entries(q).filter((e): e is [string, string] => !!e[1]))}`),
   appConfigure: (b: { host: string; instance: string; params?: Record<string, string>; secrets?: Record<string, string>; ai?: AIConfig; preview?: boolean }) => call<AppPlanResult>("POST", "/apps/configure", b),
   appAuto: () => call<AppAutoStatus>("GET", "/apps/autoupdate"),
@@ -594,12 +595,13 @@ export type SiteTLS = "auto" | "internal" | "le" | "custom" | "http";
 export interface NetSite { server: SiteServer; address: string; kind: SiteKind; target: string; tls: SiteTLS; maxBody?: number; hsts?: boolean; keepHttp?: boolean; perm?: boolean }
 /** “添加站点”的表单，和服务端的 netcfg.SiteRequest 对应。 */
 export interface SiteForm {
-  server: SiteServer; address: string; kind: SiteKind; port: number; dir: string; url: string; tls: SiteTLS;
+  server: SiteServer; address: string; kind: SiteKind; port: number; upstream: string; dir: string; url: string; tls: SiteTLS;
   email: string; agree: boolean; cert: string; key: string; maxBody: number; hsts: boolean; keepHttp: boolean; perm: boolean;
 }
 export interface NetCert { name: string; domains: string[]; expiry: string; days: number; valid: boolean }
 export interface F2BJail { name: string; failed: number; totalFailed: number; banned: number; totalBanned: number; ips: string[] }
 export interface F2BConfig { bantime: number; findtime: number; maxretry: number; ignore: string[]; jails: string[] }
+export interface TSOptions { hostname: string; acceptRoutes: boolean; acceptDns: boolean; ssh: boolean }
 export interface NetworkView {
   status: {
     os: string; family: string; root: boolean; sudo: boolean; noNewPrivs: boolean; sshPort: number;
@@ -609,6 +611,7 @@ export interface NetworkView {
     certbot: { installed: boolean; autoRenew: boolean };
     certs: NetCert[];
     fail2ban: { installed: boolean; active: boolean; installable: boolean; unknown: boolean; jails: F2BJail[]; config: F2BConfig | null; authLog: boolean };
+    tailscale: { installed: boolean; active: boolean; installable: boolean; state: "" | "Running" | "NeedsLogin" | "Stopped" | "Starting" | "NeedsMachineAuth"; ips: string[]; name: string; dnsName: string; tailnet: string; version: string; options: TSOptions | null; viaTailscale: boolean };
     clientIp: string;
     sites: NetSite[];
     listen: { port: number; addr: string; proc?: string }[];

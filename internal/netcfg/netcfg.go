@@ -32,7 +32,7 @@ const Caddyfile = "/etc/caddy/Caddyfile"
 const DetectCommand = `echo '== os'; cat /etc/os-release 2>/dev/null; ` +
 	`echo '== uid'; id -u; ` +
 	`echo '== nnp'; grep -s '^NoNewPrivs:' /proc/self/status; ` +
-	`echo '== has'; for c in ufw firewall-cmd firewall-offline-cmd nft iptables caddy nginx certbot fail2ban-client docker apt-get dnf yum sudo; do command -v "$c" >/dev/null 2>&1 && echo "$c"; done; ` +
+	`echo '== has'; for c in ufw firewall-cmd firewall-offline-cmd nft iptables caddy nginx certbot fail2ban-client tailscale docker apt-get dnf yum sudo; do command -v "$c" >/dev/null 2>&1 && echo "$c"; done; ` +
 	`echo '== ufw'; ufw status 2>/dev/null || sudo -n ufw status 2>/dev/null; ` +
 	`echo '== firewalld'; systemctl is-active firewalld 2>/dev/null; ` +
 	`echo '== firewalld-ports'; firewall-cmd --list-ports 2>/dev/null || sudo -n firewall-cmd --list-ports 2>/dev/null; ` +
@@ -48,6 +48,9 @@ const DetectCommand = `echo '== os'; cat /etc/os-release 2>/dev/null; ` +
 	`echo '== f2b-jails'; if command -v fail2ban-client >/dev/null 2>&1; then for j in $({ fail2ban-client status 2>/dev/null || sudo -n fail2ban-client status 2>/dev/null; } | sed -n 's/.*Jail list:[[:space:]]*//p' | tr ',' ' '); do echo "-- $j"; fail2ban-client status "$j" 2>/dev/null || sudo -n fail2ban-client status "$j" 2>/dev/null; done; fi; ` +
 	`echo '== f2b-conf'; grep -hs '^# hostower-f2b ' ` + F2BFile + `; ` +
 	`echo '== authlog'; ls /var/log/auth.log /var/log/secure 2>/dev/null; ` +
+	`echo '== ts'; systemctl is-active tailscaled 2>/dev/null; ` +
+	`echo '== ts-status'; tailscale status --json 2>/dev/null; ` +
+	`echo '== ts-prefs'; tailscale debug prefs 2>/dev/null; ` +
 	`echo '== client'; echo "${SSH_CONNECTION%% *}"; ` +
 	`echo '== sshd'; grep -is '^[[:space:]]*port[[:space:]]' /etc/ssh/sshd_config; ` +
 	`echo '== listen'; ss -Htlnp 2>/dev/null; ` +
@@ -125,8 +128,9 @@ type Status struct {
 		// AutoRenew 表示 certbot 的定时续期在跑（systemd 定时器或 cron）。
 		AutoRenew bool `json:"autoRenew"`
 	} `json:"certbot"`
-	Certs    []Cert   `json:"certs"`
-	Fail2ban Fail2ban `json:"fail2ban"`
+	Certs     []Cert    `json:"certs"`
+	Fail2ban  Fail2ban  `json:"fail2ban"`
+	Tailscale Tailscale `json:"tailscale"`
 	// ClientIP 是这台主机看到的 Hostower 的来源地址（SSH_CONNECTION 的第一段）；本机执行时为空。
 	ClientIP string       `json:"clientIp"`
 	Sites    []Site       `json:"sites"`
@@ -251,6 +255,8 @@ func Parse(out string, sshPort int) Status {
 			st.ClientIP = ip.String()
 		}
 	}
+	st.Tailscale = parseTailscale(has["tailscale"], sec, st.ClientIP)
+	st.Tailscale.Installable = st.Caddy.Installable
 	st.SSHPort = sshPort
 	if st.SSHPort == 0 {
 		st.SSHPort = 22

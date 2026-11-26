@@ -34,7 +34,7 @@ type Site struct {
 	Server  string `json:"server"`  // caddy | nginx
 	Address string `json:"address"` // 域名（可带端口）或 IP:端口
 	Kind    string `json:"kind"`    // proxy（反向代理）| static（静态目录）| redirect（跳转）
-	// Target：反向代理是 127.0.0.1:端口，静态目录是目录，跳转是网址。
+	// Target：反向代理是 地址:端口（默认是本机的 127.0.0.1，也可以是另一台主机），静态目录是目录，跳转是网址。
 	Target string `json:"target"`
 	// TLS：auto（Caddy 自动申请）| internal（Caddy 自签）| le（Nginx + Let's Encrypt）| custom（已有证书）| http（不用 HTTPS）
 	TLS      string `json:"tls"`
@@ -46,10 +46,13 @@ type Site struct {
 
 // SiteRequest 是“添加站点”的表单。
 type SiteRequest struct {
-	Server   string `json:"server"`
-	Address  string `json:"address"`
-	Kind     string `json:"kind"`
-	Port     int    `json:"port"`  // 反向代理：转发到 127.0.0.1 的端口
+	Server  string `json:"server"`
+	Address string `json:"address"`
+	Kind    string `json:"kind"`
+	Port    int    `json:"port"` // 反向代理：转发到的端口
+	// Upstream 是反向代理转发到的地址：空表示本机（127.0.0.1）；也可以填另一台主机的 IPv4 地址或主机名，
+	// 用这台主机当入口去访问那台主机上的服务。
+	Upstream string `json:"upstream"`
 	Dir      string `json:"dir"`   // 静态目录
 	URL      string `json:"url"`   // 跳转到的网址
 	TLS      string `json:"tls"`   // 空表示按服务器选默认值
@@ -131,6 +134,9 @@ func (s Site) marker() string {
 	}
 	return b
 }
+
+// upstreamRe 是反向代理目标地址的写法：IPv4 地址或主机名。它会原样写进站点配置，所以只放行这几种字符。
+var upstreamRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$`)
 
 func parseSite(server, line string) (Site, bool) {
 	rest, ok := strings.CutPrefix(strings.TrimSpace(line), siteMarker)
@@ -234,7 +240,14 @@ func (st Status) normalize(req SiteRequest) (Site, error) {
 		if req.Port < 1 || req.Port > 65535 {
 			return Site{}, errors.New("转发到的端口要在 1 到 65535 之间")
 		}
-		s.Target = "127.0.0.1:" + strconv.Itoa(req.Port)
+		up := strings.ToLower(strings.TrimSpace(req.Upstream))
+		if up == "" || up == "localhost" {
+			up = "127.0.0.1"
+		}
+		if !upstreamRe.MatchString(up) || strings.Contains(up, "..") {
+			return Site{}, errors.New("转发到的地址只能是 IPv4 地址或主机名（不带协议、端口和路径）")
+		}
+		s.Target = up + ":" + strconv.Itoa(req.Port)
 	case "static":
 		dir := strings.TrimRight(strings.TrimSpace(req.Dir), "/")
 		if !staticDirRe.MatchString(dir) {

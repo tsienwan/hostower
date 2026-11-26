@@ -191,6 +191,7 @@ func (s *Server) Handler() http.Handler {
 	priv("POST /api/v1/hosts/{name}/sites", s.hostSites)
 	priv("POST /api/v1/hosts/{name}/certs", s.hostCerts)
 	priv("POST /api/v1/hosts/{name}/fail2ban", s.hostFail2ban)
+	priv("POST /api/v1/hosts/{name}/tailscale", s.hostTailscale)
 	priv("GET /api/v1/hosts/{name}/netlog", s.hostNetLog)
 	priv("GET /api/v1/select", s.selectHosts)
 	priv("POST /api/v1/classify", s.classify)

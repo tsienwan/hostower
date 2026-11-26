@@ -318,6 +318,17 @@ Si le démarrage échoue, la sortie de la demande contient le journal récent du
 
 Deux programmes ne peuvent pas écouter sur le même port. Déplacez l'entrée Xray sur un autre port, ou donnez au site une adresse avec port (par ex. `app.example.com:8443`) ; dans ce cas Nginx ne peut utiliser qu'un certificat existant, tandis que Caddy peut toujours en obtenir un automatiquement.
 
+### Je veux qu'un hôte bien connecté serve d'entrée vers un service hébergé sur un autre hôte
+
+Par exemple, l'hôte A a la meilleure route et l'hôte B le stockage : les navigateurs se connectent à A, qui transmet à une application sur B.
+
+1. Dans l'onglet **Réseau** des deux hôtes, installez **Tailscale** puis **rejoignez le réseau** (même compte Tailscale). Vous pouvez vous connecter depuis le navigateur, ou enregistrer d'abord une clé d'authentification comme secret d'application et la choisir : la clé n'apparaît ni dans les commandes ni dans l'audit. Une fois le réseau rejoint, chaque hôte a une adresse interne en `100.x`.
+2. Dans l'onglet **Réseau** de A, ajoutez un site de type proxy inverse, choisissez l'adresse Tailscale de B dans **Rediriger vers** (elle est proposée dès que vous avez ouvert l'onglet Réseau de B ; sinon choisissez **Autre adresse** et saisissez-la), et indiquez le port de l'application sur B.
+
+Le tronçon de A vers B passe alors par un tunnel chiffré et le port de B n'a pas à être ouvert sur Internet. Trois points à retenir : l'application sur B ne doit pas écouter uniquement sur `127.0.0.1` ; envois et téléchargements comptent dans le trafic de A ; installer Tailscale, rejoindre le réseau, modifier ses réglages et se déconnecter sont des opérations à haut risque qui demandent une nouvelle vérification lors de l'approbation.
+
+Sans Tailscale, vous pouvez saisir directement l'adresse publique de B, mais ce tronçon est en HTTP non chiffré et le port de B ne devrait être autorisé que pour l'IP de A.
+
 ### Fail2ban peut-il me bannir, moi ou Hostower ?
 
 La liste blanche contient toujours les adresses de bouclage et l'adresse depuis laquelle Hostower se connecte ; Hostower se connecte par clé et ne laisse donc aucun échec. Si votre IP publique change, ajoutez à la liste blanche les réseaux que vous utilisez habituellement.

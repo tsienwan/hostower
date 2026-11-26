@@ -1,6 +1,6 @@
-// 主机的网络入口：防火墙放行端口；Caddy / Nginx 站点和证书；Fail2ban；对外监听的端口。
+// 主机的网络入口：防火墙放行端口；Caddy / Nginx 站点和证书；Fail2ban；Tailscale；对外监听的端口。
 // 这一页没有自己的执行通道：现状是只读检测，改动都变成请求，走判级和审批
-// （改防火墙和 Fail2ban 是 L2，改站点、申请和续期证书是 L1）。远端的内容（日志、证书信息）一律按纯文本显示。
+// （改防火墙、Fail2ban 和 Tailscale 是 L2，改站点、申请和续期证书是 L1）。远端的内容（日志、证书信息）一律按纯文本显示。
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Ban, ExternalLink, FileText, Globe, KeyRound, Lock, Play, Plus, RefreshCw, Settings2, Shield, ShieldAlert, ShieldCheck, ShieldOff, Trash2, TriangleAlert } from "lucide-react";
@@ -11,6 +11,7 @@ import { Select } from "../controls";
 import { PreviewPanel } from "../shared";
 import { cached, remember } from "../cache";
 import { ts, useT } from "../i18n";
+import { TailscaleCard } from "./Tailscale";
 
 const portText = (p: NetPort) => `${p.port}/${p.proto}`;
 
@@ -322,6 +323,8 @@ export function NetworkPanel({ host }: { host: string }) {
         </div>
       </div>
 
+      <TailscaleCard host={host} data={data} canRoot={canRoot} loading={loading} reqs={reqs} activeReq={activeReq} Plan={PlanDialog} ReqLink={ReqLink} />
+
       <ListenCard data={data} />
 
       {dialog === "setup" && <SetupDialog host={host} data={data} onClose={() => setDialog(null)} />}
@@ -441,15 +444,39 @@ function Check({ checked, onChange, children }: { checked: boolean; onChange: (v
 
 const numIn = (v: string) => Number(v.replace(/\D/g, "")) || 0;
 
+/** 主机清单里的地址去掉账号和端口，只留主机部分；本机、IPv6 和空地址不算（转发目标只收 IPv4 和主机名）。 */
+function hostOnly(addr: string): string {
+  let a = addr.trim().slice(addr.lastIndexOf("@") + 1);
+  if ((a.match(/:/g) ?? []).length > 1 || a.startsWith("[")) return "";
+  a = a.split(":")[0].toLowerCase();
+  return !a || a === "localhost" || a.startsWith("127.") ? "" : a;
+}
+
+/** 是不是 Tailscale 分配的地址（100.64 到 100.127 开头的那一段）。 */
+function inTailnet(addr: string): boolean {
+  const m = /^100\.(\d+)\.\d+\.\d+$/.exec(addr);
+  return !!m && Number(m[1]) >= 64 && Number(m[1]) <= 127;
+}
+
 function SiteDialog({ host, data, port: preset, onClose }: { host: string; data: NetworkView; port: number; onClose: () => void }) {
   const t = useT();
   const st = data.status;
   const servers: SiteServer[] = [...(st.caddy.installed ? ["caddy" as const] : []), ...(st.nginx.installed ? ["nginx" as const] : [])];
   const [f, setF] = useState<SiteForm>({
-    server: servers[0] ?? "caddy", address: "", kind: "proxy", port: preset || 0, dir: "", url: "", tls: servers[0] === "nginx" ? "le" : "auto",
+    server: servers[0] ?? "caddy", address: "", kind: "proxy", port: preset || 0, upstream: "", dir: "", url: "", tls: servers[0] === "nginx" ? "le" : "auto",
     email: "", agree: false, cert: "", key: "", maxBody: 100, hsts: false, keepHttp: false, perm: false,
   });
   const set = (p: Partial<SiteForm>) => setF((o) => ({ ...o, ...p }));
+  // 反向代理也可以转发到另一台主机：用这台当入口（线路好），去访问那台上的服务。清单里别的主机直接列出来选。
+  // 那台主机加入了 Tailscale（这次打开页面后看过它的网络页，内存里有它的状态）时，把它的内网地址排在前面：那一段是加密的。
+  const others = useStore((s) => s.hosts).filter((h) => h.name !== host).flatMap((h) => {
+    const a = hostOnly(h.addr), tn = cached<NetworkView>("net:" + h.name)?.status.tailscale;
+    const ip = tn?.state === "Running" ? tn.ips.find((x) => x.startsWith("100.")) : undefined;
+    return [...(ip ? [{ name: `${h.name} · Tailscale`, addr: ip }] : []), ...(a ? [{ name: h.name, addr: a }] : [])];
+  });
+  const [where, setWhere] = useState<"local" | "host" | "custom">("local");
+  const remote = f.kind === "proxy" && where !== "local" ? f.upstream.trim() : "";
+  const viaTS = inTailnet(remote);
   // 给一个现成的端口：常见的备用 HTTPS 端口里第一个没人在监听的。
   const sparePort = [8443, 2053, 2083, 2087, 2096, 9443, 10443].find((p) => !st.listen.some((l) => l.port === p)) ?? 8443;
   const taken443 = st.listen.some((l) => l.port === 443 && l.proc && l.proc !== f.server);
@@ -470,7 +497,7 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
   const tls = tlsOptions.some((o) => o.value === f.tls) ? f.tls : tlsOptions[0].value;
   // 发给服务端的地址：端口不是这种站点的默认端口（HTTPS 443、只用 HTTP 80）时才写进去；IP 必须带端口。
   const addr = typedPort || !typed || !pub || (!ipOnly && pub === (tls === "http" ? 80 : 443)) ? typed : `${typed}:${pub}`;
-  const target = f.kind === "proxy" ? f.port > 0 : f.kind === "static" ? !!f.dir.trim() : !!f.url.trim();
+  const target = f.kind === "proxy" ? f.port > 0 && (where === "local" || !!f.upstream.trim()) : f.kind === "static" ? !!f.dir.trim() : !!f.url.trim();
   const ready = !!addr && target && (tls !== "le" || f.agree) && (tls !== "custom" || (!!f.cert.trim() && !!f.key.trim()));
   // 站点要监听的端口：地址里写了就是它，否则 HTTPS 是 443、只用 HTTP 是 80。看得到是别的程序占着它时直接说明白。
   const sitePort = pub || (tls === "http" ? 80 : 443);
@@ -495,9 +522,16 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
           <input id="site-pub" className="input mono" inputMode="numeric" value={typedPort || pubText} onChange={(e) => setPub(e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder={tls === "http" ? "80" : "443"} />
           <span className="hint">{t("浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。", { server: f.server === "nginx" ? "Nginx" : "Caddy" })}</span>
         </div>
-        {f.kind === "proxy" && <div className="field"><label htmlFor="site-port">{t("转发到本机端口")}</label>
+        {f.kind === "proxy" && <div className="field"><label>{t("转发到哪里")}</label>
+          <Select value={where === "host" ? f.upstream : where} onChange={(v) => {
+            if (v === "local") { setWhere("local"); set({ upstream: "" }); } else if (v === "custom") { setWhere("custom"); set({ upstream: "" }); } else { setWhere("host"); set({ upstream: v }); }
+          }} options={[{ value: "local", label: t("这台主机"), hint: "127.0.0.1" }, ...others.map((o) => ({ value: o.addr, label: o.name, hint: o.addr })), { value: "custom", label: t("其他地址…") }]} /></div>}
+        {f.kind === "proxy" && where === "custom" && <div className="field"><label htmlFor="site-up">{t("目标地址")}</label>
+          <input id="site-up" className="input mono" value={f.upstream} onChange={(e) => set({ upstream: e.target.value })} placeholder="192.0.2.20" spellCheck={false} />
+          <span className="hint">{t("IPv4 地址或主机名，不带协议和端口。")}</span></div>}
+        {f.kind === "proxy" && <div className="field"><label htmlFor="site-port">{where === "local" ? t("转发到本机端口") : t("转发到端口")}</label>
           <input id="site-port" className="input mono" inputMode="numeric" value={f.port || ""} onChange={(e) => set({ port: numIn(e.target.value) })} placeholder="3001" />
-          <span className="hint">{t("转发到 127.0.0.1 的这个端口，比如应用市场里装的应用的端口。支持 WebSocket。")}</span></div>}
+          <span className="hint">{where === "local" ? t("转发到 127.0.0.1 的这个端口，比如应用市场里装的应用的端口。支持 WebSocket。") : t("那台主机上服务监听的端口。支持 WebSocket。")}</span></div>}
         {f.kind === "static" && <div className="field"><label htmlFor="site-dir">{t("网站目录")}</label>
           <input id="site-dir" className="input mono" value={f.dir} onChange={(e) => set({ dir: e.target.value })} placeholder="/var/www/site" spellCheck={false} />
           <span className="hint">{t("要在 /var/www、/srv、/opt 或 /home 下面，不能是隐藏目录。目录里的文件会公开给所有人。")}</span></div>}
@@ -542,6 +576,9 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
           {f.kind === "redirect" && <Check checked={f.perm} onChange={(v) => set({ perm: v })}>{t("永久跳转（301，浏览器会记住）")}</Check>}
         </div>
       </div>
+      {remote && viaTS && st.tailscale.state !== "Running" && <div className="note crit"><TriangleAlert /><span>{t("{addr} 是 Tailscale 的内网地址，而这台主机还没有连上 Tailscale 网络，转发不过去：先在这一页的 Tailscale 卡片里加入网络。", { addr: remote })}</span></div>}
+      {remote && viaTS && <div className="note"><TriangleAlert /><span>{t("流量会先到这台主机，再经 Tailscale 转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是加密的，那台主机的端口不用对公网开放；它上面的服务不能只监听 127.0.0.1。", { addr: remote })}</span></div>}
+      {remote && !viaTS && <div className="note warn"><TriangleAlert /><span>{t("流量会先到这台主机，再转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是明文 HTTP；那台主机上的服务不能只监听 127.0.0.1，端口要让这台主机连得上，建议在那台主机的防火墙里只对这台主机的 IP 放行。", { addr: remote })}</span></div>}
       {holder && <div className="note crit"><TriangleAlert /><span>{t("{port} 端口已经被 {proc} 占用，这样添加会失败。把“对外端口”换成别的（比如 {example}），或者先把那个程序改到别的端口。", { port: sitePort, proc: holder.proc!, example: sparePort })}
         {suggested && <><br /><button type="button" className="btn sm" style={{ marginTop: 6 }} onClick={() => setPub(String(sparePort))}>{t("改用 {address}", { address: suggested })}</button></>}</span></div>}
       {busy443 && <div className="note warn"><TriangleAlert /><span>{t("443 端口已经有程序在监听（比如 3x-ui 的 Xray）：HTTPS 站点可能起不来。")}</span></div>}

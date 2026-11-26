@@ -233,6 +233,53 @@ func (s *Server) hostFail2ban(w http.ResponseWriter, r *http.Request) {
 	s.submitPlan(w, r, []plannedTarget{{host: name, command: cmd}}, in.Preview, kernel.Strategy{}, func(int) string { return intent }, "")
 }
 
+type tsBody struct {
+	netcfg.TSRequest
+	// Secret 是存着授权密钥的应用密钥的名字（只是名字）；空表示不用密钥，由人打开登录链接。
+	Secret  string `json:"secret"`
+	Preview bool   `json:"preview"`
+}
+
+// hostTailscale 安装 Tailscale、加入网络、改设置、断开、退出登录。都是 L2：它决定这台主机能被谁连上。
+// 授权密钥只以引用出现：执行时由内核从凭据存储里取出来，经标准输入送给 tailscale。
+func (s *Server) hostTailscale(w http.ResponseWriter, r *http.Request) {
+	var in tsBody
+	if !readJSON(w, r, &in) {
+		return
+	}
+	name := r.PathValue("name")
+	_, st, err := s.detect(r.Context(), actor(sessionOf(r)), name)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	var input *kernel.Input
+	if in.Action == "up" && in.Secret != "" {
+		if !appSecretRe.MatchString(in.Secret) {
+			writeErr(w, 400, "应用密钥的名称不合法")
+			return
+		}
+		if _, err := s.Secrets.Get("app/" + in.Secret); err != nil {
+			writeErr(w, 400, "应用密钥 "+in.Secret+" 不存在或读不出来")
+			return
+		}
+		input = &kernel.Input{Kind: "secret", Label: "Tailscale 授权密钥 " + in.Secret, Ref: "app/" + in.Secret}
+	}
+	cmd, err := netcfg.TSCommand(st, in.TSRequest, input != nil)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	intent := map[string]string{
+		"install": "在 " + name + " 上安装 Tailscale",
+		"up":      "把 " + name + " 加入 Tailscale 网络",
+		"set":     "修改 " + name + " 上的 Tailscale 设置",
+		"down":    "断开 " + name + " 的 Tailscale",
+		"logout":  "让 " + name + " 退出 Tailscale 登录",
+	}[in.Action]
+	s.submitPlan(w, r, []plannedTarget{{host: name, command: cmd, input: input}}, in.Preview, kernel.Strategy{}, func(int) string { return intent }, "")
+}
+
 // hostNetLog 看站点或 Fail2ban 的日志：只读查询，最后 200 行。
 func (s *Server) hostNetLog(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")

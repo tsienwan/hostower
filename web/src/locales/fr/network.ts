@@ -162,6 +162,22 @@ const dict: Record<string, string> = {
   "域名要先解析到这台主机，才能申请证书。也可以写 IP。": "Le domaine doit d’abord pointer vers cet hôte pour obtenir un certificat. Une IP convient aussi.",
   "对外端口": "Port public",
   "浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。": "Port utilisé par les navigateurs pour joindre ce site ; {server} l’écoute. Par défaut 443 (80 en HTTP seul) ; choisissez-en un autre s’il est occupé par un autre programme.",
+  "转发到哪里":
+    "Rediriger vers",
+  "这台主机":
+    "Cet hôte",
+  "其他地址…":
+    "Autre adresse…",
+  "目标地址":
+    "Adresse cible",
+  "IPv4 地址或主机名，不带协议和端口。":
+    "Une adresse IPv4 ou un nom d’hôte, sans protocole ni port.",
+  "转发到端口":
+    "Port cible",
+  "那台主机上服务监听的端口。支持 WebSocket。":
+    "Le port sur lequel le service écoute sur cet hôte. WebSocket est pris en charge.",
+  "流量会先到这台主机，再转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是明文 HTTP；那台主机上的服务不能只监听 127.0.0.1，端口要让这台主机连得上，建议在那台主机的防火墙里只对这台主机的 IP 放行。":
+    "Le trafic arrive d’abord sur cet hôte, puis est transmis à {addr} : envois et téléchargements comptent dans le trafic de cet hôte. Le tronçon entre les deux hôtes est en HTTP non chiffré ; le service de l’autre hôte ne doit pas écouter uniquement sur 127.0.0.1 et son port doit être joignable depuis cet hôte. Dans le pare-feu de l’autre hôte, n’autorisez ce port que pour l’IP de cet hôte.",
 };
 
 export default dict;

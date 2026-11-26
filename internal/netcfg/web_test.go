@@ -400,3 +400,31 @@ func TestReloadingCountsAsRunning(t *testing.T) {
 		t.Error("reloading 应算在运行")
 	}
 }
+
+// 反向代理到另一台主机：目标写进配置和标记行，判级不变；地址只收 IPv4 和主机名。
+func TestSiteUpstream(t *testing.T) {
+	st := Status{Root: true}
+	st.Caddy.Installed, st.Caddy.Active, st.Caddy.Imported = true, true, true
+	st.Nginx.Installed, st.Nginx.Active = true, true
+	e := risk.New()
+	cmd, site, err := SiteAddCommand(st, SiteRequest{Server: "caddy", Address: "files.example.com", Kind: "proxy", Port: 5244, Upstream: "192.0.2.20"})
+	if err != nil || site.Target != "192.0.2.20:5244" || !strings.Contains(cmd, "reverse_proxy 192.0.2.20:5244") || e.Classify(cmd).Level != risk.L1 {
+		t.Fatalf("Caddy 转发到另一台主机不对：%v %+v\n%s", err, site, cmd)
+	}
+	if got, ok := parseSite("caddy", site.marker()); !ok || got.Target != site.Target || got.Kind != "proxy" {
+		t.Fatalf("标记行读不回来：%+v", got)
+	}
+	cmd, site, err = SiteAddCommand(st, SiteRequest{Server: "nginx", Address: "files.example.com", Kind: "proxy", Port: 5244, Upstream: "Store.Example.com", TLS: "http"})
+	if err != nil || site.Target != "store.example.com:5244" || !strings.Contains(cmd, "proxy_pass http://store.example.com:5244;") || e.Classify(cmd).Level != risk.L1 {
+		t.Fatalf("Nginx 转发到另一台主机不对：%v %+v\n%s", err, site, cmd)
+	}
+	// 不填就是本机。
+	if _, site, err = SiteAddCommand(st, SiteRequest{Server: "caddy", Address: "a.example.com", Kind: "proxy", Port: 3001}); err != nil || site.Target != "127.0.0.1:3001" {
+		t.Fatalf("默认应该转发到本机：%v %+v", err, site)
+	}
+	for _, bad := range []string{"192.0.2.20:80", "http://192.0.2.20", "192.0.2.20/x", "a b", "a;b", "$(id)", "a..b", "-a", "[2001:db8::1]", "a\nb"} {
+		if _, _, err := SiteAddCommand(st, SiteRequest{Server: "caddy", Address: "b.example.com", Kind: "proxy", Port: 80, Upstream: bad}); err == nil {
+			t.Fatalf("地址 %q 不应该被接受", bad)
+		}
+	}
+}

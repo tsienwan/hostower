@@ -318,6 +318,17 @@ Schlägt der Start fehl, enthält die Ausgabe der Anfrage das aktuelle Log des D
 
 Zwei Programme können nicht auf demselben Port lauschen. Verlegen Sie den Xray-Inbound auf einen anderen Port, oder geben Sie der Site eine Adresse mit Port (z. B. `app.example.com:8443`); dann kann Nginx nur ein vorhandenes Zertifikat nutzen, Caddy holt weiterhin automatisch eines.
 
+### Ein Host mit guter Anbindung soll als Eingang für einen Dienst auf einem anderen Host dienen
+
+Angenommen, Host A hat die bessere Route und Host B den Speicherplatz: Browser sollen sich mit A verbinden, und A leitet an eine App auf B weiter.
+
+1. Im Reiter **Netzwerk** beider Hosts **Tailscale** installieren und **Netz beitreten** (dasselbe Tailscale-Konto). Die Anmeldung geht im Browser, oder Sie speichern zuerst einen Auth-Schlüssel als App-Secret und wählen ihn aus – der Schlüssel erscheint weder in Befehlen noch im Audit-Protokoll. Nach dem Beitritt hat jeder Host eine interne `100.x`-Adresse.
+2. Im Reiter **Netzwerk** von A eine Site vom Typ Reverse-Proxy hinzufügen, unter **Weiterleiten an** die Tailscale-Adresse von B wählen (sie wird angeboten, sobald Sie den Netzwerk-Reiter von B einmal geöffnet haben; sonst **Andere Adresse** wählen und eintragen) und den Port der App auf B angeben.
+
+Die Strecke von A nach B läuft dann durch einen verschlüsselten Tunnel, und der Port von B muss nicht ins Internet geöffnet werden. Drei Punkte sind zu beachten: Die App auf B darf nicht nur auf `127.0.0.1` lauschen; Uploads und Downloads zählen beide zum Traffic von A; Installation von Tailscale, Beitritt, Änderungen der Einstellungen und Trennen sind Vorgänge mit hohem Risiko, die bei der Genehmigung eine erneute Verifizierung erfordern.
+
+Ohne Tailscale können Sie direkt die öffentliche Adresse von B eintragen, aber diese Strecke ist unverschlüsseltes HTTP, und der Port von B sollte nur für die IP von A freigegeben sein.
+
 ### Kann Fail2ban mich oder Hostower aussperren?
 
 Auf der Positivliste stehen immer die Loopback-Adressen und die Adresse, von der Hostower verbindet; Hostower meldet sich per Schlüssel an und hinterlässt keine Fehlversuche. Wenn sich Ihre eigene öffentliche IP ändert, tragen Sie die Netze ein, aus denen Sie üblicherweise kommen.

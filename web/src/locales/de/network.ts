@@ -162,6 +162,22 @@ const dict: Record<string, string> = {
   "域名要先解析到这台主机，才能申请证书。也可以写 IP。": "Die Domain muss zuerst auf diesen Host zeigen, damit ein Zertifikat ausgestellt werden kann. Eine IP geht auch.",
   "对外端口": "Öffentlicher Port",
   "浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。": "Port, über den Browser diese Site erreichen; {server} lauscht darauf. Standard ist 443 (80 bei nur HTTP); wählen Sie einen anderen, wenn ein anderes Programm ihn belegt.",
+  "转发到哪里":
+    "Weiterleiten an",
+  "这台主机":
+    "Dieser Host",
+  "其他地址…":
+    "Andere Adresse…",
+  "目标地址":
+    "Zieladresse",
+  "IPv4 地址或主机名，不带协议和端口。":
+    "Eine IPv4-Adresse oder ein Hostname, ohne Protokoll und Port.",
+  "转发到端口":
+    "Zielport",
+  "那台主机上服务监听的端口。支持 WebSocket。":
+    "Der Port, auf dem der Dienst auf jenem Host lauscht. WebSocket wird unterstützt.",
+  "流量会先到这台主机，再转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是明文 HTTP；那台主机上的服务不能只监听 127.0.0.1，端口要让这台主机连得上，建议在那台主机的防火墙里只对这台主机的 IP 放行。":
+    "Der Verkehr erreicht zuerst diesen Host und wird dann an {addr} weitergeleitet: Uploads und Downloads zählen beide zum Traffic dieses Hosts. Die Strecke zwischen den beiden Hosts ist unverschlüsseltes HTTP; der Dienst auf dem anderen Host darf nicht nur auf 127.0.0.1 lauschen, und sein Port muss von diesem Host aus erreichbar sein. In der Firewall des anderen Hosts den Port am besten nur für die IP dieses Hosts freigeben.",
 };
 
 export default dict;

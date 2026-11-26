@@ -80,6 +80,7 @@ const dict: Record<string, string> = {
   "Nginx 已经在运行了": "Nginx 已經在執行了",
   "登录账号不是 root，也没有 sudo：启动不了 Nginx": "登入帳號不是 root，也沒有 sudo：啟動不了 Nginx",
   "{a} 端口已经被 {b} 占用：把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口": "{a} 連接埠已經被 {b} 佔用：把位址寫成帶連接埠的形式（例如 app.example.com:8443），或者先把那個程式改到別的連接埠",
+  "转发到的地址只能是 IPv4 地址或主机名（不带协议、端口和路径）": "轉送到的位址只能是 IPv4 位址或主機名稱（不帶協定、連接埠和路徑）",
 };
 
 export default dict;

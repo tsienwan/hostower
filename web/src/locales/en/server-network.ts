@@ -80,6 +80,7 @@ const dict: Record<string, string> = {
   "Nginx 已经在运行了": "Nginx is already running",
   "登录账号不是 root，也没有 sudo：启动不了 Nginx": "The login account is not root and has no sudo: Nginx cannot be started",
   "{a} 端口已经被 {b} 占用：把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口": "Port {a} is already held by {b}: write the address with a port (for example app.example.com:8443), or move that program to another port first",
+  "转发到的地址只能是 IPv4 地址或主机名（不带协议、端口和路径）": "The forward target must be an IPv4 address or a host name (no scheme, port or path)",
 };
 
 export default dict;

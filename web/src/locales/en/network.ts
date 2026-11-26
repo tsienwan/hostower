@@ -162,6 +162,22 @@ const dict: Record<string, string> = {
   "域名要先解析到这台主机，才能申请证书。也可以写 IP。": "The domain must resolve to this host before a certificate can be issued. An IP also works.",
   "对外端口": "Public port",
   "浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。": "The port browsers use to reach this site; {server} listens on it. Defaults to 443 (80 for HTTP only); pick another if a different program holds it.",
+  "转发到哪里":
+    "Forward to",
+  "这台主机":
+    "This host",
+  "其他地址…":
+    "Another address…",
+  "目标地址":
+    "Target address",
+  "IPv4 地址或主机名，不带协议和端口。":
+    "An IPv4 address or host name, without scheme or port.",
+  "转发到端口":
+    "Forward to port",
+  "那台主机上服务监听的端口。支持 WebSocket。":
+    "The port the service listens on at that host. WebSocket is supported.",
+  "流量会先到这台主机，再转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是明文 HTTP；那台主机上的服务不能只监听 127.0.0.1，端口要让这台主机连得上，建议在那台主机的防火墙里只对这台主机的 IP 放行。":
+    "Traffic reaches this host first and is then forwarded to {addr}: uploads and downloads both count against this host’s traffic. The hop between the two hosts is plain HTTP; the service on that host must not listen only on 127.0.0.1, and its port must be reachable from this host. In that host’s firewall, allow the port only from this host’s IP.",
 };
 
 export default dict;

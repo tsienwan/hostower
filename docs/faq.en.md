@@ -318,6 +318,17 @@ If the start fails, the request output includes the service's recent log. The mo
 
 Two programs cannot listen on the same port. Either move the Xray inbound to another port, or give the site an address with a port (e.g. `app.example.com:8443`); in that case Nginx can only use an existing certificate, while Caddy can still obtain one automatically.
 
+### I want a host with a good route to be the entry point for a service on another host
+
+Say host A has the better route and host B has the storage, and you want browsers to connect to A while A forwards to an app on B:
+
+1. On the **Network** tab of both hosts, install **Tailscale** and **Join network** (same Tailscale account). You can log in from the browser, or store an auth key as an app secret first and pick it — the key never appears in commands or the audit log. After joining, each host has a `100.x` private address.
+2. On A's **Network** tab, add a site of type reverse proxy, set **Forward to** to B's Tailscale address (it is listed once you have opened B's Network tab; otherwise choose **Another address** and type it), and enter the port of the app on B.
+
+The hop from A to B then runs through an encrypted tunnel and B's port does not have to be open to the internet. Three things to keep in mind: the app on B must not listen only on `127.0.0.1`; uploads and downloads both count against A's traffic; installing Tailscale, joining, changing its settings and disconnecting are all high-risk operations that require re-verification on approval.
+
+Without Tailscale you can enter B's public address directly, but that hop is plain HTTP and B's port should be allowed only from A's IP.
+
 ### Can Fail2ban ban me or Hostower?
 
 The allowlist always contains the loopback addresses and the address Hostower connects from, and Hostower logs in with a key, so it leaves no failed attempts. If your own public IP changes, add the networks you usually come from to the allowlist.

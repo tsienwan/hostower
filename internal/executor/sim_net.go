@@ -35,6 +35,9 @@ type simNet struct {
 	f2bConf        string              // Hostower 写的标记行
 	jails          map[string][]string // jail → 被封的 IP
 	sites          map[string]simSite  // 地址 → 站点
+	ts, tsOn       bool                // Tailscale 装了没有、服务在不在跑
+	tsState        string              // NeedsLogin | Running | Stopped
+	tsFlags        map[string]string   // tailscale up / set 给的参数
 }
 
 func (sh *simHost) net() *simNet {
@@ -80,7 +83,7 @@ func (n *simNet) detect(h inventory.Host) []string {
 	for _, c := range []struct {
 		on   bool
 		name string
-	}{{n.ufw, "ufw"}, {n.fwd, "firewall-cmd"}, {n.fwd, "firewall-offline-cmd"}, {n.caddy, "caddy"}, {n.nginx, "nginx"}, {n.certbot, "certbot"}, {n.f2b, "fail2ban-client"}, {h.HasTag("docker"), "docker"}} {
+	}{{n.ufw, "ufw"}, {n.fwd, "firewall-cmd"}, {n.fwd, "firewall-offline-cmd"}, {n.caddy, "caddy"}, {n.nginx, "nginx"}, {n.certbot, "certbot"}, {n.f2b, "fail2ban-client"}, {n.ts, "tailscale"}, {h.HasTag("docker"), "docker"}} {
 		if c.on {
 			out = append(out, c.name)
 		}
@@ -168,6 +171,29 @@ func (n *simNet) detect(h inventory.Host) []string {
 	if n.authLog {
 		out = append(out, "/var/log/auth.log")
 	}
+	out = append(out, "== ts")
+	if n.tsOn {
+		// 每台模拟主机一个固定的 Tailscale 地址，名字默认就是主机名。
+		sum := 0
+		for _, c := range h.Name {
+			sum += int(c)
+		}
+		name := h.Name
+		if v := n.tsFlags["hostname"]; v != "" {
+			name = v
+		}
+		out = append(out, "active", "== ts-status")
+		if n.tsState == "NeedsLogin" {
+			out = append(out, `{"Version":"1.80.2-t1a2b3c","BackendState":"NeedsLogin","TailscaleIPs":null,"Self":{"HostName":"`+name+`","DNSName":""}}`)
+		} else {
+			out = append(out, fmt.Sprintf(`{"Version":"1.80.2-t1a2b3c","BackendState":%q,"TailscaleIPs":["100.64.0.%d","fd7a:115c:a1e0::%x"],`+
+				`"Self":{"HostName":%q,"DNSName":"%s.example-tailnet.ts.net."},"CurrentTailnet":{"Name":"example-tailnet.ts.net"}}`, n.tsState, 2+sum%250, 2+sum%250, name, name))
+		}
+		out = append(out, "== ts-prefs", fmt.Sprintf(`{"RouteAll":%t,"CorpDNS":%t,"RunSSH":%t,"Hostname":%q}`,
+			n.tsFlags["accept-routes"] == "true", n.tsFlags["accept-dns"] != "false", n.tsFlags["ssh"] == "true", n.tsFlags["hostname"]))
+	} else {
+		out = append(out, "== ts-status", "== ts-prefs")
+	}
 	out = append(out, "== client", "198.51.100.10")
 	out = append(out, "== sshd", "== listen", "LISTEN 0 4096 0.0.0.0:22 0.0.0.0:*", "LISTEN 0 4096 127.0.0.1:18443 0.0.0.0:*")
 	if n.caddyOn || n.nginxOn {
@@ -221,6 +247,8 @@ var (
 	simSiteRmRe    = regexp.MustCompile(`then mv -f (\S+) \S+\.removed;`)
 	simF2BRe       = regexp.MustCompile(`(?m)^# hostower-f2b .*$`)
 	simUnbanRe     = regexp.MustCompile(`then fail2ban-client set (\S+) unbanip (\S+);`)
+	simTSRe        = regexp.MustCompile(`then tailscale (up|set) ([^;]*);`)
+	simTSFlagRe    = regexp.MustCompile(`--(hostname|accept-routes|accept-dns|ssh)=(\S*)`)
 	simForceRe     = regexp.MustCompile(`then certbot renew --cert-name (\S+) --force-renewal`)
 )
 
@@ -259,7 +287,7 @@ func (s *Sim) netCommand(h inventory.Host, sh *simHost, cmd string) (lines []str
 	// 只认“网络”页的命令：别的脚本（比如测速前装 curl）也有同样的 root 判断，不能误吞。
 	if !strings.Contains(cmd, `if [ "$(id -u)" = 0 ]; then`) ||
 		!(strings.Contains(cmd, "then ufw ") || strings.Contains(cmd, "then firewall") || strings.Contains(cmd, "caddy") || strings.Contains(cmd, "nginx") ||
-			strings.Contains(cmd, "certbot") || strings.Contains(cmd, "fail2ban") || strings.Contains(cmd, "install -y -q ufw") || strings.Contains(cmd, "install -y -q firewalld")) {
+			strings.Contains(cmd, "certbot") || strings.Contains(cmd, "fail2ban") || strings.Contains(cmd, "tailscale") || strings.Contains(cmd, "install -y -q ufw") || strings.Contains(cmd, "install -y -q firewalld")) {
 		return nil, 0, false
 	}
 	n := sh.net()
@@ -302,6 +330,39 @@ func (s *Sim) netCommand(h inventory.Host, sh *simHost, cmd string) (lines []str
 	if strings.Contains(cmd, "install -y -q fail2ban") {
 		n.f2b = true
 		say("Setting up fail2ban (1.0.2-2) ...")
+	}
+	if strings.Contains(cmd, "install -y -q tailscale") {
+		n.ts, n.tsOn, n.tsState, n.tsFlags = true, true, "NeedsLogin", map[string]string{}
+		say("Setting up tailscale (1.80.2) ...", "Created symlink /etc/systemd/system/multi-user.target.wants/tailscaled.service → /lib/systemd/system/tailscaled.service.")
+	}
+	if n.ts {
+		if m := simTSRe.FindStringSubmatch(cmd); m != nil {
+			if n.tsFlags == nil {
+				n.tsFlags = map[string]string{}
+			}
+			for _, f := range simTSFlagRe.FindAllStringSubmatch(m[2], -1) {
+				n.tsFlags[f[1]] = f[2]
+			}
+			if m[1] == "up" {
+				if !strings.Contains(m[2], "--auth-key=") && n.tsState == "NeedsLogin" {
+					say("", "To authenticate, visit:", "", "\thttps://login.tailscale.com/a/1a2b3c4d5e6f", "", "Success.")
+				}
+				n.tsOn, n.tsState = true, "Running"
+			}
+		}
+		if strings.Contains(cmd, "then tailscale down;") {
+			n.tsState = "Stopped"
+		}
+		if strings.Contains(cmd, "then tailscale logout;") {
+			n.tsState = "NeedsLogin"
+		}
+		if strings.Contains(cmd, "tailscale ip -4") && n.tsState == "Running" {
+			sum := 0
+			for _, c := range h.Name {
+				sum += int(c)
+			}
+			say(fmt.Sprintf("100.64.0.%d", 2+sum%250))
+		}
 	}
 	for _, m := range simUFWAllowRe.FindAllStringSubmatch(cmd, -1) {
 		n.rules[m[1]] = true
