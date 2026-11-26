@@ -4,6 +4,17 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.5
+
+### Added
+
+- The built-in local host (`local`) can switch its connection to SSH under **Edit** (the address must be `127.0.0.1` or `localhost`, with a credential), and can switch back to the direct local connection at any time. When the service sets `NoNewPrivileges` and the direct connection cannot escalate, an account that can sudo now manages the firewall and sites on this same host, without adding the machine a second time.
+- After putting an app behind a reverse proxy, **Open panel** opens the site's address automatically: it applies when a site added by Hostower on that host proxies to the app's port and no panel address has been set; a panel address you set still wins.
+
+### Improved
+
+- The tabs on the Apps page are now Installed, Catalog, Environment, and the page opens on **Installed**.
+
 ## v0.5.4
 
 ### Improved
