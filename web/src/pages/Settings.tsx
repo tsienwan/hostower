@@ -371,7 +371,7 @@ function PanelSettings({ dev }: { dev: boolean }) {
           <input className="input mono" value={ip} onChange={(e) => setIP(e.target.value)} disabled={locked("listen")} placeholder={effIP} spellCheck={false} aria-label={t("监听 IP")} />
         </div>
         <div className="setting-row">
-          <div><div className="setting-name">{t("监听端口")}</div><div className="setting-desc">{t("重启后生效。")}</div>{envNote("listen")}</div>
+          <div><div className="setting-name">{t("监听端口")}</div><div className="setting-desc">{t("塔台本身监听的端口，重启后生效。前面有反向代理时，这是代理转发到的端口；浏览器里用的端口以“访问地址”为准。")}</div>{envNote("listen")}</div>
           <input className="input mono" value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ""))} disabled={locked("listen")} placeholder={effPort} inputMode="numeric" aria-label={t("监听端口")} />
         </div>
         <div className="setting-row">

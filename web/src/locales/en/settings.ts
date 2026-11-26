@@ -181,7 +181,7 @@ const dict: Record<string, string> = {
   "；要对外提供访问填 ": "; to accept outside connections, enter ",
   "，此时必须配置下面的 TLS。": ", in which case TLS below must be configured.",
   "监听端口": "Listen port",
-  "重启后生效。": "Takes effect after a restart.",
+  "塔台本身监听的端口，重启后生效。前面有反向代理时，这是代理转发到的端口；浏览器里用的端口以“访问地址”为准。": "The port Hostower itself listens on; takes effect after a restart. Behind a reverse proxy, this is the port the proxy forwards to; the port you open in the browser is the one in “Public URL”.",
   "浏览器里打开塔台用的完整地址（含域名）。Passkey 绑定到这个域名，改了它已有的 Passkey 会失效。":
     "The full address (including the domain) used to open the tower in a browser. Passkeys are bound to this domain, so changing it invalidates existing Passkeys.",
   "谁来提供 HTTPS。对外监听时必须二选一，否则塔台拒绝启动。": "Who provides HTTPS. When listening externally you must pick one of the two, otherwise the tower refuses to start.",

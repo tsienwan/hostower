@@ -181,7 +181,7 @@ const dict: Record<string, string> = {
   "；要对外提供访问填 ": " ; pour accepter les connexions extérieures, saisissez ",
   "，此时必须配置下面的 TLS。": ", auquel cas le TLS ci-dessous doit être configuré.",
   "监听端口": "Port d'écoute",
-  "重启后生效。": "Prend effet après un redémarrage.",
+  "塔台本身监听的端口，重启后生效。前面有反向代理时，这是代理转发到的端口；浏览器里用的端口以“访问地址”为准。": "Port sur lequel Hostower écoute lui-même ; prend effet après un redémarrage. Derrière un proxy inverse, c’est le port vers lequel le proxy transfère ; le port ouvert dans le navigateur est celui de « URL publique ».",
   "浏览器里打开塔台用的完整地址（含域名）。Passkey 绑定到这个域名，改了它已有的 Passkey 会失效。":
     "L'adresse complète (domaine compris) utilisée pour ouvrir la tour dans un navigateur. Les Passkeys sont liées à ce domaine ; le modifier invalide donc les Passkeys existantes.",
   "谁来提供 HTTPS。对外监听时必须二选一，否则塔台拒绝启动。": "Qui fournit le HTTPS. En écoute externe, vous devez choisir l'une des deux options, sinon la tour refuse de démarrer.",
