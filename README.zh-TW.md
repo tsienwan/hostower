@@ -10,7 +10,7 @@
 
 名字是 host + tower：燈塔照得見海面上的每一艘船，並為它們指引方向。
 
-目前版本：**v0.5.1**（變更紀錄見 [CHANGELOG.md](CHANGELOG.md)）。在通過外部安全審查之前，建議只在內網或放在會驗證身分的反向代理之後使用。
+目前版本：**v0.5.2**（變更紀錄見 [CHANGELOG.md](CHANGELOG.md)）。在通過外部安全審查之前，建議只在內網或放在會驗證身分的反向代理之後使用。
 
 ## 它怎麼運作
 
@@ -71,10 +71,10 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
 ```
 
-要安裝指定版本，在後面加上版本標籤（例如 `v0.5.1`）：
+要安裝指定版本，在後面加上版本標籤（例如 `v0.5.2`）：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.5.1
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.5.2
 ```
 
 要安裝宿主機版（還會管理所在的這台機器，以特權容器執行），加上 `--host`：
@@ -105,10 +105,10 @@ bash install.sh
 
 | 映像檔 | 用途 |
 | --- | --- |
-| `ghcr.io/tsienwan/hostower:0.5.1` | 預設映像檔：非 root、根檔案系統唯讀、沒有 shell，透過 SSH 管理主機（要管理所在的這台機器，就把它當作一般 SSH 主機加進來）。建議使用。 |
-| `ghcr.io/tsienwan/hostower:0.5.1-host` | 宿主機版：還會把所在的機器當作內建的 `local` 主機來管理。以特權容器執行，在這台機器上執行的指令是 root 身分。 |
+| `ghcr.io/tsienwan/hostower:0.5.2` | 預設映像檔：非 root、根檔案系統唯讀、沒有 shell，透過 SSH 管理主機（要管理所在的這台機器，就把它當作一般 SSH 主機加進來）。建議使用。 |
+| `ghcr.io/tsienwan/hostower:0.5.2-host` | 宿主機版：還會把所在的機器當作內建的 `local` 主機來管理。以特權容器執行，在這台機器上執行的指令是 root 身分。 |
 
-`0` 和 `latest`（宿主機版是 `0-host` 和 `latest-host`）一律指向最新版本；正式環境請固定具體版本，例如 `0.5.1`。
+`0` 和 `latest`（宿主機版是 `0-host` 和 `latest-host`）一律指向最新版本；正式環境請固定具體版本，例如 `0.5.2`。
 
 ### 1. 啟動
 

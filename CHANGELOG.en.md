@@ -4,6 +4,18 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.2
+
+### Improved
+
+- When adding a site, if the port it needs (443 by default) is already held by another program (for example 3x-ui's Xray), the site is no longer added: when the program can be identified, the preview says so and suggests writing the address with a port (for example `app.example.com:8443`); when it cannot, the first step of the command checks again and changes nothing if the port is taken.
+- If reloading Caddy or Nginx fails after adding a site, the new site is withdrawn automatically, the log is shown, and the service is restored to its previous configuration. Previously the site file stayed in place and Caddy remained stuck in “reloading”, which had to be fixed by hand on the host.
+- Caddy and Nginx are no longer shown as “Not running” while they are reloading their configuration.
+
+### Fixed
+
+- When the network dropped silently (a network change, a restart of the proxy in front, or after the computer slept), the page kept showing “Live” while receiving no updates, and requests stayed at “Running”. The page now shows “Reconnecting…” and reconnects on its own after 45 seconds without a message from the server.
+
 ## v0.5.1
 
 ### Added
