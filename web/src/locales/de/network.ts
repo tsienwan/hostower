@@ -108,7 +108,6 @@ const dict: Record<string, string> = {
   "用哪个服务器": "Server",
   "站点类型": "Site-Typ",
   "跳到别的网址": "zu einer anderen URL",
-  "域名要先解析到这台主机，才能申请证书。也可以写 IP:端口，或者 域名:端口。": "Die Domain muss auf diesen Host zeigen, bevor ein Zertifikat bezogen werden kann. Auch IP:Port oder Domain:Port ist möglich.",
   "转发到 127.0.0.1 的这个端口，比如应用市场里装的应用的端口。支持 WebSocket。": "Leitet an diesen Port auf 127.0.0.1 weiter, z. B. den einer App aus dem App-Katalog. WebSocket wird unterstützt.",
   "网站目录": "Site-Verzeichnis",
   "要在 /var/www、/srv、/opt 或 /home 下面，不能是隐藏目录。目录里的文件会公开给所有人。": "Muss unter /var/www, /srv, /opt oder /home liegen und darf kein verstecktes Verzeichnis sein. Die Dateien darin werden für alle öffentlich.",
@@ -158,7 +157,11 @@ const dict: Record<string, string> = {
   "启动 {name}": "{name} starten",
   "在 {host} 上启动 {name}": "{name} auf {host} starten",
   "{name} 没在运行时，这台主机上的站点都打不开，证书也不会申请。起不来的话，输出里会带上它最近的日志，原因多半是 80 或 443 端口被别的程序占了。": "Solange {name} nicht läuft, ist keine Site auf diesem Host erreichbar und es wird kein Zertifikat angefordert. Schlägt der Start fehl, enthält die Ausgabe das aktuelle Log; meist belegt ein anderes Programm Port 80 oder 443.",
-  "{port} 端口已经被 {proc} 占用，这样添加会失败。把地址写成带端口的形式（比如 {example}），或者先把那个程序改到别的端口。": "Port {port} wird bereits von {proc} belegt, so schlägt das Hinzufügen fehl. Schreiben Sie die Adresse mit Port (zum Beispiel {example}) oder verlegen Sie das Programm zuerst auf einen anderen Port.",
+  "{port} 端口已经被 {proc} 占用，这样添加会失败。把“对外端口”换成别的（比如 {example}），或者先把那个程序改到别的端口。": "Port {port} wird bereits von {proc} belegt, so schlägt das Hinzufügen fehl. Ändern Sie „Öffentlicher Port“ auf einen anderen (zum Beispiel {example}) oder verlegen Sie das Programm zuerst auf einen anderen Port.",
+  "改用 {address}": "{address} verwenden",
+  "域名要先解析到这台主机，才能申请证书。也可以写 IP。": "Die Domain muss zuerst auf diesen Host zeigen, damit ein Zertifikat ausgestellt werden kann. Eine IP geht auch.",
+  "对外端口": "Öffentlicher Port",
+  "浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。": "Port, über den Browser diese Site erreichen; {server} lauscht darauf. Standard ist 443 (80 bei nur HTTP); wählen Sie einen anderen, wenn ein anderes Programm ihn belegt.",
 };
 
 export default dict;

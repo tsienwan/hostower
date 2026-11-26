@@ -450,9 +450,17 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
     email: "", agree: false, cert: "", key: "", maxBody: 100, hsts: false, keepHttp: false, perm: false,
   });
   const set = (p: Partial<SiteForm>) => setF((o) => ({ ...o, ...p }));
-  const addr = f.address.trim().toLowerCase();
-  const ip = /^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(addr);
-  const hasPort = /:\d+$/.test(addr);
+  // 给一个现成的端口：常见的备用 HTTPS 端口里第一个没人在监听的。
+  const sparePort = [8443, 2053, 2083, 2087, 2096, 9443, 10443].find((p) => !st.listen.some((l) => l.port === p)) ?? 8443;
+  const taken443 = st.listen.some((l) => l.port === 443 && l.proc && l.proc !== f.server);
+  // “对外端口”一栏：一打开就显示默认值；443 被别的程序占着时直接填上一个空闲的。地址里自己写了端口的，以地址里的为准。
+  const [pubText, setPubText] = useState(() => String(taken443 ? sparePort : 443));
+  const typed = f.address.trim().toLowerCase();
+  const typedPort = /:(\d+)$/.exec(typed)?.[1] ?? "";
+  const pub = Number(typedPort || pubText) || 0;
+  const hasPort = !!typedPort || (pub > 0 && pub !== 443 && pub !== 80);
+  const ipOnly = /^\d{1,3}(\.\d{1,3}){3}$/.test(typed);
+  const ip = ipOnly || /^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(typed);
   const tlsOptions: { value: SiteTLS; label: string; hint?: string }[] = f.server === "caddy"
     ? [...(ip ? [] : [{ value: "auto" as const, label: t("自动申请（Let's Encrypt / ZeroSSL）"), hint: t("推荐") }]),
        { value: "internal", label: t("Caddy 自签证书") }, { value: "custom", label: t("用已有的证书") }, { value: "http", label: t("只用 HTTP") }]
@@ -460,11 +468,15 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
        { value: "custom", label: t("用已有的证书") }, { value: "http", label: t("只用 HTTP") }];
   // 地址或服务器变了，原来的方式不能用时换成第一个能用的。
   const tls = tlsOptions.some((o) => o.value === f.tls) ? f.tls : tlsOptions[0].value;
+  // 发给服务端的地址：端口不是这种站点的默认端口（HTTPS 443、只用 HTTP 80）时才写进去；IP 必须带端口。
+  const addr = typedPort || !typed || !pub || (!ipOnly && pub === (tls === "http" ? 80 : 443)) ? typed : `${typed}:${pub}`;
   const target = f.kind === "proxy" ? f.port > 0 : f.kind === "static" ? !!f.dir.trim() : !!f.url.trim();
   const ready = !!addr && target && (tls !== "le" || f.agree) && (tls !== "custom" || (!!f.cert.trim() && !!f.key.trim()));
   // 站点要监听的端口：地址里写了就是它，否则 HTTPS 是 443、只用 HTTP 是 80。看得到是别的程序占着它时直接说明白。
-  const sitePort = hasPort ? Number(addr.slice(addr.lastIndexOf(":") + 1)) : tls === "http" ? 80 : 443;
+  const sitePort = pub || (tls === "http" ? 80 : 443);
   const holder = st.listen.find((l) => l.port === sitePort && l.proc && l.proc !== f.server);
+  const setPub = (v: string) => { if (typedPort) set({ address: typed.slice(0, -typedPort.length - 1) }); setPubText(v); };
+  const suggested = typed && sitePort !== sparePort ? `${typedPort ? typed.slice(0, -typedPort.length - 1) : typed}:${sparePort}` : "";
   const busy443 = !holder && tls !== "http" && !hasPort && st.listen.some((l) => l.port === 443) && !st.sites.some((x) => x.server === f.server && x.tls !== "http") && !(f.server === "caddy" && st.caddy.active);
   const send = (preview: boolean) => api.hostSites(host, { action: "add", ...f, address: addr, tls, dir: f.dir.trim(), url: f.url.trim(), cert: f.cert.trim(), key: f.key.trim(), email: f.email.trim(), preview });
   return (
@@ -477,7 +489,11 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
             { value: "proxy", label: t("反向代理"), hint: t("转发到本机端口") }, { value: "static", label: t("静态目录") }, { value: "redirect", label: t("跳转"), hint: t("跳到别的网址") }]} /></div>
         <div className="field"><label htmlFor="site-addr">{t("访问地址")}</label>
           <input id="site-addr" className="input mono" value={f.address} onChange={(e) => set({ address: e.target.value })} placeholder="app.example.com" spellCheck={false} />
-          <span className="hint">{t("域名要先解析到这台主机，才能申请证书。也可以写 IP:端口，或者 域名:端口。")}</span>
+          <span className="hint">{t("域名要先解析到这台主机，才能申请证书。也可以写 IP。")}</span>
+        </div>
+        <div className="field"><label htmlFor="site-pub">{t("对外端口")}</label>
+          <input id="site-pub" className="input mono" inputMode="numeric" value={typedPort || pubText} onChange={(e) => setPub(e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder={tls === "http" ? "80" : "443"} />
+          <span className="hint">{t("浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。", { server: f.server === "nginx" ? "Nginx" : "Caddy" })}</span>
         </div>
         {f.kind === "proxy" && <div className="field"><label htmlFor="site-port">{t("转发到本机端口")}</label>
           <input id="site-port" className="input mono" inputMode="numeric" value={f.port || ""} onChange={(e) => set({ port: numIn(e.target.value) })} placeholder="3001" />
@@ -488,7 +504,12 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
         {f.kind === "redirect" && <div className="field"><label htmlFor="site-url">{t("跳转到")}</label>
           <input id="site-url" className="input mono" value={f.url} onChange={(e) => set({ url: e.target.value })} placeholder="https://www.example.com" spellCheck={false} /></div>}
         <div className="field"><label>HTTPS</label>
-          <Select value={tls} onChange={(v) => set({ tls: v as SiteTLS })} options={tlsOptions} />
+          <Select value={tls} onChange={(v) => {
+            set({ tls: v as SiteTLS });
+            // 端口还是默认值时跟着换：只用 HTTP 是 80，HTTPS 是 443。
+            if (v === "http" && pubText === "443") setPubText("80");
+            if (v !== "http" && pubText === "80") setPubText("443");
+          }} options={tlsOptions} />
           <span className="hint">{tls === "auto" ? t("Caddy 自动申请证书并在到期前续期。")
             : tls === "le" ? t("先以 HTTP 开站，用 certbot 从 80 端口验证域名、申请证书，再换成 HTTPS。certbot 会在到期前自动续期。")
             : tls === "internal" ? t("浏览器会提示证书不受信任，适合内网或测试。")
@@ -521,7 +542,8 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
           {f.kind === "redirect" && <Check checked={f.perm} onChange={(v) => set({ perm: v })}>{t("永久跳转（301，浏览器会记住）")}</Check>}
         </div>
       </div>
-      {holder && <div className="note crit"><TriangleAlert /><span>{t("{port} 端口已经被 {proc} 占用，这样添加会失败。把地址写成带端口的形式（比如 {example}），或者先把那个程序改到别的端口。", { port: sitePort, proc: holder.proc!, example: (ip || !addr ? "app.example.com" : addr.replace(/:\d+$/, "")) + ":8443" })}</span></div>}
+      {holder && <div className="note crit"><TriangleAlert /><span>{t("{port} 端口已经被 {proc} 占用，这样添加会失败。把“对外端口”换成别的（比如 {example}），或者先把那个程序改到别的端口。", { port: sitePort, proc: holder.proc!, example: sparePort })}
+        {suggested && <><br /><button type="button" className="btn sm" style={{ marginTop: 6 }} onClick={() => setPub(String(sparePort))}>{t("改用 {address}", { address: suggested })}</button></>}</span></div>}
       {busy443 && <div className="note warn"><TriangleAlert /><span>{t("443 端口已经有程序在监听（比如 3x-ui 的 Xray）：HTTPS 站点可能起不来。")}</span></div>}
       <p className="hint">{t("写入一个单独的站点文件，先校验配置（caddy validate / nginx -t），通过才重载；校验不过会自动撤下，不影响已有的站点。")}</p>
     </PlanDialog>

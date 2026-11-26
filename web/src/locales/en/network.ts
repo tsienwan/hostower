@@ -108,7 +108,6 @@ const dict: Record<string, string> = {
   "用哪个服务器": "Server",
   "站点类型": "Site type",
   "跳到别的网址": "go to another URL",
-  "域名要先解析到这台主机，才能申请证书。也可以写 IP:端口，或者 域名:端口。": "The domain must resolve to this host before a certificate can be obtained. You can also enter IP:port or domain:port.",
   "转发到 127.0.0.1 的这个端口，比如应用市场里装的应用的端口。支持 WebSocket。": "Forwards to this port on 127.0.0.1, e.g. the port of an app installed from the app catalog. WebSocket is supported.",
   "网站目录": "Site directory",
   "要在 /var/www、/srv、/opt 或 /home 下面，不能是隐藏目录。目录里的文件会公开给所有人。": "Must be under /var/www, /srv, /opt or /home and not a hidden directory. Files in it become public to everyone.",
@@ -158,7 +157,11 @@ const dict: Record<string, string> = {
   "启动 {name}": "Start {name}",
   "在 {host} 上启动 {name}": "Start {name} on {host}",
   "{name} 没在运行时，这台主机上的站点都打不开，证书也不会申请。起不来的话，输出里会带上它最近的日志，原因多半是 80 或 443 端口被别的程序占了。": "While {name} is not running, no site on this host can be reached and no certificate is requested. If it fails to start, the output includes its recent log; the usual cause is another program holding port 80 or 443.",
-  "{port} 端口已经被 {proc} 占用，这样添加会失败。把地址写成带端口的形式（比如 {example}），或者先把那个程序改到别的端口。": "Port {port} is already held by {proc}, so adding the site this way will fail. Write the address with a port (for example {example}), or move that program to another port first.",
+  "{port} 端口已经被 {proc} 占用，这样添加会失败。把“对外端口”换成别的（比如 {example}），或者先把那个程序改到别的端口。": "Port {port} is already held by {proc}, so adding the site this way will fail. Change “Public port” to another one (for example {example}), or move that program to another port first.",
+  "改用 {address}": "Use {address}",
+  "域名要先解析到这台主机，才能申请证书。也可以写 IP。": "The domain must resolve to this host before a certificate can be issued. An IP also works.",
+  "对外端口": "Public port",
+  "浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。": "The port browsers use to reach this site; {server} listens on it. Defaults to 443 (80 for HTTP only); pick another if a different program holds it.",
 };
 
 export default dict;

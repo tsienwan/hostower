@@ -108,7 +108,6 @@ const dict: Record<string, string> = {
   "用哪个服务器": "Serveur",
   "站点类型": "Type de site",
   "跳到别的网址": "vers une autre URL",
-  "域名要先解析到这台主机，才能申请证书。也可以写 IP:端口，或者 域名:端口。": "Le domaine doit pointer vers cet hôte pour obtenir un certificat. Vous pouvez aussi saisir IP:port ou domaine:port.",
   "转发到 127.0.0.1 的这个端口，比如应用市场里装的应用的端口。支持 WebSocket。": "Transfère vers ce port sur 127.0.0.1, par exemple celui d'une application installée depuis le catalogue. WebSocket est pris en charge.",
   "网站目录": "Répertoire du site",
   "要在 /var/www、/srv、/opt 或 /home 下面，不能是隐藏目录。目录里的文件会公开给所有人。": "Doit se trouver sous /var/www, /srv, /opt ou /home et ne pas être un répertoire caché. Ses fichiers deviennent publics.",
@@ -158,7 +157,11 @@ const dict: Record<string, string> = {
   "启动 {name}": "Démarrer {name}",
   "在 {host} 上启动 {name}": "Démarrer {name} sur {host}",
   "{name} 没在运行时，这台主机上的站点都打不开，证书也不会申请。起不来的话，输出里会带上它最近的日志，原因多半是 80 或 443 端口被别的程序占了。": "Tant que {name} ne tourne pas, aucun site de cet hôte n’est joignable et aucun certificat n’est demandé. S’il ne démarre pas, la sortie contient son journal récent ; la cause habituelle est un autre programme qui occupe le port 80 ou 443.",
-  "{port} 端口已经被 {proc} 占用，这样添加会失败。把地址写成带端口的形式（比如 {example}），或者先把那个程序改到别的端口。": "Le port {port} est déjà occupé par {proc} : l’ajout échouera ainsi. Écrivez l’adresse avec un port (par exemple {example}), ou déplacez d’abord ce programme sur un autre port.",
+  "{port} 端口已经被 {proc} 占用，这样添加会失败。把“对外端口”换成别的（比如 {example}），或者先把那个程序改到别的端口。": "Le port {port} est déjà occupé par {proc} : l’ajout échouera ainsi. Changez « Port public » pour un autre (par exemple {example}), ou déplacez d’abord ce programme sur un autre port.",
+  "改用 {address}": "Utiliser {address}",
+  "域名要先解析到这台主机，才能申请证书。也可以写 IP。": "Le domaine doit d’abord pointer vers cet hôte pour obtenir un certificat. Une IP convient aussi.",
+  "对外端口": "Port public",
+  "浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。": "Port utilisé par les navigateurs pour joindre ce site ; {server} l’écoute. Par défaut 443 (80 en HTTP seul) ; choisissez-en un autre s’il est occupé par un autre programme.",
 };
 
 export default dict;
