@@ -350,7 +350,7 @@ func caddySiteAdd(s Site, req SiteRequest) string {
 	b.WriteString(writeRoot(file, s.caddyConfig(req.Cert, req.Key), "写站点配置失败"))
 	b.WriteString("{ " + asRoot("caddy validate --config "+Caddyfile+" --adapter caddyfile") + "; } || { " +
 		asRoot("mv -f "+file+" "+file+".rejected") + "; echo 'hostower: Caddy 配置校验没通过，已撤下这个站点（地址重复或者写法不对）'; exit 1; }; ")
-	b.WriteString(step("systemctl reload caddy", "重载 Caddy 失败"))
+	b.WriteString(reload("caddy"))
 	return b.String()
 }
 
@@ -470,7 +470,7 @@ func nginxSiteAdd(st Status, s Site, req SiteRequest) (string, error) {
 		// 第一步：先用 HTTP 把站点开起来，Let's Encrypt 要从 80 端口访问验证文件。
 		b.WriteString(writeRoot(file, s.nginxConfig("http", "", ""), "写站点配置失败"))
 		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，已撤下这个站点（地址重复或者写法不对）"))
-		b.WriteString(step("systemctl reload nginx", "重载 Nginx 失败"))
+		b.WriteString(reload("nginx"))
 		mail := "--register-unsafely-without-email"
 		if req.Email != "" {
 			mail = "-m " + snippet.Quote(req.Email)
@@ -486,7 +486,7 @@ func nginxSiteAdd(st Status, s Site, req SiteRequest) (string, error) {
 		b.WriteString(writeRoot(file, s.nginxConfig(s.TLS, req.Cert, req.Key), "写站点配置失败"))
 		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，已撤下这个站点（地址重复、证书路径不对或者写法不对）"))
 	}
-	b.WriteString(step("systemctl reload nginx", "重载 Nginx 失败"))
+	b.WriteString(reload("nginx"))
 	return b.String(), nil
 }
 
@@ -540,8 +540,45 @@ func SiteRemoveCommand(st Status, addr string) (string, error) {
 		return "", st.rootErr("改不了站点配置")
 	}
 	file := SiteFile(s.Server, s.Address)
-	return step("mv -f "+file+" "+file+".removed", "撤下站点失败") + step("systemctl reload "+s.Server, "重载 "+serverName(s.Server)+" 失败") +
+	return step("mv -f "+file+" "+file+".removed", "撤下站点失败") + reload(s.Server) +
 		`echo ` + snippet.Quote("hostower: 站点 "+s.Address+" 已撤下"), nil
+}
+
+// bring 运行一条让反向代理起来的 systemctl 命令；失败时先把服务最近的日志打出来，
+// 起不来的原因（多半是 80、443 端口被别的程序占了）就在里面。
+func bring(cmd, server, fail string) string {
+	return "{ " + asRoot(cmd) + "; } || { " + asRoot("journalctl -u "+server+" -n 20 --no-pager") + "; echo " +
+		snippet.Quote("hostower: "+fail+"，原因见上面的日志") + "; exit 1; }; "
+}
+
+// reload 让反向代理重新读配置：在运行就重载，没在运行就启动（systemctl reload-or-restart 的语义）。
+// 只用 reload 的话，服务没在运行时会失败，而站点文件已经写进去了。
+func reload(server string) string {
+	return bring("systemctl reload-or-restart "+server, server, "重载 "+serverName(server)+" 失败")
+}
+
+// ServerStartCommand 启动装好了但没在运行的 Caddy 或 Nginx。
+func ServerStartCommand(st Status, server string) (string, error) {
+	var installed, active bool
+	switch server {
+	case "caddy":
+		installed, active = st.Caddy.Installed, st.Caddy.Active
+	case "nginx":
+		installed, active = st.Nginx.Installed, st.Nginx.Active
+	default:
+		return "", errors.New("未知的操作")
+	}
+	name := serverName(server)
+	if !installed {
+		return "", errors.New("这台主机上没有安装 " + name)
+	}
+	if active {
+		return "", errors.New(name + " 已经在运行了")
+	}
+	if !st.CanRoot() {
+		return "", st.rootErr("启动不了 " + name)
+	}
+	return bring("systemctl start "+server, server, "启动 "+name+" 失败") + `echo ` + snippet.Quote("hostower: "+name+" 已启动"), nil
 }
 
 func serverName(server string) string {

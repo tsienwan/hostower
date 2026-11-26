@@ -106,9 +106,9 @@ func TestNginxSites(t *testing.T) {
 	if err != nil || site.Server != "nginx" {
 		t.Fatal(err, site)
 	}
-	order := []string{"tls=http", "nginx -t", "systemctl reload nginx", "certbot certonly --webroot -w /var/www/hostower-acme -d new.example.com --cert-name new.example.com",
+	order := []string{"tls=http", "nginx -t", "systemctl reload-or-restart nginx", "certbot certonly --webroot -w /var/www/hostower-acme -d new.example.com --cert-name new.example.com",
 		"-m ops@example.com", "--deploy-hook 'systemctl reload nginx'", "tls=le", "return 301 https://$host$request_uri;", "listen 443 ssl http2;",
-		"client_max_body_size 50m;", "ssl_certificate_key /etc/letsencrypt/live/new.example.com/privkey.pem;", "Strict-Transport-Security", "nginx -t", "systemctl reload nginx"}
+		"client_max_body_size 50m;", "ssl_certificate_key /etc/letsencrypt/live/new.example.com/privkey.pem;", "Strict-Transport-Security", "nginx -t", "systemctl reload-or-restart nginx"}
 	at := 0
 	for _, s := range order {
 		i := strings.Index(cmd[at:], s)
@@ -159,7 +159,7 @@ func TestNginxSites(t *testing.T) {
 		t.Errorf("静态站点不对：%v\n%s", err, cmd)
 	}
 	rm, err := SiteRemoveCommand(st, "files.example.com")
-	if err != nil || !strings.Contains(rm, "/etc/nginx/conf.d/hostower-files.example.com.conf.removed") || !strings.Contains(rm, "systemctl reload nginx") || e.Classify(rm).Level != risk.L1 {
+	if err != nil || !strings.Contains(rm, "/etc/nginx/conf.d/hostower-files.example.com.conf.removed") || !strings.Contains(rm, "systemctl reload-or-restart nginx") || e.Classify(rm).Level != risk.L1 {
 		t.Errorf("撤下 Nginx 站点不对：%v\n%s", err, rm)
 	}
 	// 日志是只读的。
@@ -314,5 +314,35 @@ func TestFail2ban(t *testing.T) {
 	noNginx := Parse(strings.Replace(debianOut, "nginx\n", "", 1), 22)
 	if _, err := F2BCommand(noNginx, F2BRequest{Action: "config", Config: F2BConfig{BanTime: 600, FindTime: 600, MaxRetry: 5, Jails: []string{"nginx-botsearch"}}}); err == nil {
 		t.Error("没装 Nginx 时开不了 Web 防护")
+	}
+}
+
+// 启动没在运行的反向代理：L1；失败时带上服务日志；没装或已经在运行时不给命令。
+func TestServerStart(t *testing.T) {
+	e := risk.New()
+	st := Parse(ubuntuOut, 22)
+	st.Caddy.Installed, st.Caddy.Active = true, false
+	cmd, err := ServerStartCommand(st, "caddy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []string{"systemctl start caddy", "journalctl -u caddy -n 20 --no-pager", "exit 1"} {
+		if !strings.Contains(cmd, s) {
+			t.Errorf("启动命令里缺少 %q：\n%s", s, cmd)
+		}
+	}
+	if got := e.Classify(cmd).Level; got != risk.L1 {
+		t.Errorf("启动 Caddy 应是 L1，得到 %s", got)
+	}
+	st.Caddy.Active = true
+	if _, err := ServerStartCommand(st, "caddy"); err == nil {
+		t.Error("已经在运行时不应给出启动命令")
+	}
+	st.Nginx.Installed = false
+	if _, err := ServerStartCommand(st, "nginx"); err == nil {
+		t.Error("没装时不应给出启动命令")
+	}
+	if _, err := ServerStartCommand(st, "sshd"); err == nil {
+		t.Error("只能启动 Caddy 或 Nginx")
 	}
 }

@@ -442,6 +442,12 @@ L1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 L1 caddy reload --config /etc/caddy/Caddyfile
 L1 tee /etc/nginx/conf.d/hostower-app.example.com.conf
 L1 systemctl reload nginx
+L1 systemctl reload-or-restart nginx
+L1 systemctl reload-or-restart caddy
+L1 systemctl start caddy
+L1 systemctl start nginx
+L1 { if [ "$(id -u)" = 0 ]; then systemctl start caddy; else sudo -n systemctl start caddy; fi; } || { if [ "$(id -u)" = 0 ]; then journalctl -u caddy -n 20 --no-pager; else sudo -n journalctl -u caddy -n 20 --no-pager; fi; echo 'hostower: 启动 Caddy 失败，原因见上面的日志'; exit 1; }; echo 'hostower: Caddy 已启动'
+L1 { if [ "$(id -u)" = 0 ]; then systemctl reload-or-restart nginx; else sudo -n systemctl reload-or-restart nginx; fi; } || { if [ "$(id -u)" = 0 ]; then journalctl -u nginx -n 20 --no-pager; else sudo -n journalctl -u nginx -n 20 --no-pager; fi; echo 'hostower: 重载 Nginx 失败，原因见上面的日志'; exit 1; }; echo ok
 L0 tail -n 200 /var/log/nginx/hostower-app.example.com.access.log
 L0 sudo -n tail -n 200 /var/log/nginx/hostower-app.example.com.error.log
 

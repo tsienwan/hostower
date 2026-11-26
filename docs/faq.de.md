@@ -308,6 +308,12 @@ Schlägt es fehl, wird die Site vorerst per HTTP ausgeliefert, andere Sites blei
 
 Danach die Site entfernen und neu anlegen.
 
+### Die Karte „Sites“ zeigt „Caddy · Läuft nicht“
+
+Ist er installiert, aber der Dienst läuft nicht, ist keine Site auf diesem Host erreichbar und es wird kein Zertifikat angefordert. Klicken Sie daneben auf „Caddy starten“ (für Nginx gilt dasselbe); nach der Genehmigung wird es ausgeführt. Auch beim Hinzufügen oder Entfernen einer Site wird der Dienst gestartet, falls er nicht läuft.
+
+Schlägt der Start fehl, enthält die Ausgabe der Anfrage das aktuelle Log des Dienstes. Häufigste Ursache ist ein anderes Programm, das Port 80 oder 443 belegt, etwa ein selbst eingerichteter Caddy, Nginx oder Container auf dem Host. Beenden Sie, was den Port belegt, und starten Sie erneut.
+
 ### Port 443 wird schon von 3x-ui (Xray) belegt
 
 Zwei Programme können nicht auf demselben Port lauschen. Verlegen Sie den Xray-Inbound auf einen anderen Port, oder geben Sie der Site eine Adresse mit Port (z. B. `app.example.com:8443`); dann kann Nginx nur ein vorhandenes Zertifikat nutzen, Caddy holt weiterhin automatisch eines.

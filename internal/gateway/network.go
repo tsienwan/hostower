@@ -117,7 +117,7 @@ func (s *Server) hostFirewall(w http.ResponseWriter, r *http.Request) {
 }
 
 type siteBody struct {
-	Action string `json:"action"` // add | remove | install-caddy | install-nginx
+	Action string `json:"action"` // add | remove | install-caddy | install-nginx | start-caddy | start-nginx
 	netcfg.SiteRequest
 	Preview bool `json:"preview"`
 }
@@ -156,6 +156,12 @@ func (s *Server) hostSites(w http.ResponseWriter, r *http.Request) {
 	case "install-nginx":
 		cmd, err = netcfg.NginxInstallCommand(st)
 		intent = "在 " + name + " 上安装 Nginx"
+	case "start-caddy":
+		cmd, err = netcfg.ServerStartCommand(st, "caddy")
+		intent = "在 " + name + " 上启动 Caddy"
+	case "start-nginx":
+		cmd, err = netcfg.ServerStartCommand(st, "nginx")
+		intent = "在 " + name + " 上启动 Nginx"
 	default:
 		writeErr(w, 400, "未知的操作")
 		return

@@ -71,6 +71,14 @@ const dict: Record<string, string> = {
   "登录账号不是 root，也没有 sudo：装不了 Nginx": "Das Anmeldekonto ist nicht root und hat kein sudo: Nginx lässt sich nicht installieren",
   "登录账号不是 root，也没有 sudo：续期不了证书": "Das Anmeldekonto ist nicht root und hat kein sudo: Zertifikate lassen sich nicht erneuern",
   "登录账号不是 root，也没有 sudo：管不了 Fail2ban": "Das Anmeldekonto ist nicht root und hat kein sudo: Fail2ban lässt sich nicht verwalten",
+  "在 {a} 上启动 Caddy": "Caddy auf {a} starten",
+  "这台主机上没有安装 Caddy": "Caddy ist auf diesem Host nicht installiert",
+  "Caddy 已经在运行了": "Caddy läuft bereits",
+  "登录账号不是 root，也没有 sudo：启动不了 Caddy": "Das Login-Konto ist nicht root und hat kein sudo: Caddy nicht startbar",
+  "在 {a} 上启动 Nginx": "Nginx auf {a} starten",
+  "这台主机上没有安装 Nginx": "Nginx ist auf diesem Host nicht installiert",
+  "Nginx 已经在运行了": "Nginx läuft bereits",
+  "登录账号不是 root，也没有 sudo：启动不了 Nginx": "Das Login-Konto ist nicht root und hat kein sudo: Nginx nicht startbar",
 };
 
 export default dict;

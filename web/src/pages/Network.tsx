@@ -2,10 +2,10 @@
 // 这一页没有自己的执行通道：现状是只读检测，改动都变成请求，走判级和审批
 // （改防火墙和 Fail2ban 是 L2，改站点、申请和续期证书是 L1）。远端的内容（日志、证书信息）一律按纯文本显示。
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Ban, ExternalLink, FileText, Globe, KeyRound, Lock, Plus, RefreshCw, Settings2, Shield, ShieldCheck, ShieldOff, Trash2, TriangleAlert } from "lucide-react";
-import { api, type F2BConfig, type NetPort, type NetSite, type NetworkView, type Preview, type AppPlanResult, type SiteForm, type SiteKind, type SiteServer, type SiteTLS } from "../api";
-import { backAfterApproval, fail, onHost, useRequestFinished } from "../store";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Ban, ExternalLink, FileText, Globe, KeyRound, Lock, Play, Plus, RefreshCw, Settings2, Shield, ShieldAlert, ShieldCheck, ShieldOff, Trash2, TriangleAlert } from "lucide-react";
+import { api, type F2BConfig, type NetPort, type NetSite, type NetworkView, type Preview, type Req, type AppPlanResult, type SiteForm, type SiteKind, type SiteServer, type SiteTLS } from "../api";
+import { backAfterApproval, fail, onHost, useRequestFinished, useStore } from "../store";
 import { Empty, Modal } from "../ui";
 import { Select } from "../controls";
 import { PreviewPanel } from "../shared";
@@ -51,6 +51,31 @@ function PlanDialog({ title, send, onClose, children, ready = true }: {
   );
 }
 
+/**
+ * 这台主机上还在等批准或执行中的请求里，意图符合 match 的最新一条。
+ * 意图是服务端的固定写法（internal/gateway/network.go）。有它时不再给“安装”按钮，免得重复提交。
+ */
+function activeReq(reqs: Req[], host: string, match: (intent: string) => boolean): Req | null {
+  let latest: Req | null = null;
+  for (const r of reqs) {
+    if (r.state !== "pending" && r.state !== "running") continue;
+    if (r.targets.length !== 1 || r.targets[0].host !== host || !match(r.intent)) continue;
+    if (!latest || r.createdAt > latest.createdAt) latest = r;
+  }
+  return latest;
+}
+
+/** 代替“安装”按钮：显示请求走到哪一步，点了去看这条请求。 */
+function ReqLink({ req, running, name }: { req: Req; running: string; name?: string }) {
+  const t = useT();
+  return (
+    <Link className="btn sm" to={`/requests/${req.id}`} state={backAfterApproval}>
+      {req.state === "pending" ? <ShieldAlert /> : <RefreshCw className="spin" />}
+      {name ? name + " · " : ""}{req.state === "pending" ? t("等待批准") : running}
+    </Link>
+  );
+}
+
 function PortInput({ value, onChange }: { value: NetPort; onChange: (p: NetPort) => void }) {
   const t = useT();
   return (
@@ -65,10 +90,11 @@ function PortInput({ value, onChange }: { value: NetPort; onChange: (p: NetPort)
 export function NetworkPanel({ host }: { host: string }) {
   const t = useT();
   const [sp, setSp] = useSearchParams();
+  const reqs = useStore((s) => s.requests);
   const [data, setData] = useState<NetworkView | null>(() => cached<NetworkView>("net:" + host) ?? null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [dialog, setDialog] = useState<null | "setup" | "allow" | "site" | "caddy" | "nginx" | "f2b" | { remove: NetPort } | { unsite: string }
+  const [dialog, setDialog] = useState<null | "setup" | "allow" | "site" | "caddy" | "nginx" | "start-caddy" | "start-nginx" | "f2b" | { remove: NetPort } | { unsite: string }
     | { log: string } | { cert: "dry-run" | "renew" } | { force: string } | { unban: { jail: string; ip: string } }>(null);
   // 从应用页跳过来时带着端口：直接打开“添加站点”。
   const presetPort = Number(sp.get("port")) || 0;
@@ -92,6 +118,14 @@ export function NetworkPanel({ host }: { host: string }) {
   const keep = new Set(data.keep.map(portText));
   const canRoot = st.root || (st.sudo && !st.noNewPrivs);
   const toolName = fw.tool === "ufw" ? "ufw" : fw.tool === "firewalld" ? "firewalld" : "";
+  // 请求刚结束、现状还在重新检测时（loading），这几个“安装”按钮先禁用：这时页面上还是装之前的状态。
+  const fwReq = activeReq(reqs, host, (i) => i.startsWith(`在 ${host} 上启用防火墙 `));
+  const caddyReq = activeReq(reqs, host, (i) => i === `在 ${host} 上安装 Caddy`);
+  const nginxReq = activeReq(reqs, host, (i) => i === `在 ${host} 上安装 Nginx`);
+  const startReq = activeReq(reqs, host, (i) => i === `在 ${host} 上启动 Caddy` || i === `在 ${host} 上启动 Nginx`);
+  // 装好了但没在运行的那个（两个都装了时先看 Caddy）。
+  const stopped = st.caddy.installed && !st.caddy.active ? "caddy" as const : st.nginx.installed && !st.nginx.active ? "nginx" as const : null;
+  const f2bReq = activeReq(reqs, host, (i) => i === `在 ${host} 上安装 Fail2ban`);
   const webOpen = !fw.tool || ["80/tcp", "443/tcp", "80", "443", "http", "https"].some((r) => fw.rules.includes(r));
 
   return (
@@ -116,8 +150,8 @@ export function NetworkPanel({ host }: { host: string }) {
             : <span className="badge neutral"><ShieldOff />{t("没有启用")}</span>}
           <span className="grow" />
           {toolName && <button className="btn sm" onClick={() => setDialog("allow")} disabled={!canRoot}><Plus />{t("开放端口")}</button>}
-          {!fw.tool && !fw.unknown && <button className="btn primary sm" onClick={() => setDialog("setup")} disabled={!canRoot || (!fw.recommended && !fw.ufwInstalled && !fw.firewalldInstalled)}>
-            <Shield />{fw.ufwInstalled || fw.firewalldInstalled ? t("启用防火墙") : t("安装并启用防火墙")}</button>}
+          {!fw.tool && !fw.unknown && (fwReq ? <ReqLink req={fwReq} running={t("执行中")} /> : <button className="btn primary sm" onClick={() => setDialog("setup")} disabled={!canRoot || loading || (!fw.recommended && !fw.ufwInstalled && !fw.firewalldInstalled)}>
+            <Shield />{fw.ufwInstalled || fw.firewalldInstalled ? t("启用防火墙") : t("安装并启用防火墙")}</button>)}
         </div>
         <div className="card-body">
           {fw.tool === "conflict" && <div className="note crit"><TriangleAlert /><span>{t("两个防火墙同时管规则会互相覆盖。请先在主机上停掉其中一个（比如 systemctl disable --now firewalld），Hostower 不会同时管两个。")}</span></div>}
@@ -153,11 +187,15 @@ export function NetworkPanel({ host }: { host: string }) {
           {st.nginx.installed && <span className={"badge " + (st.nginx.active ? "ok" : "warn")}>Nginx · {st.nginx.active ? t("运行中") : t("没有运行")}</span>}
           {!st.caddy.installed && !st.nginx.installed && <span className="badge neutral">{t("没有 Caddy 或 Nginx")}</span>}
           <span className="grow" />
+          {startReq ? <ReqLink req={startReq} running={t("执行中")} />
+            : stopped && <button className="btn sm" onClick={() => setDialog(`start-${stopped}`)} disabled={!canRoot || loading}><Play />{t("启动 {name}", { name: stopped === "caddy" ? "Caddy" : "Nginx" })}</button>}
           {(st.caddy.installed || st.nginx.installed)
             ? <button className="btn primary sm" onClick={() => setDialog("site")} disabled={!canRoot}><Plus />{t("添加站点")}</button>
+            : caddyReq ? <ReqLink req={caddyReq} running={t("正在安装…")} name="Caddy" />
+            : nginxReq ? <ReqLink req={nginxReq} running={t("正在安装…")} name="Nginx" />
             : <>
-                {st.caddy.installable && <button className="btn primary sm" onClick={() => setDialog("caddy")} disabled={!canRoot}><Plus />{t("安装 Caddy")}</button>}
-                {st.nginx.installable && <button className="btn sm" onClick={() => setDialog("nginx")} disabled={!canRoot}><Plus />{t("安装 Nginx")}</button>}
+                {st.caddy.installable && <button className="btn primary sm" onClick={() => setDialog("caddy")} disabled={!canRoot || loading}><Plus />{t("安装 Caddy")}</button>}
+                {st.nginx.installable && <button className="btn sm" onClick={() => setDialog("nginx")} disabled={!canRoot || loading}><Plus />{t("安装 Nginx")}</button>}
               </>}
         </div>
         <div className="card-body">
@@ -244,7 +282,8 @@ export function NetworkPanel({ host }: { host: string }) {
                 <button className="btn ghost icon sm" title={t("看日志")} aria-label={t("看日志")} onClick={() => setDialog({ log: "" })}><FileText /></button>
                 <button className="btn sm" onClick={() => setDialog("f2b")} disabled={!canRoot}><Settings2 />{t("设置")}</button>
               </>
-            : f2b.installable && <button className="btn primary sm" onClick={() => setDialog("f2b")} disabled={!canRoot}><ShieldCheck />{t("安装并启用")}</button>}
+            : f2bReq ? <ReqLink req={f2bReq} running={t("正在安装…")} />
+            : f2b.installable && <button className="btn primary sm" onClick={() => setDialog("f2b")} disabled={!canRoot || loading}><ShieldCheck />{t("安装并启用")}</button>}
         </div>
         <div className="card-body">
           <p className="dim" style={{ marginTop: 0 }}>{t("按日志里的失败次数自动封禁来源 IP（它改的是防火墙规则）。安装、改设置、解封都是高危操作，批准时要重新验证身份。")}</p>
@@ -294,6 +333,11 @@ export function NetworkPanel({ host }: { host: string }) {
         <PlanDialog title={t("关闭端口 {port}", { port: portText(dialog.remove) })} onClose={() => setDialog(null)} send={(preview) => api.hostFirewall(host, { action: "remove", ports: [dialog.remove], preview })}>
           <p className="dim">{t("删掉这条放行规则后，外面就连不上这个端口了。改防火墙是高危操作，批准时要重新验证身份。")}</p></PlanDialog>
       )}
+      {(dialog === "start-caddy" || dialog === "start-nginx") && (() => {
+        const action = dialog, name = dialog === "start-caddy" ? "Caddy" : "Nginx";
+        return <PlanDialog title={t("在 {host} 上启动 {name}", { host, name })} onClose={() => setDialog(null)} send={(preview) => api.hostSites(host, { action, preview })}>
+          <p className="dim">{t("{name} 没在运行时，这台主机上的站点都打不开，证书也不会申请。起不来的话，输出里会带上它最近的日志，原因多半是 80 或 443 端口被别的程序占了。", { name })}</p></PlanDialog>;
+      })()}
       {dialog === "nginx" && <PlanDialog title={t("在 {host} 上安装 Nginx", { host })} onClose={() => setDialog(null)} send={(preview) => api.hostSites(host, { action: "install-nginx", preview })}>
         <p className="dim">{t("从系统软件源安装 Nginx 并开机自启。RHEL 系还会打开 SELinux 的 httpd_can_network_connect，否则反向代理会被挡住。")}</p>
         {st.listen.some((l) => l.port === 80) && <div className="note warn"><TriangleAlert /><span>{t("80 端口已经有程序在监听：Nginx 可能启动不了。")}</span></div>}</PlanDialog>}

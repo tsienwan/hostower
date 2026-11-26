@@ -147,7 +147,7 @@ func TestSites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range []string{"/etc/caddy/sites.d/app.example.com.caddy", "reverse_proxy 127.0.0.1:3001", "caddy validate", "systemctl reload caddy", ".rejected", "# hostower-site app.example.com 127.0.0.1:3001 kind=proxy tls=auto"} {
+	for _, s := range []string{"/etc/caddy/sites.d/app.example.com.caddy", "reverse_proxy 127.0.0.1:3001", "caddy validate", "systemctl reload-or-restart caddy", ".rejected", "# hostower-site app.example.com 127.0.0.1:3001 kind=proxy tls=auto"} {
 		if !strings.Contains(cmd, s) {
 			t.Errorf("添加站点的命令里缺少 %q：\n%s", s, cmd)
 		}

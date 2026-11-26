@@ -334,7 +334,7 @@ export const api = {
   appAction: (b: AppActionBody) => call<AppPlanResult>("POST", "/apps/action", b),
   hostNetwork: (host: string) => call<NetworkView>("GET", `/hosts/${encodeURIComponent(host)}/network`),
   hostFirewall: (host: string, b: { action: "setup" | "allow" | "remove"; tool?: string; ports: NetPort[]; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/firewall`, b),
-  hostSites: (host: string, b: { action: "add" | "remove" | "install-caddy" | "install-nginx"; preview?: boolean } & Partial<SiteForm>) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/sites`, b),
+  hostSites: (host: string, b: { action: "add" | "remove" | "install-caddy" | "install-nginx" | "start-caddy" | "start-nginx"; preview?: boolean } & Partial<SiteForm>) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/sites`, b),
   hostCerts: (host: string, b: { action: "dry-run" | "renew" | "force"; name?: string; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/certs`, b),
   hostFail2ban: (host: string, b: { action: "install" | "config" | "unban"; config?: F2BConfig; jail?: string; ip?: string; preview?: boolean }) => call<AppPlanResult>("POST", `/hosts/${encodeURIComponent(host)}/fail2ban`, b),
   hostNetLog: (host: string, q: { kind: "access" | "error" | "fail2ban"; server?: string; address?: string }) => call<{ text: string }>("GET", `/hosts/${encodeURIComponent(host)}/netlog?${new URLSearchParams(Object.entries(q).filter((e): e is [string, string] => !!e[1]))}`),

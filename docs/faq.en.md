@@ -308,6 +308,12 @@ When it fails, the site is served over HTTP for now and other sites are unaffect
 
 Once fixed, remove the site and add it again.
 
+### The Sites card says “Caddy · Not running”
+
+When it is installed but the service is not running, no site on this host can be reached and no certificate is requested. Click “Start Caddy” next to it (the same goes for Nginx); it runs after approval. Adding or removing a site also starts the service if it is not running.
+
+If the start fails, the request output includes the service's recent log. The most common cause is another program holding port 80 or 443, such as a Caddy, Nginx or container you set up yourself on the host. Stop whatever holds the port, then click start again.
+
 ### Port 443 is already used by 3x-ui (Xray)
 
 Two programs cannot listen on the same port. Either move the Xray inbound to another port, or give the site an address with a port (e.g. `app.example.com:8443`); in that case Nginx can only use an existing certificate, while Caddy can still obtain one automatically.

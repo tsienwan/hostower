@@ -155,6 +155,9 @@ const dict: Record<string, string> = {
   "{n} 个端口": "{n} ports",
   "主机进程": "Host processes",
   "绕过防火墙": "Bypasses firewall",
+  "启动 {name}": "Start {name}",
+  "在 {host} 上启动 {name}": "Start {name} on {host}",
+  "{name} 没在运行时，这台主机上的站点都打不开，证书也不会申请。起不来的话，输出里会带上它最近的日志，原因多半是 80 或 443 端口被别的程序占了。": "While {name} is not running, no site on this host can be reached and no certificate is requested. If it fails to start, the output includes its recent log; the usual cause is another program holding port 80 or 443.",
 };
 
 export default dict;

@@ -71,6 +71,14 @@ const dict: Record<string, string> = {
   "登录账号不是 root，也没有 sudo：装不了 Nginx": "登入帳號不是 root，也沒有 sudo：裝不了 Nginx",
   "登录账号不是 root，也没有 sudo：续期不了证书": "登入帳號不是 root，也沒有 sudo：續期不了憑證",
   "登录账号不是 root，也没有 sudo：管不了 Fail2ban": "登入帳號不是 root，也沒有 sudo：管不了 Fail2ban",
+  "在 {a} 上启动 Caddy": "在 {a} 上啟動 Caddy",
+  "这台主机上没有安装 Caddy": "這台主機上沒有安裝 Caddy",
+  "Caddy 已经在运行了": "Caddy 已經在執行了",
+  "登录账号不是 root，也没有 sudo：启动不了 Caddy": "登入帳號不是 root，也沒有 sudo：啟動不了 Caddy",
+  "在 {a} 上启动 Nginx": "在 {a} 上啟動 Nginx",
+  "这台主机上没有安装 Nginx": "這台主機上沒有安裝 Nginx",
+  "Nginx 已经在运行了": "Nginx 已經在執行了",
+  "登录账号不是 root，也没有 sudo：启动不了 Nginx": "登入帳號不是 root，也沒有 sudo：啟動不了 Nginx",
 };
 
 export default dict;

@@ -8,6 +8,8 @@ const dict: Record<string, string> = {
   "装不了 Nginx": "Nginx를 설치할 수 없습니다",
   "续期不了证书": "인증서를 갱신할 수 없습니다",
   "管不了 Fail2ban": "Fail2ban을 관리할 수 없습니다",
+  "启动不了 Caddy": "Caddy를 시작할 수 없습니다",
+  "启动不了 Nginx": "Nginx를 시작할 수 없습니다",
 };
 
 export default dict;

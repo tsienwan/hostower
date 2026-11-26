@@ -308,6 +308,12 @@ En cas d'échec, le site est servi en HTTP en attendant, sans toucher aux autres
 
 Une fois le problème réglé, retirez le site puis ajoutez-le de nouveau.
 
+### La carte Sites affiche « Caddy · Non démarré »
+
+Quand il est installé mais que le service ne tourne pas, aucun site de cet hôte n'est joignable et aucun certificat n'est demandé. Cliquez sur « Démarrer Caddy » à côté (même chose pour Nginx) ; l'action s'exécute après approbation. L'ajout ou le retrait d'un site démarre aussi le service s'il ne tourne pas.
+
+Si le démarrage échoue, la sortie de la demande contient le journal récent du service. La cause la plus fréquente est un autre programme qui occupe le port 80 ou 443, par exemple un Caddy, un Nginx ou un conteneur que vous avez installé vous-même sur l'hôte. Arrêtez ce qui occupe le port, puis relancez le démarrage.
+
 ### Le port 443 est déjà utilisé par 3x-ui (Xray)
 
 Deux programmes ne peuvent pas écouter sur le même port. Déplacez l'entrée Xray sur un autre port, ou donnez au site une adresse avec port (par ex. `app.example.com:8443`) ; dans ce cas Nginx ne peut utiliser qu'un certificat existant, tandis que Caddy peut toujours en obtenir un automatiquement.

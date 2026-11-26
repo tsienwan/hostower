@@ -155,6 +155,9 @@ const dict: Record<string, string> = {
   "{n} 个端口": "{n} ports",
   "主机进程": "Processus de l'hôte",
   "绕过防火墙": "Contourne le pare-feu",
+  "启动 {name}": "Démarrer {name}",
+  "在 {host} 上启动 {name}": "Démarrer {name} sur {host}",
+  "{name} 没在运行时，这台主机上的站点都打不开，证书也不会申请。起不来的话，输出里会带上它最近的日志，原因多半是 80 或 443 端口被别的程序占了。": "Tant que {name} ne tourne pas, aucun site de cet hôte n’est joignable et aucun certificat n’est demandé. S’il ne démarre pas, la sortie contient son journal récent ; la cause habituelle est un autre programme qui occupe le port 80 ou 443.",
 };
 
 export default dict;

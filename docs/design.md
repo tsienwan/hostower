@@ -172,6 +172,7 @@ Snippet 是参数化的操作模板：
 - 不把自己锁在外面：启用前先放行 SSH 端口（和面板对外的端口、勾选的正在监听的端口），最后才启用，任何一步失败都不启用；SSH 和面板的端口不能关。
 - 需要 root 的命令写成“是 root 就直接运行，否则 sudo -n”两个完整分支，判级引擎看得到实际要做什么（不用变量拼命令名）。
 - 站点用 Caddy 或 Nginx（系统软件源安装，每台主机只装一个，两个都要 80/443）。站点有反向代理（转发到 127.0.0.1 的端口）、静态目录（只能在 /var/www、/srv、/opt、/home 下，不能是隐藏目录）、跳转三种。每个站点一个文件（Caddy 在 `/etc/caddy/sites.d`，主配置里加一行 import；Nginx 是 `/etc/nginx/conf.d/hostower-*.conf`），第一行是标记，检测脚本只读标记，所以只列出 Hostower 加的站点。文件内容用带引号的 heredoc 写进命令里，审批摘要覆盖写入的全部内容；写完先 `caddy validate` / `nginx -t`，通过才重载，不通过把文件改名成 `.rejected` 撤下。删除是改名成 `.removed`。写站点是 L1。
+- 改完站点用 `systemctl reload-or-restart`：服务在运行就重载，没在运行就启动。装好了但没在运行时，页面上有“启动”（L1）；启动或重载失败时，输出里带上服务最近 20 行日志。
 - HTTPS：Caddy 自动申请；Nginx 用 certbot 的 webroot 方式申请 Let's Encrypt 证书（先写 HTTP 站点让 80 端口能验证，拿到证书再换成 HTTPS 配置；不让 certbot 改 Hostower 写的文件），续期靠 certbot 自带的定时任务，续期后重载 Nginx。也可以填主机上已有证书的路径（只写进配置，不读私钥）。证书列表来自 `certbot certificates`（L0），续期是 L1，删除和吊销证书是 L2（页面不提供）。
 - Fail2ban 装在宿主机上，只写 `/etc/fail2ban/jail.d/hostower.local`。它管着防火墙的封禁规则，所以 `/etc/fail2ban` 算关键配置，`fail2ban-client` 除了查看（status、get 等）都是 L2，fail2ban 服务的启停也是 L2：安装、改设置、解封都要在网页上批准。不把自己封掉：白名单固定有回环地址和 Hostower 的来源地址（`SSH_CONNECTION`）；安装时先写配置再装包，服务第一次启动就带着白名单；改设置先备份，`fail2ban-client -t` 不通过就换回去。
 - Docker 直接发布到所有地址的端口会绕过 ufw 和 firewalld：页面列出来提醒改绑 127.0.0.1。云服务商的安全组在主机之外，管不到。

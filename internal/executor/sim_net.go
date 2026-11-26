@@ -280,6 +280,21 @@ func (s *Sim) netCommand(h inventory.Host, sh *simHost, cmd string) (lines []str
 		n.nginx, n.nginxOn = true, true
 		say("Setting up nginx (1.22.1-9) ...")
 	}
+	// 启动、停止反向代理（添加站点时的 reload-or-restart 也会把没在运行的服务启动起来）。
+	for _, sv := range []struct {
+		name          string
+		installed, on *bool
+	}{{"caddy", &n.caddy, &n.caddyOn}, {"nginx", &n.nginx, &n.nginxOn}} {
+		if !*sv.installed {
+			continue
+		}
+		if strings.Contains(cmd, "systemctl start "+sv.name) || strings.Contains(cmd, "systemctl reload-or-restart "+sv.name) {
+			*sv.on = true
+		}
+		if strings.Contains(cmd, "systemctl stop "+sv.name) {
+			*sv.on = false
+		}
+	}
 	if strings.Contains(cmd, "install -y -q certbot") {
 		n.certbot = true
 		say("Setting up certbot (2.1.0-4) ...", "Created symlink /etc/systemd/system/timers.target.wants/certbot.timer → /lib/systemd/system/certbot.timer.")
