@@ -5,6 +5,7 @@ import { Bell, Pencil, Plus, Send, Trash2, TriangleAlert } from "lucide-react";
 import { BrandIcon } from "../brand";
 import { api, type NotifyChannel, type NotifyEvent, type NotifyStatus } from "../api";
 import { fail, toast, useStore } from "../store";
+import { useCached } from "../cache";
 import { Modal, ago } from "../ui";
 import { Select, TagInput } from "../controls";
 import { lang as uiLang, languages, ts, useT } from "../i18n";
@@ -37,7 +38,7 @@ const groupNames: Record<string, string> = { approval: "审批", run: "执行", 
 export function NotifySettings({ onChange }: { onChange?: () => void }) {
   const t = useT();
   const owner = useStore((s) => s.boot?.user?.role === "owner");
-  const [data, setData] = useState<{ channels: NotifyChannel[]; status: Record<string, NotifyStatus>; events: NotifyEvent[]; defaults: string[]; available: boolean } | null>(null);
+  const [data, setData] = useCached<{ channels: NotifyChannel[]; status: Record<string, NotifyStatus>; events: NotifyEvent[]; defaults: string[]; available: boolean }>("settings.notify");
   const [editing, setEditing] = useState<NotifyChannel | "new" | null>(null);
   const [busy, setBusy] = useState("");
   const load = useCallback(() => api.notifyList().then((d) => { setData(d); onChange?.(); }).catch(fail), [onChange]);

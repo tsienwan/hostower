@@ -5,6 +5,7 @@ import { askConfirm } from "../dialogs";
 import { Check, Copy, KeyRound, Link2Off, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { api, type ChatBot } from "../api";
 import { fail, toast, useStore } from "../store";
+import { useCached } from "../cache";
 import { stamp } from "../ui";
 import { Select } from "../controls";
 import { BrandIcon } from "../brand";
@@ -13,13 +14,13 @@ import { ts, useT } from "../i18n";
 export function ChatBotSettings({ version }: { version: number }) {
   const t = useT();
   const owner = useStore((s) => s.boot?.user?.role === "owner");
-  const [bot, setBot] = useState<ChatBot | null>(null);
-  const [ttl, setTtl] = useState("");
+  const [bot, setBot] = useCached<ChatBot>("settings.chatbot");
+  const [ttl, setTtl] = useState(() => (bot?.ttlDays ? String(bot.ttlDays) : bot ? "30" : ""));
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   // ttlDays 为 0 表示永久：输入框里留着上次的天数，方便取消“永久”时直接用。
-  const apply = useCallback((b: ChatBot) => { setBot(b); if (b.ttlDays) setTtl(String(b.ttlDays)); else setTtl((v) => v || "30"); }, []);
+  const apply = useCallback((b: ChatBot) => { setBot(b); if (b.ttlDays) setTtl(String(b.ttlDays)); else setTtl((v) => v || "30"); }, [setBot]);
   const load = useCallback(() => { if (owner) api.chatBot().then(apply).catch(fail); }, [owner, apply]);
   // version 变了说明通知渠道有改动（新增、删除了 Telegram 渠道），重新取一次。
   useEffect(() => { load(); }, [load, version]);

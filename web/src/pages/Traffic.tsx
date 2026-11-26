@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Activity, Settings2, TriangleAlert } from "lucide-react";
 import { api, type DayTraffic, type HostTraffic, type Quota, type QuotaMode, type QuotaStatus, type TrafficView } from "../api";
 import { fail, toast, useStore } from "../store";
+import { useCached } from "../cache";
 import { Modal, SortTh, bytes, lastOnly, pctText, poll, useSort } from "../ui";
 import { Select } from "../controls";
 import { askConfirm } from "../dialogs";
@@ -299,7 +300,8 @@ function QuotaDialog({ host, view, onClose, onSaved }: { host: string; view: Tra
 /** 总览上的流量排行：各主机本周期的用量。设了配额的按配额的周期和网卡，没设的按自然月。 */
 export function TrafficRanking() {
   const t = useT();
-  const [list, setList] = useState<HostTraffic[] | null>(null);
+  // 再回到总览时先显示上次的排行，不用等接口返回才出现；新数据到了再换上。
+  const [list, setList] = useCached<HostTraffic[]>("traffic.ranking");
   useEffect(() => {
     let on = true;
     const next = lastOnly();

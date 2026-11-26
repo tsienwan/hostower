@@ -4,6 +4,7 @@ import { Archive, Bell, OctagonPause, Play, RefreshCw, RotateCcw, Server, Shield
 import { useSearchParams } from "react-router-dom";
 import { api, type AuditArchiveView, type UpdateStatus, type PanelView, type RetentionView } from "../api";
 import { fail, loadBoot, refreshHosts, setPaused, toast, useStore } from "../store";
+import { cached, remember, useCached } from "../cache";
 import { Modal, ago, bytes, stamp, uptime } from "../ui";
 import { withVerify } from "../verify";
 import { Select } from "../controls";
@@ -143,7 +144,7 @@ const split = (listen: string): [string, string] => {
 /** 自动更新：开关、当前和最新版本、手动检查与更新。新版本在服务端验过发布签名才会换上去。 */
 function UpdateSettings() {
   const t = useT();
-  const [st, setSt] = useState<UpdateStatus | null>(null);
+  const [st, setSt] = useCached<UpdateStatus>("settings.update");
   const [busy, setBusy] = useState(false);
   const [switching, setSwitching] = useState("");
   const load = useCallback(() => api.update().then(setSt).catch(() => {}), []);
@@ -205,7 +206,7 @@ function UpdateSettings() {
 /** 审计的范围：日常查看要不要也记下来。关键操作永远记录，不受这个开关影响。 */
 function AuditSettings() {
   const t = useT();
-  const [record, setRecord] = useState<boolean | null>(null);
+  const [record, setRecord] = useCached<boolean>("settings.routine");
   const [busy, setBusy] = useState(false);
   useEffect(() => { api.auditRoutine().then((r) => setRecord(r.record)).catch(() => {}); }, []);
   if (record === null) return null;
@@ -239,7 +240,7 @@ function AuditSettings() {
 function AuditArchiveSettings() {
   const t = useT();
   const owner = useStore((s) => s.boot?.user?.role === "owner");
-  const [v, setV] = useState<AuditArchiveView | null>(null);
+  const [v, setV] = useCached<AuditArchiveView>("settings.archive");
   const [busy, setBusy] = useState(false);
   const load = useCallback(() => api.auditArchive().then(setV).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
@@ -297,22 +298,25 @@ function AuditArchiveSettings() {
 
 function PanelSettings({ dev }: { dev: boolean }) {
   const t = useT();
-  const [view, setView] = useState<PanelView | null>(null);
-  const [v, setV] = useState<Record<string, string>>({});
-  const [ip, setIP] = useState("");
-  const [port, setPort] = useState("");
+  // 先用上次的数据把卡片和表单填好；重新取到的和它不一样才换（一样就不动，免得冲掉正在填的内容）。
+  const [seen] = useState(() => cached<PanelView>("settings.panel"));
+  const stored0 = seen ? Object.fromEntries(seen.fields.map((f) => [f.key, f.stored])) : {};
+  const [view, setView] = useState<PanelView | null>(seen ?? null);
+  const [v, setV] = useState<Record<string, string>>(stored0);
+  const [ip, setIP] = useState(() => split(stored0.listen || "")[0]);
+  const [port, setPort] = useState(() => split(stored0.listen || "")[1]);
   const [busy, setBusy] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const owner = useStore((s) => s.boot?.user?.role === "owner");
 
   const apply = useCallback((pv: PanelView) => {
-    setView(pv);
+    setView(remember("settings.panel", pv));
     const stored = Object.fromEntries(pv.fields.map((f) => [f.key, f.stored]));
     setV(stored);
     const [h, p] = split(stored.listen || "");
     setIP(h); setPort(p);
   }, []);
-  useEffect(() => { api.panel().then(apply).catch(fail); }, [apply]);
+  useEffect(() => { api.panel().then((pv) => { if (JSON.stringify(pv) !== JSON.stringify(seen)) apply(pv); }).catch(fail); }, [apply, seen]);
   if (!view) return null;
 
   const f = Object.fromEntries(view.fields.map((x) => [x.key, x]));
@@ -519,7 +523,7 @@ function InterfaceSettings() {
 /** 指标历史保留多久：分钟级和 15 分钟级分开设。缩短后，超出的部分在一小时内清掉。 */
 function RetentionSettings({ owner }: { owner: boolean }) {
   const t = useT();
-  const [v, setV] = useState<RetentionView | null>(null);
+  const [v, setV] = useCached<RetentionView>("settings.retention");
   const [busy, setBusy] = useState(false);
   const hosts = useStore((st) => st.hosts.length) || 1;
   useEffect(() => { api.retention().then(setV).catch(() => {}); }, []);

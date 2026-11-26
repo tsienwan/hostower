@@ -6,6 +6,7 @@ import qrcode from "qrcode-generator";
 import { Copy, Dices, Eye, EyeOff, Fingerprint, KeyRound, Plus, ShieldCheck, Smartphone, Trash2, TriangleAlert } from "lucide-react";
 import { api, type AuthFactors, type Methods } from "../api";
 import { fail, loadBoot, toast, useStore } from "../store";
+import { useCached } from "../cache";
 import { Modal, ago } from "../ui";
 import { Select } from "../controls";
 import { withVerify } from "../verify";
@@ -15,7 +16,7 @@ export function LoginSecurity() {
   const t = useT();
   const owner = useStore((s) => s.boot?.user?.role === "owner");
   const defaultName = useStore((s) => !!s.boot?.defaultUsername);
-  const [info, setInfo] = useState<AuthFactors | null>(null);
+  const [info, setInfo] = useCached<AuthFactors>("security.factors");
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<"password" | "totp" | "username" | null>(null);
   // 当前访问地址能不能用 Passkey（用 IP 访问时不能）。

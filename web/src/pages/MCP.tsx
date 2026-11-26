@@ -5,6 +5,7 @@ import { Bot, Check, Copy, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { api, type MCPToken } from "../api";
 import { askConfirm } from "../dialogs";
 import { fail, toast } from "../store";
+import { cached, remember, useCached } from "../cache";
 import { stamp } from "../ui";
 import { Select } from "../controls";
 import { VerifyCancelled, withVerify } from "../verify";
@@ -27,15 +28,15 @@ function CopyBlock({ text, label }: { text: string; label: string }) {
 
 export function MCPSettings({ owner }: { owner: boolean }) {
   const t = useT();
-  const [tokens, setTokens] = useState<MCPToken[] | null>(null);
-  const [endpoint, setEndpoint] = useState("");
+  const [tokens, setTokens] = useCached<MCPToken[]>("settings.mcp");
+  const [endpoint, setEndpoint] = useState(() => cached<string>("settings.mcp.endpoint") ?? "");
   const [name, setName] = useState("claude-code");
   const [days, setDays] = useState("30");
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<{ token: string; name: string } | null>(null);
 
   const load = useCallback(() => {
-    if (owner) api.mcpTokens().then((v) => { setTokens(v.tokens); setEndpoint(v.endpoint); }).catch(fail);
+    if (owner) api.mcpTokens().then((v) => { setTokens(v.tokens); setEndpoint(remember("settings.mcp.endpoint", v.endpoint)); }).catch(fail);
   }, [owner]);
   useEffect(() => { load(); }, [load]);
   if (!owner || !tokens) return null;

@@ -1,6 +1,8 @@
 // 页面数据的内存缓存：切回一个页面时先显示上次的数据，同时在后台重新取，取到再替换。
 // 这样切换页签时不会先空一下、再“啪”地出现，布局也不会跳。
 // 只存在内存里（刷新页面就没了），不进浏览器存储；退出登录时清空。
+import { useCallback, useState } from "react";
+
 const mem = new Map<string, unknown>();
 
 /** 读上次缓存的值。 */
@@ -17,4 +19,11 @@ export function remember<T>(key: string, value: T): T {
 /** 清空全部缓存（退出登录、切换账号时）。 */
 export function clearCache() {
   mem.clear();
+}
+
+/** 带缓存的状态：初值是上次记下的（没有就是 null），每次写入都同时记下。给“进页面先取一次数据”的卡片用。 */
+export function useCached<T>(key: string): [T | null, (value: T) => void] {
+  const [value, setValue] = useState<T | null>(() => cached<T>(key) ?? null);
+  const set = useCallback((next: T) => setValue(remember(key, next)), [key]);
+  return [value, set];
 }

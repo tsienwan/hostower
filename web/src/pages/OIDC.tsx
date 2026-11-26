@@ -3,29 +3,32 @@ import { useEffect, useState } from "react";
 import { Copy, LogIn, TriangleAlert } from "lucide-react";
 import { api, type OIDCView } from "../api";
 import { fail, toast } from "../store";
+import { cached, remember } from "../cache";
 import { TagInput } from "../controls";
 import { VerifyCancelled, withVerify } from "../verify";
 import { ts, useT } from "../i18n";
 
 export function OIDCSettings({ owner }: { owner: boolean }) {
   const t = useT();
-  const [view, setView] = useState<OIDCView | null>(null);
-  const [enabled, setEnabled] = useState(false);
-  const [name, setName] = useState("");
-  const [issuer, setIssuer] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [allowed, setAllowed] = useState<string[]>([]);
+  // 先用上次的数据把卡片和表单填好；重新取到的和它不一样才换（一样就不动，免得冲掉正在填的内容）。
+  const [seen] = useState(() => cached<OIDCView>("settings.oidc"));
+  const [view, setView] = useState<OIDCView | null>(seen ?? null);
+  const [enabled, setEnabled] = useState(seen?.config.enabled ?? false);
+  const [name, setName] = useState(seen?.config.name ?? "");
+  const [issuer, setIssuer] = useState(seen?.config.issuer ?? "");
+  const [clientId, setClientId] = useState(seen?.config.clientId ?? "");
+  const [allowed, setAllowed] = useState<string[]>(seen?.config.allowed ?? []);
   const [secret, setSecret] = useState("");
   const [clearSecret, setClearSecret] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   const apply = (v: OIDCView) => {
-    setView(v);
+    setView(remember("settings.oidc", v));
     setEnabled(v.config.enabled); setName(v.config.name ?? ""); setIssuer(v.config.issuer ?? ""); setClientId(v.config.clientId ?? "");
     setAllowed(v.config.allowed ?? []); setSecret(""); setClearSecret(false);
   };
-  useEffect(() => { api.oidc().then(apply).catch(() => {}); }, []);
+  useEffect(() => { api.oidc().then((v) => { if (JSON.stringify(v) !== JSON.stringify(seen)) apply(v); }).catch(() => {}); }, []);
   if (!view) return null;
 
   const save = async () => {
