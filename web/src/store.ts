@@ -118,6 +118,8 @@ export function useRequestFinished(reload: () => void, match?: (r: Req) => boole
 
 export function upsertRequest(r: Req) {
   const i = state.requests.findIndex((x) => x.id === r.id);
+  // 不让旧的快照盖掉新的状态：命令执行得很快时，实时推送的“已结束”会比“批准”这次调用的返回值（还是“执行中”）先到。
+  if (i >= 0 && ((state.requests[i].finishedAt && !r.finishedAt) || (state.requests[i].decidedAt && !r.decidedAt))) return;
   const next = [...state.requests];
   if (i >= 0) next[i] = { ...r, targets: r.targets.map((t, j) => ({ ...t, output: next[i].targets[j]?.output ?? "" })) };
   else next.unshift(r);
