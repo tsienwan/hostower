@@ -290,7 +290,7 @@ function Files({ host }: { host: string }) {
       }
     } catch (e) { fail(e); } finally { setSending(null); }
     if (made.length === 1) nav(`/requests/${made[0]}`, { state: backAfterApproval });
-    else if (made.length > 1) { toast(t("已生成 {n} 个上传请求，批准后写入主机", { n: made.length })); nav("/approvals"); }
+    else if (made.length > 1) { toast(t("已生成 {n} 个上传请求，批准后写入主机", { n: made.length })); nav("/approvals", { state: backAfterApproval }); }
   };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();

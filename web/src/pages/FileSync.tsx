@@ -80,7 +80,7 @@ function Distribute() {
       if (r.error) toast(ts(r.error), "err");
       const reqs = r.requests ?? [];
       if (reqs.length === 1) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
-      else if (reqs.length > 1) { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals"); }
+      else if (reqs.length > 1) { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals", { state: backAfterApproval }); }
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
 

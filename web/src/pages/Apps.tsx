@@ -207,7 +207,7 @@ function InstallDialog({ app, initialHost, onClose }: { app: AppItem; initialHos
       const reqs = Array.isArray(r.requests) ? r.requests : [];
       if (r.error) toast(ts(r.error), "err");
       if (reqs.length === 1) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
-      else { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals"); }
+      else { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals", { state: backAfterApproval }); }
     } catch (e) { fail(e); } finally { setBusy(false); }
   };
   const saveSecret = async () => {
@@ -433,7 +433,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
       const reqs = Array.isArray(r.requests) ? r.requests : [];
       setSel([]);
       if (reqs.length === 1) nav(`/requests/${reqs[0].id}`, { state: backAfterApproval });
-      else { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals"); }
+      else { toast(t("已提交 {n} 个请求", { n: reqs.length })); nav("/approvals", { state: backAfterApproval }); }
     } catch (e) { fail(e); }
   };
   const ask = (action: AppActionName, keys: string[]) => (action === "uninstall" || action === "purge" ? setConfirm({ action, keys }) : run(action, keys));

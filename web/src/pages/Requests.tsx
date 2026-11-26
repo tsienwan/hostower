@@ -61,9 +61,11 @@ function BackButton({ primary }: { primary?: boolean }) {
 export function Approvals() {
   const t = useT();
   const pending = useStore((s) => s.requests).filter((r) => r.state === "pending");
+  // 一次提交了好几个请求时会被带到这里（带了 backAfterApproval），这时才有“刚才的页面”；从导航栏点进来的没有。
+  const sent = !!(useLocation().state as { back?: boolean } | null)?.back;
   return (
     <>
-      <div className="topbar"><BackButton /><h1>{t("审批")}</h1><span className="muted num">{t("{n} 个等待中", { n: pending.length })}</span></div>
+      <div className="topbar">{sent && <BackButton />}<h1>{t("审批")}</h1><span className="muted num">{t("{n} 个等待中", { n: pending.length })}</span></div>
       <div className="content">
         <div className="page">
           <p className="lede">{t("这里是所有等待人来决定的操作。批准的是你看到的那一份内容：命令或文件变了，批准自动作废。")}</p>
