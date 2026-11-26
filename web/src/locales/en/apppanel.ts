@@ -18,6 +18,8 @@ const dict: Record<string, string> = {
   "复制命令": "Copy command",
   "按钮打开": "Button opens",
   "这个应用只在主机本机（127.0.0.1）监听，从外面打不开：填写完整地址或者经由 SSH 隧道。": "This app listens only on the host itself (127.0.0.1) and can't be opened from outside: enter a full address or use an SSH tunnel.",
+  "这台主机上有站点反向代理到这个应用的端口：没有另外设置时，按钮自动打开站点的地址。想照主机地址打开，就在上面填上端口。":
+    "A site on this host reverse-proxies to this app's port: with nothing else set, the button opens the site's address automatically. To open the host address instead, fill in the port above.",
   "只有所有者可以修改面板地址。": "Only the owner can change the panel address.",
   "这个应用只在主机本机（127.0.0.1）监听：先设置面板地址（反向代理的域名或 SSH 隧道）": "This app listens only on the host itself (127.0.0.1): set a panel address first (a reverse-proxy domain or an SSH tunnel)",
   "打开面板": "Open panel",

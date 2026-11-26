@@ -15,7 +15,7 @@ import { DockerSetup } from "../DockerSetup";
 import { cached, remember } from "../cache";
 import { ts, useT } from "../i18n";
 import { AppGuideDialog, guideUrl } from "./AppGuide";
-import { AppPanelDialog, panelEntry, panelLink } from "./AppPanel";
+import { AppPanelDialog, panelEntry, panelLink, siteUrls, usePanelSites } from "./AppPanel";
 import { EnvMatrix } from "./HostEnv";
 
 const icons: Record<string, typeof Bot> = { bot: Bot, sparkles: Sparkles, activity: Activity, database: Database, network: Network, box: Box, shield: Shield, terminal: SquareTerminal };
@@ -413,6 +413,8 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
 
   const rows = (data ?? []).flatMap((h) => h.installed.map((x) => ({ ...x, host: h.host, key: h.host + "/" + x.instance })));
   const errors = (data ?? []).filter((h) => h.error);
+  // 有面板、又没设过面板地址的实例：查它所在主机上的站点，有反向代理到应用端口的就让“打开面板”用站点地址。
+  const sites = usePanelSites([...new Set(rows.filter((r) => panelEntry(r) && !r.panel).map((r) => r.host))]);
   const updates = rows.filter((r) => r.update || r.rebuilt);
   // 从请求详情页跳过来（?host=…&app=…）：数据到了以后直接打开那个实例的上手指南，只打开一次。
   const wantHost = sp.get("host"), wantApp = sp.get("app");
@@ -519,7 +521,7 @@ function Installed({ byName }: { byName: Map<string, AppItem> }) {
                             {(() => {
                               const pe = panelEntry(r);
                               if (!pe) return null;
-                              const l = panelLink(hosts.find((h) => h.name === r.host), pe, r.panel);
+                              const l = panelLink(hosts.find((h) => h.name === r.host), pe, r.panel, r.panel ? undefined : siteUrls(sites[r.host] ?? [], pe.port, pe.path)[0]);
                               if (!l.url) return <button className="btn sm" title={t("这个应用只在主机本机（127.0.0.1）监听：先设置面板地址（反向代理的域名或 SSH 隧道）")} onClick={() => setPaneling(r.key)}><ExternalLink />{t("打开面板")}</button>;
                               return <a className={"btn sm" + (running > 0 ? "" : " disabled")} href={l.url} target="_blank" rel="noopener noreferrer"
                                 title={running === 0 ? t("应用已停止") : l.ssh ? t("经由 SSH 隧道：先在自己电脑上运行 {cmd}", { cmd: l.ssh }) : l.url}

@@ -4,7 +4,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Copy, ExternalLink, Globe, RotateCcw, Save, TriangleAlert } from "lucide-react";
-import { api, type AppGuide, type AppInstalled, type AppPanel, type Host, type NetSite } from "../api";
+import { api, type AppGuide, type AppInstalled, type AppPanel, type Host, type NetSite, type NetworkView } from "../api";
+import { cached, remember } from "../cache";
 import { fail, toast, useStore } from "../store";
 import { Modal } from "../ui";
 import { ts, useT } from "../i18n";
@@ -38,9 +39,13 @@ export interface PanelLink {
   ssh?: string;
 }
 
-/** 按清单的面板入口、这个实例当前的参数和所有者设的面板地址，拼出按钮要打开的地址。 */
-export function panelLink(h: Host | undefined, o: Entry, p?: AppPanel): PanelLink {
+/**
+ * 按清单的面板入口、这个实例当前的参数和所有者设的面板地址，拼出按钮要打开的地址。
+ * site 是网络页里反向代理到这个应用端口的站点地址：没有设过面板地址时自动用它（设过就照设的）。
+ */
+export function panelLink(h: Host | undefined, o: Entry, p?: AppPanel, site?: string): PanelLink {
   const port = p?.port || o.port, path = p?.path || o.path || "/";
+  if (!p && site) return { url: site };
   if (p?.mode === "url" && p.url) return { url: p.url };
   if (p?.mode === "ssh") {
     const local = p.localPort || port;
@@ -50,10 +55,10 @@ export function panelLink(h: Host | undefined, o: Entry, p?: AppPanel): PanelLin
   return { url: `${o.scheme}://${browserHost(h)}:${port}${path}` };
 }
 
-/** 网络页里反向代理到这个端口的站点：可以直接拿来当面板地址。 */
-function siteUrls(sites: NetSite[], port: string, path: string): string[] {
+/** 网络页里反向代理到这个端口的站点：可以直接拿来当面板地址。走 HTTPS 的排在前面。 */
+export function siteUrls(sites: NetSite[], port: string, path: string): string[] {
   const out: string[] = [];
-  for (const s of sites) {
+  for (const s of [...sites].sort((a, b) => Number(a.tls === "http") - Number(b.tls === "http"))) {
     if (s.kind !== "proxy" || s.target !== `127.0.0.1:${port}`) continue;
     let a = s.address.trim();
     if (!a || a.startsWith(":")) continue;
@@ -61,6 +66,27 @@ function siteUrls(sites: NetSite[], port: string, path: string): string[] {
     out.push(a.replace(/\/+$/, "") + (path || "/"));
   }
   return [...new Set(out)];
+}
+
+/**
+ * 这几台主机上由 Hostower 添加的站点，给“打开面板”自动跟随用：先用内存里上次查到的，再各查一次。
+ * 查不到（主机连不上、没有权限）就当没有站点，按钮照原来的地址。
+ */
+export function usePanelSites(hosts: string[]): Record<string, NetSite[]> {
+  const key = [...hosts].sort().join(",");
+  const seen = (list: string[]) => Object.fromEntries(list.flatMap((h) => { const v = cached<NetworkView>("net:" + h); return v ? [[h, v.status?.sites ?? []]] : []; }));
+  const [sites, setSites] = useState<Record<string, NetSite[]>>(() => seen(hosts));
+  useEffect(() => {
+    if (!key) return;
+    let live = true;
+    const list = key.split(",");
+    setSites(seen(list));
+    for (const h of list) {
+      api.hostNetwork(h).then((v) => { remember("net:" + h, v); if (live) setSites((m) => ({ ...m, [h]: v.status?.sites ?? [] })); }).catch(() => {});
+    }
+    return () => { live = false; };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return sites;
 }
 
 function copy(text: string, done: string) {
@@ -78,18 +104,22 @@ export function AppPanelDialog({ row, title, onClose, onSaved }: { row: AppInsta
   const [port, setPort] = useState(cur?.port ?? "");
   const [path, setPath] = useState(cur?.path ?? "");
   const [localPort, setLocalPort] = useState(cur?.localPort ?? "");
-  const [sites, setSites] = useState<string[]>([]);
+  const [raw, setRaw] = useState<NetSite[]>(() => cached<NetworkView>("net:" + row.host)?.status?.sites ?? []);
   const [busy, setBusy] = useState(false);
 
   // 网络页里已经有反向代理到这个端口的站点：列出来，点一下就填进去。查不到不影响别的。
   useEffect(() => {
     let live = true;
-    api.hostNetwork(row.host).then((v) => live && setSites(siteUrls(v.status?.sites ?? [], port || o.port, path || o.path))).catch(() => {});
+    api.hostNetwork(row.host).then((v) => { remember("net:" + row.host, v); if (live) setRaw(v.status?.sites ?? []); }).catch(() => {});
     return () => { live = false; };
   }, [row.host]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const sites = siteUrls(raw, port.trim() || o.port, path.trim() || o.path);
+  // 没有设置（直接访问、端口和路径都空着）时，按钮自动用反向代理到应用端口的站点。
+  const auto = mode === "direct" && !port.trim() && !path.trim() ? siteUrls(raw, o.port, o.path)[0] : undefined;
+
   const draft: AppPanel = mode === "url" ? { mode, url: url.trim() } : mode === "ssh" ? { mode, port: port.trim(), path: path.trim(), localPort: localPort.trim() } : { mode, port: port.trim(), path: path.trim() };
-  const preview = useMemo(() => panelLink(h, o, { ...draft, path: draft.path && !draft.path.startsWith("/") ? "/" + draft.path : draft.path }), [h, o, mode, url, port, path, localPort]); // eslint-disable-line react-hooks/exhaustive-deps
+  const preview = useMemo(() => auto ? { url: auto } as PanelLink : panelLink(h, o, { ...draft, path: draft.path && !draft.path.startsWith("/") ? "/" + draft.path : draft.path }), [h, o, mode, url, port, path, localPort, auto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = (p: AppPanel) => {
     setBusy(true);
@@ -145,6 +175,7 @@ export function AppPanelDialog({ row, title, onClose, onSaved }: { row: AppInsta
           </div>
         )}
 
+        {auto && <div className="note ok"><Globe /><span>{t("这台主机上有站点反向代理到这个应用的端口：没有另外设置时，按钮自动打开站点的地址。想照主机地址打开，就在上面填上端口。")}</span></div>}
         {preview.ssh && (
           <div className="guide-link">
             <span className="muted">{t("先运行")}</span>
