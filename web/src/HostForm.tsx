@@ -10,7 +10,7 @@ import { useT } from "./i18n";
 export function HostForm({ host, onClose }: { host?: Host; onClose: () => void }) {
   const t = useT();
   const editing = !!host;
-  // 内置的本机：只能改标签和敏感度，怎么连是固定的。
+  // 内置的本机：名字固定；连接方式是本机直连，或者经 SSH 连回本机（用一个能 sudo 的账号管防火墙和站点）。
   const builtin = host?.source === "builtin";
   const all = useStore((s) => s.hosts);
   const [name, setName] = useState(host?.name ?? "");
@@ -60,11 +60,12 @@ export function HostForm({ host, onClose }: { host?: Host; onClose: () => void }
         </div>
         <div className="field">
           <label htmlFor="h-addr">{t("地址")}</label>
-          <input id="h-addr" className="input mono" value={addr} onChange={(e) => setAddr(e.target.value)} disabled={builtin} spellCheck={false} placeholder={t("192.0.2.10 或 192.0.2.10:2222")} />
+          <input id="h-addr" className="input mono" value={addr} onChange={(e) => setAddr(e.target.value)} disabled={builtin && !ssh} spellCheck={false} placeholder={t("192.0.2.10 或 192.0.2.10:2222")} />
         </div>
         <div className="field">
           <label htmlFor="h-exec">{t("连接方式")}</label>
-          {builtin ? <input id="h-exec" className="input" value={t("本机直连")} disabled readOnly /> : <Select id="h-exec" value={executor} onChange={setExecutor}
+          {builtin ? <Select id="h-exec" value={executor} onChange={(e) => { setExecutor(e); setAddr(e === "ssh" ? (host?.executor === "ssh" ? host.addr : "127.0.0.1") : "localhost"); }}
+            options={[{ value: "local", label: t("本机直连") }, { value: "ssh", label: "SSH", hint: "127.0.0.1" }]} /> : <Select id="h-exec" value={executor} onChange={setExecutor}
             options={executors.map((e) => ({ value: e, label: e === "ssh" ? "SSH" : e === "sim" ? t("模拟主机") : e, hint: e === "ssh" ? t("塔台 → 主机") : e === "sim" ? t("仅开发模式") : undefined }))} />}
         </div>
         <div className="field">
@@ -73,6 +74,7 @@ export function HostForm({ host, onClose }: { host?: Host; onClose: () => void }
             options={[{ value: "low", label: t("低") }, { value: "normal", label: t("普通") }, { value: "high", label: t("高"), hint: t("写操作自动升一级") }]} />
         </div>
       </div>
+      {builtin && ssh && <div className="hint">{t("经 SSH 连回这台机器：地址只能是 127.0.0.1 或 localhost（可以带端口）。选一条能免密 sudo 的账号的凭据，就能管防火墙和站点；随时可以改回本机直连。")}</div>}
       {ssh && (
         <div className="field">
           <label htmlFor="h-cred">{t("SSH 凭据")}</label>

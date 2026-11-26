@@ -1,6 +1,8 @@
 // Dictionnaire français：HostForm.tsx（新增、编辑主机）。
 const dict: Record<string, string> = {
   "本机直连": "Local (sans SSH)",
+  "经 SSH 连回这台机器：地址只能是 127.0.0.1 或 localhost（可以带端口）。选一条能免密 sudo 的账号的凭据，就能管防火墙和站点；随时可以改回本机直连。":
+    "Connexion à cette même machine via SSH : l’adresse doit être 127.0.0.1 ou localhost (port autorisé). Choisissez l’identifiant d’un compte avec sudo sans mot de passe pour gérer le pare-feu et les sites ; vous pouvez revenir à tout moment à la connexion locale.",
   "主机已更新": "Hôte mis à jour",
   "主机已添加": "Hôte ajouté",
   "编辑主机 {name}": "Modifier l'hôte {name}",

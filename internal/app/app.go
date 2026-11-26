@@ -408,8 +408,8 @@ func (a *App) loadInventory() (*inventory.Inventory, error) {
 			a.log.Warn("跳过一条无法解析的主机记录")
 			continue
 		}
-		if a.local != nil && h.Name == inventory.LocalName && h.Executor == "local" {
-			// 这一条不是另一台主机，而是页面上对内置本机的修改。
+		if a.local != nil && h.Name == inventory.LocalName && (h.Executor == "local" || (h.Executor == "ssh" && inventory.Loopback(h.Addr))) {
+			// 这一条不是另一台主机，而是页面上对内置本机的修改（包括把它改成经 SSH 连回本机）。
 			local = &h
 			continue
 		}
@@ -420,6 +420,9 @@ func (a *App) loadInventory() (*inventory.Inventory, error) {
 		b := inventory.Builtin()
 		if local != nil {
 			b.Tags, b.Sensitivity, b.Vars, b.Manual = local.Tags, local.Sensitivity, local.Vars, local.Manual
+			if local.Executor == "ssh" {
+				b.Addr, b.Executor, b.Credential = local.Addr, "ssh", local.Credential
+			}
 		}
 		managed = append(managed, b)
 	}
@@ -439,13 +442,24 @@ func (a *App) SaveHost(h inventory.Host, create bool) error {
 	cur, exists := a.Kernel.Inventory().Host(h.Name)
 	builtin := exists && cur.Source == "builtin"
 	if builtin {
-		// 内置的本机只能改标签、敏感度这些；怎么连是固定的。
-		h.Addr, h.Executor, h.Credential = cur.Addr, cur.Executor, ""
+		// 内置的本机：标签、敏感度可以改；连接方式要么是本机直连，要么是经 SSH 连回本机
+		// （直连的进程提不了权时，用一个能 sudo 的账号来管防火墙和站点）。地址只能是回环地址：它始终是这台机器。
+		if h.Executor == "ssh" {
+			if a.Config.LocalMode == "host" {
+				return errors.New("宿主机模式下本机上的命令已经以 root 身份执行，不需要改成 SSH")
+			}
+			if !inventory.Loopback(h.Addr) {
+				return errors.New("本机改成 SSH 连接时，地址只能是 127.0.0.1 或 localhost（可以带端口）")
+			}
+		} else {
+			b := inventory.Builtin()
+			h.Addr, h.Executor, h.Credential = b.Addr, b.Executor, ""
+		}
 	}
 	if err := inventory.Normalize(&h); err != nil {
 		return err
 	}
-	ok := builtin
+	ok := builtin && h.Executor == "local"
 	for _, e := range a.Executors() {
 		ok = ok || e == h.Executor
 	}

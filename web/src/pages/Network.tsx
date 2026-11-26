@@ -137,7 +137,7 @@ export function NetworkPanel({ host }: { host: string }) {
       {!canRoot && (st.noNewPrivs
         ? <div className="note warn"><TriangleAlert /><span>
             {t("这台主机上的命令由 Hostower 进程直接执行，而服务设置了 NoNewPrivileges（禁止提权的安全加固），所以 sudo 用不了，改不了防火墙和 Caddy。")}
-            <br />{t("推荐：在“总览”里把这台机器以 SSH 方式再添加一次（地址 127.0.0.1，用一个能免密 sudo 的账号），通过它来管防火墙和 Caddy。也可以去掉服务文件里的 NoNewPrivileges=true，但那会削弱加固。")}
+            <br />{t("推荐：点右上角的“编辑”，把这台主机的连接方式改成 SSH（地址 127.0.0.1，选一条能免密 sudo 的账号的凭据）。它还是这一台，不用另外添加主机。也可以去掉服务文件里的 NoNewPrivileges=true，但那会削弱加固。")}
           </span></div>
         : <div className="note warn"><TriangleAlert /><span>{t("登录账号不是 root，也没有 sudo：改不了防火墙和 Caddy。给它配置免密 sudo，或者用 root 连接这台主机。")}</span></div>)}
 

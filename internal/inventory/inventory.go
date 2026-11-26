@@ -3,9 +3,11 @@ package inventory
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"regexp"
 	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -164,10 +166,26 @@ func Normalize(h *Host) error {
 const LocalName = "local"
 
 // Builtin 返回内置的“本机”主机：Hostower 自己所在的这台机器。
-// 标签、敏感度、变量可以在页面上改（见 app.SaveHost）；名字、地址、连接方式是固定的，也不能删除。
+// 标签、敏感度、变量可以在页面上改（见 app.SaveHost）；名字是固定的，也不能删除。
+// 连接方式默认是本机直连；所有者可以改成经 SSH 连回本机（地址只能是回环地址，见 Loopback），
+// 用一个能 sudo 的账号来管防火墙这类需要提权的东西。
 func Builtin() Host {
 	return Host{Name: LocalName, Addr: "localhost", Executor: "local", Tags: []string{"local"},
 		Sensitivity: risk.SensNormal, Source: "builtin"}
+}
+
+// Loopback 判断一个主机地址（可带端口）是不是指向本机的回环地址。
+func Loopback(addr string) bool {
+	host := addr
+	if h, _, err := net.SplitHostPort(addr); err == nil {
+		host = h
+	}
+	host = strings.Trim(host, "[]")
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // WithManaged 返回一份合并了“页面管理的主机”的新清单。

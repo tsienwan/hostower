@@ -1,6 +1,6 @@
 // ko 词典：本机主机禁止提权（NoNewPrivileges）时的说明。
 const dict: Record<string, string> = {
-  "执行命令的进程被禁止提权（服务设置了 NoNewPrivileges），sudo 用不了，{a}。可以把这台机器以 SSH 方式再添加一次（地址 127.0.0.1，用一个能 sudo 的账号），通过它来管": "명령을 실행하는 프로세스가 권한 상승을 금지당했습니다(서비스에 NoNewPrivileges). sudo를 쓸 수 없어 {a}. 이 머신을 SSH 방식으로 다시 추가하고(주소 127.0.0.1, sudo 가능한 계정) 그것으로 관리하세요",
+  "执行命令的进程被禁止提权（服务设置了 NoNewPrivileges），sudo 用不了，{a}。可以编辑这台主机，把连接方式改成 SSH（地址 127.0.0.1，选一条能 sudo 的账号的凭据），再来操作": "명령을 실행하는 프로세스가 권한 상승을 금지당했습니다(서비스에 NoNewPrivileges). sudo를 쓸 수 없어 {a}. 이 호스트를 편집해 연결 방식을 SSH로 바꾼 뒤(주소 127.0.0.1, sudo 가능한 계정의 자격 증명) 다시 시도하세요",
   "登录账号不是 root，也没有 sudo：{a}": "로그인 계정이 root가 아니고 sudo도 없습니다: {a}",
   "改不了防火墙": "방화벽을 바꿀 수 없습니다",
   "装不了 Caddy": "Caddy를 설치할 수 없습니다",
@@ -10,6 +10,8 @@ const dict: Record<string, string> = {
   "管不了 Fail2ban": "Fail2ban을 관리할 수 없습니다",
   "启动不了 Caddy": "Caddy를 시작할 수 없습니다",
   "启动不了 Nginx": "Nginx를 시작할 수 없습니다",
+  "宿主机模式下本机上的命令已经以 root 身份执行，不需要改成 SSH": "호스트 모드에서는 로컬 호스트의 명령이 이미 root로 실행되므로 SSH로 바꿀 필요가 없습니다",
+  "本机改成 SSH 连接时，地址只能是 127.0.0.1 或 localhost（可以带端口）": "로컬 호스트를 SSH 연결로 바꿀 때 주소는 127.0.0.1 또는 localhost만 가능합니다(포트 지정 가능)",
 };
 
 export default dict;

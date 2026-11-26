@@ -1,6 +1,8 @@
 // Deutsches Wörterbuch: HostForm.tsx – Hosts hinzufügen und bearbeiten.
 const dict: Record<string, string> = {
   "本机直连": "Lokal (ohne SSH)",
+  "经 SSH 连回这台机器：地址只能是 127.0.0.1 或 localhost（可以带端口）。选一条能免密 sudo 的账号的凭据，就能管防火墙和站点；随时可以改回本机直连。":
+    "Verbindet sich per SSH zurück zu diesem Rechner: Die Adresse muss 127.0.0.1 oder localhost sein (Port erlaubt). Mit den Zugangsdaten eines Kontos mit passwortlosem sudo lassen sich Firewall und Sites verwalten; die Umstellung zurück auf Lokal ist jederzeit möglich.",
   "主机已更新": "Host aktualisiert",
   "主机已添加": "Host hinzugefügt",
   "编辑主机 {name}": "Host {name} bearbeiten",

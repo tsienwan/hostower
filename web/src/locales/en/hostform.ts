@@ -1,6 +1,8 @@
 // HostForm.tsx：新增、编辑主机。
 const dict: Record<string, string> = {
   "本机直连": "Local (no SSH)",
+  "经 SSH 连回这台机器：地址只能是 127.0.0.1 或 localhost（可以带端口）。选一条能免密 sudo 的账号的凭据，就能管防火墙和站点；随时可以改回本机直连。":
+    "Connects back to this machine over SSH: the address must be 127.0.0.1 or localhost (a port is allowed). Pick a credential for an account with passwordless sudo to manage the firewall and sites; you can switch back to Local at any time.",
   "主机已更新": "Host updated",
   "主机已添加": "Host added",
   "编辑主机 {name}": "Edit host {name}",

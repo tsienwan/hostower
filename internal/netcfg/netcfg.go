@@ -315,7 +315,7 @@ func (st Status) CanRoot() bool { return st.Root || (st.Sudo && !st.NoNewPrivs) 
 
 func (st Status) rootErr(what string) error {
 	if st.NoNewPrivs {
-		return errors.New("执行命令的进程被禁止提权（服务设置了 NoNewPrivileges），sudo 用不了，" + what + "。可以把这台机器以 SSH 方式再添加一次（地址 127.0.0.1，用一个能 sudo 的账号），通过它来管")
+		return errors.New("执行命令的进程被禁止提权（服务设置了 NoNewPrivileges），sudo 用不了，" + what + "。可以编辑这台主机，把连接方式改成 SSH（地址 127.0.0.1，选一条能 sudo 的账号的凭据），再来操作")
 	}
 	return errors.New("登录账号不是 root，也没有 sudo：" + what)
 }
