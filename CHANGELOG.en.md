@@ -4,6 +4,20 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.7
+
+### Added
+
+- The Speed test page has **This device ↔ host**: it treats the device you are viewing the panel on (a phone at home, at work or on the go) as a node, measures latency, jitter, download and upload between it and any host, and traces the route from that host back to it, showing which carrier line the return path takes and every hop.
+  - Direct to a host: a temporary speed test service is started on the chosen host (needs python3; default port 28080, changeable) and the browser opens a separate page that connects to it directly, without going through the panel. The service only accepts the address carrying a one-time token, waits at most two minutes and exits when the test is done. Opening a port is a change (L1) and needs approval; the host's firewall and the cloud provider's security group must allow the port. The test page uses HTTP, so the browser may warn that it is not secure.
+  - To the panel: the browser exchanges data with the panel to measure speed, and the return route can be traced from any host; tracing and pinging only, no approval needed.
+  - The forward route (this device → server) cannot be traced from a browser: paste the output of `tracert`, `traceroute`, `tracepath` or `mtr` into the report and the line and hops are identified the same way.
+  - The report also shows latency and packet loss when pinging the device from the host, and the protocol and connection type (Wi‑Fi, cellular) reported by the browser. These results appear in the speed test history but do not count as the host's own latest result.
+
+### Upgrade notes
+
+- The database schema goes to 18 (one new table); it migrates automatically on upgrade.
+
 ## v0.5.6
 
 ### Added

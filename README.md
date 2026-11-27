@@ -10,7 +10,7 @@ AI coding assistants on your hosts work under the same rules: every task is risk
 
 The name is host + tower: a lighthouse sees every ship on the water and guides them.
 
-Current version: **v0.5.6** (see [CHANGELOG.en.md](CHANGELOG.en.md)). Until it has passed an external security review, run it on a private network or behind a reverse proxy that authenticates users.
+Current version: **v0.5.7** (see [CHANGELOG.en.md](CHANGELOG.en.md)). Until it has passed an external security review, run it on a private network or behind a reverse proxy that authenticates users.
 
 ## How it works
 
@@ -71,10 +71,10 @@ On a Linux server with Docker and Docker Compose v2, run as root (or a user with
 bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh)
 ```
 
-To install a specific version, append its tag (for example `v0.5.6`):
+To install a specific version, append its tag (for example `v0.5.7`):
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.5.6
+bash <(curl -fsSL https://raw.githubusercontent.com/tsienwan/hostower/main/install.sh) v0.5.7
 ```
 
 To install the host-mode image (it also manages the machine it runs on, and runs privileged), add `--host`:
@@ -105,10 +105,10 @@ Official images are published to GitHub Container Registry for linux/amd64 and l
 
 | Image | Use |
 | --- | --- |
-| `ghcr.io/tsienwan/hostower:0.5.6` | Default image: non-root, read-only, no shell. Manages hosts over SSH (including the machine it runs on, added as an ordinary SSH host). Recommended. |
-| `ghcr.io/tsienwan/hostower:0.5.6-host` | Host-mode image: also manages the machine it runs on as the built-in `local` host. Runs privileged — commands on that machine run as root. |
+| `ghcr.io/tsienwan/hostower:0.5.7` | Default image: non-root, read-only, no shell. Manages hosts over SSH (including the machine it runs on, added as an ordinary SSH host). Recommended. |
+| `ghcr.io/tsienwan/hostower:0.5.7-host` | Host-mode image: also manages the machine it runs on as the built-in `local` host. Runs privileged — commands on that machine run as root. |
 
-`0` and `latest` (or `0-host` and `latest-host`) always point to the newest release; pin an exact version such as `0.5.6` in production.
+`0` and `latest` (or `0-host` and `latest-host`) always point to the newest release; pin an exact version such as `0.5.7` in production.
 
 ### 1. Start
 
