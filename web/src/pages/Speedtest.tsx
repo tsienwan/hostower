@@ -12,6 +12,7 @@ import { ApprovalCard } from "./Requests";
 import { cached, remember } from "../cache";
 import { ts, useT } from "../i18n";
 import { SpeedReport, SpeedTargets } from "./SpeedReport";
+import { ClientCard } from "./SpeedClient";
 
 const TAG = "builtin:speedtest@1";
 
@@ -396,7 +397,8 @@ export function SpeedtestPage() {
 
   const latest = useMemo(() => {
     const m = new Map<string, SpeedResult>();
-    for (const r of data?.results ?? []) if (!m.has(r.host)) m.set(r.host, r);
+    // “这台设备”测速量的是设备和面板（或主机）之间，不算这台主机自己的测速结果。
+    for (const r of data?.results ?? []) if (r.method !== "client" && r.method !== "direct" && !m.has(r.host)) m.set(r.host, r);
     return m;
   }, [data]);
   const online = hosts.filter((h) => h.status.online).map((h) => h.name);
@@ -424,6 +426,7 @@ export function SpeedtestPage() {
           ))}
           <div className="speed-layout">
           <div className="speed-main">
+          <ClientCard onDone={load} />
           <div className="card">
             <div className="card-head"><h2>{t("各主机最近一次结果")}</h2></div>
             {hosts.length === 0 ? <Empty icon={<Gauge />} title={t("还没有主机")} /> : (
@@ -540,7 +543,7 @@ function SpeedHistory({ results, reload, onReport }: { results: SpeedResult[]; r
                       <td className="num">{mbps(r.downBps)}</td>
                       <td className="num">{mbps(r.upBps)}</td>
                     </>}
-                    <td className="hide-sm muted sp-via" title={[r.server, optsLabel(t, r.threads, r.ip)].filter(Boolean).join(" · ")}>{r.method === "ookla" ? r.server || "Speedtest" : "Cloudflare"}{optsLabel(t, r.threads, r.ip) && <small className="sp-opt"> · {optsLabel(t, r.threads, r.ip)}</small>}</td>
+                    <td className="hide-sm muted sp-via" title={[r.server, optsLabel(t, r.threads, r.ip)].filter(Boolean).join(" · ")}>{r.method === "client" ? t("这台设备 ↔ 面板") : r.method === "direct" ? t("这台设备 ↔ {host}", { host: r.host }) : r.method === "ookla" ? r.server || "Speedtest" : "Cloudflare"}{optsLabel(t, r.threads, r.ip) && <small className="sp-opt"> · {optsLabel(t, r.threads, r.ip)}</small>}</td>
                     <td className="hide-sm muted num">{r.sizeMb ? r.sizeMb + " MB" : "—"}</td>
                     <td className="muted" title={stamp(r.ts)}>{ago(r.ts)}</td>
                     <td className="act" onClick={(e) => e.stopPropagation()}>

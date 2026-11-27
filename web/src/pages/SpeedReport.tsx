@@ -3,11 +3,12 @@
 import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDown, Check, Plus, RefreshCw, Route as RouteIcon, Save, Trash2, TriangleAlert } from "lucide-react";
-import { api, type SpeedDetail, type SpeedGeo, type SpeedGeoView, type SpeedHop, type SpeedOokla, type SpeedPreset, type SpeedResult, type SpeedRoute, type SpeedTarget, type SpeedTransfer } from "../api";
+import { api, type SpeedBack, type SpeedClient, type SpeedDetail, type SpeedGeo, type SpeedGeoView, type SpeedHop, type SpeedOokla, type SpeedPreset, type SpeedResult, type SpeedRoute, type SpeedTarget, type SpeedTransfer } from "../api";
 import { fail, toast, useStore } from "../store";
 import { Modal, bytes, stamp } from "../ui";
 import { lang, ts, useT } from "../i18n";
 import { mbps, optsLabel } from "./Speedtest";
+import { jitterOf, median } from "./SpeedClient";
 
 /** 骨干网标签的显示名。CHINANET 是只按自治系统号（AS4134）认出的电信地址，可能是省里的城域网，不一定是 163 骨干。 */
 const netNames: Record<string, string> = {
@@ -31,7 +32,9 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
   const [r, setR] = useState<SpeedResult | null>(null);
   const [err, setErr] = useState("");
   const [geo, setGeo] = useState<SpeedGeoView | "loading" | null>(null);
-  useEffect(() => { api.speedtestReport(requestId, host).then(setR).catch((e) => setErr(e instanceof Error ? e.message : String(e))); }, [requestId, host]);
+  // 贴上或移除去程路由后重新读一遍。
+  const [ver, setVer] = useState(0);
+  useEffect(() => { api.speedtestReport(requestId, host).then(setR).catch((e) => setErr(e instanceof Error ? e.message : String(e))); }, [requestId, host, ver]);
   const d = r?.detail;
   const o = d?.ookla;
   const hasHops = !!d?.routes?.some((x) => x.hops.some((h) => h.ip));
@@ -40,7 +43,10 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
     if (!hasHops) return;
     setGeo("loading");
     api.speedtestGeo(requestId, host, lang()).then(setGeo).catch((e) => setGeo({ enabled: true, service: "", error: e instanceof Error ? e.message : String(e) }));
-  }, [hasHops, requestId, host]);
+  }, [hasHops, requestId, host, ver]);
+  const direct = r?.method === "direct";
+  const mine = r?.method === "client" || direct;
+  const cl = mine ? d?.client : undefined;
   const tcp = d?.pings.map((p) => p.tcp) ?? [];
   const avg = tcp.length ? tcp.reduce((a, b) => a + b, 0) / tcp.length : 0;
   const jitter = tcp.length > 1 ? tcp.slice(1).reduce((a, v, i) => a + Math.abs(v - tcp[i]), 0) / (tcp.length - 1) : 0;
@@ -58,24 +64,27 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
         <>
           <div className="row wrap muted" style={{ gap: 12, fontSize: 12.5 }}>
             <span>{stamp(r.ts)}</span>
-            {r.method === "ookla"
+            {mine ? <span>{direct ? t("这台设备 ↔ {host}", { host: r.host }) : t("这台设备 ↔ 面板")}{r.sizeMb ? " · " + t("共传了 {n} MB", { n: r.sizeMb }) : ""}</span>
+              : r.method === "ookla"
               ? <span>Speedtest by Ookla{o ? " · " + serverLabel(o) : ""}{r.sizeMb ? " · " + t("共传了 {n} MB", { n: r.sizeMb }) : ""}</span>
               : <span>Cloudflare · {t("下载 {d} MB、上传 {u} MB", { d: r.sizeMb, u: r.sizeMb / 4 })}</span>}
             {optsLabel(t, r.threads, r.ip) && <span>{optsLabel(t, r.threads, r.ip)}</span>}
           </div>
           {r.error && <div className="note crit"><span>{ts(r.error)}</span></div>}
+          {mine && !cl && !r.error && <div className="note warn"><TriangleAlert /><span>{t("这次没有收到浏览器量的延迟和速度（测到一半关掉了页面），只有回程路由。")}</span></div>}
           <div className="sr-stats">
             <Stat label={t("延迟")} value={r.pingMs ? ms(r.pingMs) : "—"} unit="ms"
-              sub={o ? t("抖动 {j} ms", { j: ms(o.jitter) }) : tcp.length ? t("平均 {avg} ms", { avg: ms(avg) }) : undefined} />
+              sub={cl && cl.pings.length > 1 ? t("抖动 {j} ms", { j: ms(jitterOf(cl.pings)) }) : o ? t("抖动 {j} ms", { j: ms(o.jitter) }) : tcp.length ? t("平均 {avg} ms", { avg: ms(avg) }) : undefined} />
             <Stat label={t("下载")} value={mbps(r.downBps)} sub={transfer(t, d?.down)} />
             <Stat label={t("上传")} value={mbps(r.upBps)} sub={transfer(t, d?.up)} />
-            {o ? <Stat label={t("丢包")} value={o.packetLoss !== undefined ? String(o.packetLoss) : "—"} unit={o.packetLoss !== undefined ? "%" : undefined}
+            {cl ? <Stat label={t("失败的请求")} value={String(cl.lost ?? 0)} sub={t("共 {n} 次", { n: cl.pings.length + (cl.lost ?? 0) })} />
+              : o ? <Stat label={t("丢包")} value={o.packetLoss !== undefined ? String(o.packetLoss) : "—"} unit={o.packetLoss !== undefined ? "%" : undefined}
               sub={o.packetLoss === undefined ? t("这台服务器不测丢包") : undefined} />
               : d && tcp.length > 1 && <Stat label={t("抖动")} value={ms(jitter)} unit="ms" sub={t("{n} 次握手之间", { n: tcp.length })} />}
           </div>
           {!d ? <div className="note"><span>{t("这条记录没有明细：明细是这个版本才开始记录的，之前的测速只有汇总。")}</span></div> : (
             <>
-              {o ? <OoklaView o={o} d={d} /> : <div className="sr-grid">
+              {mine ? <ClientView direct={direct} c={cl} back={d.back} host={host} /> : o ? <OoklaView o={o} d={d} /> : <div className="sr-grid">
                 <section className="sr-sec sr-card">
                   <h3>{t("延迟")}</h3>
                   <p className="hint">{t("连 {n} 次测速服务器，每次分段计时；延迟取 TCP 握手最快的一次。", { n: d.pings.length })}
@@ -112,22 +121,85 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
               </div>}
               <section className="sr-sec">
                 <h3>{t("线路")}</h3>
-                {!routes.length ? <p className="hint">{t("这次没有追踪路由。可以在测速页的“路由追踪目标”里添加目标，发起测速时勾选“顺便追踪路由”。")}</p> : (
+                {!routes.length ? <p className="hint">{mine ? t("这次没有拿到回程路由。") : t("这次没有追踪路由。可以在测速页的“路由追踪目标”里添加目标，发起测速时勾选“顺便追踪路由”。")}</p> : (
                   <>
-                    <p className="hint">{t("线路按公开的运营商骨干网段和节点所属的自治系统（AS）推测，只能作参考；不回应的节点显示为 *。看回程线路要追踪到你那边的地址。")}</p>
+                    <p className="hint">{mine
+                      ? t("回程是从主机追踪到这台设备的地址；去程是这台设备到服务器，浏览器追踪不了，要在设备那边跑一次路由追踪贴进来。来回两个方向走的线路常常不一样。线路按公开的运营商骨干网段和节点所属的自治系统（AS）推测，只能作参考；不回应的节点显示为 *。")
+                      : t("线路按公开的运营商骨干网段和节点所属的自治系统（AS）推测，只能作参考；不回应的节点显示为 *。看回程线路要追踪到你那边的地址。")}</p>
                     {geo === "loading" && <div className="note"><RefreshCw className="spin" /><span>{t("正在查询各跳的地区和运营商…")}</span></div>}
                     {g && !g.enabled && <div className="note"><span>{t("节点地区查询已关闭，只显示地址。所有者可以在测速页的“路由追踪目标”里打开。")}</span></div>}
                     {g?.error && <div className="note warn"><TriangleAlert /><span>{ts(g.error)}</span></div>}
-                    {routes.map((rt, i) => <RouteView key={rt.target} r={rt} geo={g?.hops} loading={geo === "loading"} open={i === 0 || routes.length <= 2} />)}
+                    {routes.map((rt, i) => <RouteView key={rt.target} r={rt} host={host} geo={g?.hops} loading={geo === "loading"} open={i === 0 || routes.length <= 2} />)}
                     {g?.enabled && g.service && <span className="hint">{t("地区和运营商来自 {service}，按 IP 库推测，骨干网节点的位置常常只到国家或城市。", { service: g.service })}</span>}
                   </>
                 )}
+                {mine && <ForwardBox requestId={requestId} host={host} has={routes.some((x) => x.dir === "forward")} onSaved={() => setVer((v) => v + 1)} />}
               </section>
             </>
           )}
         </>
       )}
     </Modal>
+  );
+}
+
+/** “这台设备”测速的明细：浏览器量的延迟，和这台设备的网络信息。 */
+function ClientView({ c, back, host, direct }: { c?: SpeedClient; back?: SpeedBack; host: string; direct: boolean }) {
+  const t = useT();
+  const p = c?.pings ?? [];
+  const conn: Record<string, string> = { wifi: "Wi-Fi", cellular: t("蜂窝网络"), ethernet: t("有线网络") };
+  return (
+    <div className="sr-grid">
+      <section className="sr-sec sr-card">
+        <h3>{direct ? t("这台设备 ↔ {host}", { host }) : t("这台设备 ↔ 面板")}</h3>
+        <p className="hint">{direct
+          ? t("这台设备的浏览器直接连到 {host} 上临时开的测速服务量的，不经过面板：延迟是连发小请求的往返时间，取中位数，里面含一点服务处理的时间；下载和上传是浏览器直接和这台主机传数据。", { host })
+          : t("延迟是浏览器向面板连发小请求量出来的往返时间，取中位数，里面含一点服务器处理的时间；下载和上传是浏览器直接和面板传数据量的。")}
+          {c?.proxy && " " + t("面板前面有反向代理：这些数字量的是这台设备到代理（或 CDN）那一段，加上代理到面板。")}</p>
+        {p.length > 0 && (
+          <dl className="kv sm">
+            <dt>{t("往返时间")}</dt><dd className="num">{t("最小 {min}、中位 {med}、最大 {max} ms", { min: ms(Math.min(...p)), med: ms(median(p)), max: ms(Math.max(...p)) })}</dd>
+            <dt>{t("抖动")}</dt><dd className="num">{ms(jitterOf(p))} ms</dd>
+          </dl>
+        )}
+      </section>
+      <section className="sr-sec sr-card">
+        <h3>{t("网络")}</h3>
+        <dl className="kv sm">
+          <dt>{t("这台设备的地址")}</dt><dd className="mono">{c?.ip || "—"}</dd>
+          <dt>{t("协议")}</dt><dd className="mono">{c?.proto || "—"}</dd>
+          <dt>{t("连接类型")}</dt><dd>{c?.conn ? conn[c.conn] ?? c.conn : "—"}</dd>
+          <dt>{t("从 {host} ping 它", { host })}</dt>
+          <dd className="num">{!back ? "—" : back.recv === 0 ? t("不回应") : t("平均 {avg} ms，丢包 {loss}%", { avg: ms(back.avg), loss: Math.round(((back.sent - back.recv) / back.sent) * 100) })}</dd>
+        </dl>
+        {back && back.recv === 0 && <span className="hint">{t("家用路由器和运营商的地址常常不回应 ping，不代表不通。")}</span>}
+      </section>
+    </div>
+  );
+}
+
+/** 去程路由：浏览器追踪不了，在设备那边的电脑上跑一次，把输出贴进来。 */
+function ForwardBox({ requestId, host, has, onSaved }: { requestId: string; host: string; has: boolean; onSaved: () => void }) {
+  const t = useT();
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const save = (v: string) => {
+    setBusy(true);
+    api.speedClientForward(requestId, host, v).then(() => { setText(""); toast(t("已保存")); onSaved(); }).catch(fail).finally(() => setBusy(false));
+  };
+  if (has) return <span><button className="btn ghost sm" disabled={busy} onClick={() => save("")}><Trash2 />{t("移除去程路由")}</button></span>;
+  const name = window.location.hostname;
+  return (
+    <details className="sr-route">
+      <summary><Plus className="muted" /><b>{t("添加去程路由")}</b><span className="muted">{t("这台设备 → 服务器")}</span></summary>
+      <div className="col" style={{ gap: 8, padding: "12px 14px" }}>
+        <span className="hint">{t("在和这台设备同一个网络里的电脑上运行下面的命令，把完整输出贴到这里。手机上可以用带路由追踪功能的网络工具，把结果按文字贴进来。")}</span>
+        <pre className="code">{"Windows:        tracert -d " + name + "\nmacOS / Linux:  traceroute -n " + name}</pre>
+        <textarea className="input mono" rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("把 tracert、traceroute 或 mtr 的输出贴在这里")} aria-label={t("去程路由的输出")} />
+        <span className="hint">{t("只留下每一跳的序号、IP 地址和时间，别的文字不保存。")}</span>
+        <span><button className="btn primary sm" disabled={busy || !text.trim()} onClick={() => save(text)}><Save />{t("保存")}</button></span>
+      </div>
+    </details>
   );
 }
 
@@ -234,7 +306,7 @@ function longHaul(hops: SpeedHop[]): { after: number; from: number; to: number }
   return best;
 }
 
-function RouteView({ r, geo, loading, open }: { r: SpeedRoute; geo?: Record<string, SpeedGeo>; loading: boolean; open: boolean }) {
+function RouteView({ r, host, geo, loading, open }: { r: SpeedRoute; host?: string; geo?: Record<string, SpeedGeo>; loading: boolean; open: boolean }) {
   const t = useT();
   // traceroute 到了目标就停；最后一跳不回应说明没走到（目标是域名时打印的是 IP，所以不拿目标比）。
   const unreached = r.hops.length > 0 && !r.hops[r.hops.length - 1].ip;
@@ -251,8 +323,8 @@ function RouteView({ r, geo, loading, open }: { r: SpeedRoute; geo?: Record<stri
     <details className="sr-route" open={open}>
       <summary>
         <RouteIcon className="muted" />
-        <b>{r.name ? ts(r.name) : r.target}</b>
-        {r.name && <span className="mono muted">{r.target}</span>}
+        <b>{r.dir === "return" ? t("回程：{host} → 这台设备", { host: host ?? "" }) : r.dir === "forward" ? t("去程：这台设备 → 服务器") : r.name ? ts(r.name) : r.target}</b>
+        {(r.name || r.dir === "return") && <span className="mono muted">{r.target}</span>}
         {r.error ? <span className="badge crit">{ts(r.error)}</span>
           : r.line ? r.line.split(" + ").map((l) => <span key={l} className="badge accent">{ts(l)}</span>)
           : <span className="badge neutral">{t("没有经过认得出的骨干网")}</span>}
@@ -303,7 +375,7 @@ function RouteView({ r, geo, loading, open }: { r: SpeedRoute; geo?: Record<stri
           </table>
         </div>
       )}
-      {unreached && !r.error && <span className="hint">{t("最后一跳没有到达目标：中间有节点不回应，或者目标不回应探测。")}</span>}
+      {unreached && !r.error && <span className="hint">{r.dir === "return" ? t("最后一跳没有到达这台设备：家用路由器和运营商的地址常常不回应探测，前面的节点和线路仍然可以看。") : t("最后一跳没有到达目标：中间有节点不回应，或者目标不回应探测。")}</span>}
       {direct && <span className="hint">{t("只有 1 跳就到了目标，中间一个节点都没有：多半是主机所在的网络不按 TTL 逐跳转发探测包，由网络自己代答（比如 Docker Desktop 和一些容器、虚拟化的网络）。这种环境看不到真实路由，在真实的服务器上测才准。")}</span>}
     </details>
   );

@@ -248,6 +248,15 @@ CREATE TABLE mcp_tokens (
 	last_used_at TEXT NOT NULL DEFAULT ''
 );
 `,
+	// v18：“这台设备”测速里浏览器量的数字（延迟、下载、上传）和贴进来的去程路由，按请求存一份 JSON（带版本号）。
+	// 回程路由和别的测速一样在 speedtests 里；对应的测速结果删掉后，这里的也跟着删。
+	`
+CREATE TABLE speedtest_clients (
+	request_id TEXT PRIMARY KEY,
+	ts         INTEGER NOT NULL,
+	data       TEXT NOT NULL
+);
+`,
 }
 
 // SchemaVersion 是当前代码认识的结构版本。

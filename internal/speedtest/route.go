@@ -21,12 +21,14 @@ type Hop struct {
 
 // Route 是到一个目标的路由追踪结果。
 type Route struct {
-	Target string   `json:"target"`
-	Name   string   `json:"name,omitempty"` // 记录时按当时的设置填上的名字
-	Hops   []Hop    `json:"hops"`
-	Nets   []string `json:"nets"`           // 按出现的顺序，去重
-	Line   string   `json:"line,omitempty"` // 推测的线路
-	Error  string   `json:"error,omitempty"`
+	Target string `json:"target"`
+	Name   string `json:"name,omitempty"` // 记录时按当时的设置填上的名字
+	// Dir 只在“这台设备”测速里有：return 是回程（主机 → 设备），forward 是贴进来的去程（设备 → 服务器）。
+	Dir   string   `json:"dir,omitempty"`
+	Hops  []Hop    `json:"hops"`
+	Nets  []string `json:"nets"`           // 按出现的顺序，去重
+	Line  string   `json:"line,omitempty"` // 推测的线路
+	Error string   `json:"error,omitempty"`
 }
 
 // backbone 是一段公开的运营商骨干网段。

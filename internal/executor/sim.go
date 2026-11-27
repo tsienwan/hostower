@@ -406,6 +406,76 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 			return nil, 1
 		}
 		return out, 0
+	case strings.Contains(cmd, "echo 'speedtest direct port="):
+		// 直连测速：模拟主机开不了真的测速服务，直接给出一份像样的结果（好像有一台设备连上来测过了）。
+		var out []string
+		if !sh.hasTrace() && strings.Contains(cmd, "speedtest installing traceroute") {
+			sh.traceInstalled = true
+			out = append(out, "speedtest installing traceroute", "Setting up traceroute (1:2.1.2-1) ...")
+		}
+		m := regexp.MustCompile(`echo 'speedtest direct port=(\d+) size=(\d+)'`).FindStringSubmatch(cmd)
+		if m == nil {
+			return nil, 1
+		}
+		t, ping := "203.0.113.24", 30+sh.seed*150
+		var pings []string
+		for i := 0; i < 20; i++ {
+			pings = append(pings, fmt.Sprintf("%.2f", ping*(1+0.04*float64(i%5))))
+		}
+		size, _ := strconv.ParseFloat(m[2], 64)
+		down, up := 40+sh.seed*400, 10+sh.seed*60 // Mbps
+		out = append(out, "speedtest direct port="+m[1]+" size="+m[2], "speedtest listen port="+m[1], "speedtest client ip="+t,
+			"speedtest direct pings="+strings.Join(pings, ",")+" lost=0 proto=http/1.1 conn=wifi",
+			fmt.Sprintf("speedtest direct down bytes=%.0f ms=%.0f conns=4", size*1e6, size*8/down*1000),
+			fmt.Sprintf("speedtest direct up bytes=%.0f ms=%.0f conns=2", size*250e3, size*2/up*1000))
+		if !sh.hasTrace() {
+			out = append(out, "speedtest route "+t+" error=no-traceroute")
+		} else {
+			hops := []string{"10.0.0.1", "192.0.2.1", "198.51.100.33", "59.43.182.1", "59.43.180.6", "202.97.12.9", "*", t} // 内网网关和公开的运营商骨干网段 hygiene:allow
+			out = append(out, "speedtest route "+t+" traceroute to "+t+", 30 hops max, 60 byte packets")
+			for n, h := range hops {
+				if h == "*" {
+					out = append(out, fmt.Sprintf("speedtest route %s %2d  *", t, n+1))
+					continue
+				}
+				out = append(out, fmt.Sprintf("speedtest route %s %2d  %s  %.3f ms", t, n+1, h, 0.4+ping*float64(n)/float64(len(hops)-1)))
+			}
+		}
+		out = append(out, "speedtest back 10 packets transmitted, 0 received, 100% packet loss, time 9210ms")
+		return out, 0
+	case strings.Contains(cmd, "echo 'speedtest client ip="):
+		// “这台设备”测速的回程路由：从主机追踪到来源地址，再 ping 十次。
+		var out []string
+		if !sh.hasTrace() && strings.Contains(cmd, "speedtest installing traceroute") {
+			sh.traceInstalled = true
+			out = append(out, "speedtest installing traceroute", "Setting up traceroute (1:2.1.2-1) ...")
+		}
+		m := regexp.MustCompile(`echo 'speedtest client ip=([0-9a-f.:]+)'`).FindStringSubmatch(cmd)
+		if m == nil {
+			return nil, 1
+		}
+		t, ping := m[1], 30+sh.seed*150
+		out = append(out, "speedtest client ip="+t)
+		if !sh.hasTrace() {
+			out = append(out, "speedtest route "+t+" error=no-traceroute")
+		} else {
+			hops := []string{"10.0.0.1", "192.0.2.1", "198.51.100.33", "59.43.182.1", "59.43.180.6", "202.97.12.9", "*", t} // 内网网关和公开的运营商骨干网段 hygiene:allow
+			out = append(out, "speedtest route "+t+" traceroute to "+t+", 30 hops max, 60 byte packets")
+			for n, h := range hops {
+				if h == "*" {
+					out = append(out, fmt.Sprintf("speedtest route %s %2d  *", t, n+1))
+					continue
+				}
+				out = append(out, fmt.Sprintf("speedtest route %s %2d  %s  %.3f ms", t, n+1, h, 0.4+ping*float64(n)/float64(len(hops)-1)))
+			}
+		}
+		if sh.seed < 0.7 {
+			out = append(out, "speedtest back 10 packets transmitted, 10 received, 0% packet loss, time 1811ms",
+				fmt.Sprintf("speedtest back rtt min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms", ping*0.97, ping, ping*1.12, ping*0.03))
+		} else {
+			out = append(out, "speedtest back 10 packets transmitted, 0 received, 100% packet loss, time 9210ms")
+		}
+		return out, 0
 	case (strings.HasPrefix(cmd, "if ! curl --version") || strings.HasPrefix(cmd, "if ! command -v curl") || strings.Contains(cmd, "ookla-speedtest-")) && strings.Contains(cmd, "speedtest "):
 		var pre []string
 		ookla := strings.Contains(cmd, "ookla-speedtest-")

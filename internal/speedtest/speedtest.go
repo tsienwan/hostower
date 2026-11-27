@@ -202,18 +202,24 @@ func traceScript(routes []string) (string, error) {
 	if len(routes) == 0 {
 		return "", nil
 	}
-	var trace strings.Builder
-	trace.WriteString("for t in")
-	for _, r := range routes {
+	var list strings.Builder
+	for i, r := range routes {
 		if !ValidTarget(r) {
 			return "", errors.New("路由追踪的目标应该是 IP 地址或者域名")
 		}
-		trace.WriteString(" '" + r + "'")
+		if i > 0 {
+			list.WriteString(" ")
+		}
+		list.WriteString("'" + r + "'")
 	}
-	trace.WriteString("; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q 1 -w 1 -m 30 \"$t\" 2>/dev/null || traceroute -n -q 1 -w 1 -m 30 \"$t\" 2>&1; " +
+	return traceLoop(list.String()), nil
+}
+
+// traceLoop 是对 list 里的每个目标跑一次路由追踪的循环；list 是已经写成 shell 词的目标（带引号的字面量，或者 "$ip"）。
+func traceLoop(list string) string {
+	return "for t in " + list + "; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q 1 -w 1 -m 30 \"$t\" 2>/dev/null || traceroute -n -q 1 -w 1 -m 30 \"$t\" 2>&1; " +
 		"elif command -v tracepath >/dev/null 2>&1; then tracepath -n -m 30 \"$t\" 2>&1; else echo 'error=no-traceroute'; fi | " +
-		"while IFS= read -r l; do echo \"speedtest route $t $l\"; done; done; ")
-	return trace.String(), nil
+		"while IFS= read -r l; do echo \"speedtest route $t $l\"; done; done; "
 }
 
 var routeListRe = regexp.MustCompile(`for t in((?: '[^']*')+); do if command -v traceroute`)
@@ -234,6 +240,12 @@ func SpecOf(command string) (spec Spec, ok bool) {
 		for _, f := range strings.Fields(m[1]) {
 			spec.Routes = append(spec.Routes, strings.Trim(f, "'"))
 		}
+	}
+	if strings.Contains(command, directMark) {
+		return directSpec(command)
+	}
+	if strings.Contains(command, clientMark) {
+		return clientSpec(command, spec.Routes)
 	}
 	if strings.Contains(command, "ookla-speedtest-") {
 		spec.Method = MethodOokla
@@ -291,7 +303,7 @@ type Result struct {
 	DownBps   float64 `json:"downBps"` // 比特每秒
 	UpBps     float64 `json:"upBps"`
 	SizeMB    int     `json:"sizeMb"`
-	Method    string  `json:"method"`            // MethodOokla 或 MethodCloudflare
+	Method    string  `json:"method"`            // MethodOokla、MethodCloudflare、MethodClient 或 MethodDirect
 	Server    string  `json:"server,omitempty"`  // Ookla 用的服务器（给人看的名字）
 	Threads   string  `json:"threads,omitempty"` // single 或 multi；之前的结果没有记，是空的
 	IP        string  `json:"ip,omitempty"`      // 4 或 6；空是自动
@@ -314,6 +326,9 @@ type Detail struct {
 	Routes []Route `json:"routes,omitempty"`
 	// Ookla 是用 Ookla 测速时的明细（服务器、丢包、抖动、结果页）；Cloudflare 测速时没有。
 	Ookla *OoklaInfo `json:"ookla,omitempty"`
+	// Back 是“这台设备”测速时从主机 ping 设备的结果；Client 是浏览器量的数字（读的时候从 speedtest_clients 并进来，不存在这里）。
+	Back   *HostPing `json:"back,omitempty"`
+	Client *Client   `json:"client,omitempty"`
 }
 
 // Ping 是一次连接的各段耗时：域名解析、TCP 握手（扣掉解析）、TLS 握手（扣掉前面的）、等首字节（扣掉前面的）。
@@ -398,6 +413,8 @@ func Parse(output string) Report {
 	ping := math.Inf(1)
 	var downBytes, upBytes float64 = -1, -1
 	ooklaErr, using, version := "", "", ""
+	client := false                   // “这台设备”测速的输出：没有下载和上传，不算出错
+	direct, directIPSeen := false, "" // 直连测速：数字由主机上的临时测速服务转述
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)
 		rest, ok := strings.CutPrefix(line, "speedtest ")
@@ -406,6 +423,23 @@ func Parse(output string) Report {
 		}
 		if t, ok := strings.CutPrefix(rest, "route "); ok {
 			d.Routes = addRouteLine(d.Routes, t)
+			continue
+		}
+		if t, ok := strings.CutPrefix(rest, "client ip="); ok {
+			client = true
+			directIPSeen = directIP(t)
+			continue
+		}
+		if strings.HasPrefix(rest, "direct port=") {
+			direct = true
+			continue
+		}
+		if t, ok := strings.CutPrefix(rest, "direct "); ok {
+			d.Client = addDirectLine(d.Client, t)
+			continue
+		}
+		if t, ok := strings.CutPrefix(rest, "back "); ok {
+			d.Back = addBackLine(d.Back, t)
 			continue
 		}
 		if t, ok := strings.CutPrefix(rest, "ookla "); ok {
@@ -447,6 +481,14 @@ func Parse(output string) Report {
 		}
 		m := kv(rest)
 		switch {
+		case m["error"] == "no-python3":
+			return Report{Error: "主机上没有 python3，开不了临时测速服务"}
+		case m["error"] == "port-in-use":
+			return Report{Error: "主机上这个端口已经被占用，换一个端口再试"}
+		case m["error"] == "no-visitor":
+			return Report{Error: "没有等到这台设备连上来：测速页没打开，或者主机的防火墙、云厂商的安全组没有放行这个端口"}
+		case m["error"] == "not-finished":
+			return Report{Error: "这台设备连上来了，但没有在限定时间里测完"}
 		case m["error"] == "no-curl":
 			return Report{Error: "主机上没有 curl，测不了速"}
 		case m["error"] == "no-package-manager":
@@ -507,7 +549,31 @@ func Parse(output string) Report {
 	if !math.IsInf(ping, 1) {
 		rep.PingMS = ping * 1000 // 秒 → 毫秒
 	}
+	if direct {
+		// 直连测速：数字是浏览器量的、临时测速服务转述的，过一遍范围检查；没有就是没测成。
+		c := d.Client
+		d.Client = nil
+		if c == nil || directIPSeen == "" {
+			return Report{Error: "没有拿到测速结果"}
+		}
+		cc, err := c.clean()
+		if err != nil {
+			return Report{Error: "没有拿到测速结果"}
+		}
+		cc.V, cc.IP = ClientVersion, directIPSeen
+		d.Client = &cc
+		rep.PingMS = median(cc.Pings)
+		if cc.Down != nil {
+			rep.DownBps = cc.Down.Bps
+		}
+		if cc.Up != nil {
+			rep.UpBps = cc.Up.Bps
+		}
+		return rep
+	}
+	d.Client = nil
 	switch {
+	case client:
 	case ooklaErr != "" && d.Ookla == nil:
 		rep.Error = "Speedtest 出错：" + ooklaErr
 	case downBytes < 0 && upBytes < 0:
@@ -673,6 +739,7 @@ func (s *Service) Prune(ctx context.Context) (int64, error) {
 
 // Delete 删掉指定的结果（按请求和主机）；all 为真时全部删掉。返回删了几条。
 func (s *Service) Delete(ctx context.Context, items []Key, all bool) (int64, error) {
+	defer s.pruneClients(ctx)
 	if all {
 		res, err := s.db.ExecContext(ctx, `DELETE FROM speedtests`)
 		if err != nil {
@@ -718,6 +785,7 @@ func (s *Service) Run(ctx context.Context, k *kernel.Kernel) {
 			return
 		case <-tick.C:
 			s.Prune(ctx)
+			s.pruneClients(ctx)
 		case e := <-events:
 			// 事件里的请求不带各台主机的输出（输出是单独流式推送的）；结束时再向内核要一份完整的快照来解析。
 			if r, ok := e.Data.(*kernel.Request); ok && e.Type == "request" && r.Snippet == Tag &&
@@ -750,16 +818,31 @@ func (s *Service) record(r *kernel.Request) {
 			size = int(math.Round((rep.Detail.Down.Bytes + rep.Detail.Up.Bytes) / 1e6))
 			server = o.Server.Label()
 		}
+		if c := rep.Detail.Client; c != nil {
+			// 直连测速：数据量是实际传了多少。
+			var total float64
+			if c.Down != nil {
+				total += c.Down.Bytes
+			}
+			if c.Up != nil {
+				total += c.Up.Bytes
+			}
+			size = int(math.Round(total / 1e6))
+		}
 		detail := ""
 		if t.State == "error" || t.State == "skipped" {
 			rep.Error = "没有执行：" + t.Error
-		} else if len(rep.Detail.Pings) > 0 || rep.Detail.Down != nil || rep.Detail.Up != nil || len(rep.Detail.Routes) > 0 {
+		} else if len(rep.Detail.Pings) > 0 || rep.Detail.Down != nil || rep.Detail.Up != nil || len(rep.Detail.Routes) > 0 || rep.Detail.Back != nil || rep.Detail.Client != nil {
 			names := map[string]string{}
 			for _, t := range s.Targets() {
 				names[t.Target] = t.Name
 			}
 			for i := range rep.Detail.Routes {
 				rep.Detail.Routes[i].Name = names[rep.Detail.Routes[i].Target]
+				if spec.Method == MethodClient || spec.Method == MethodDirect {
+					// 目标是这台设备的地址，不是设置里的追踪目标。
+					rep.Detail.Routes[i].Name, rep.Detail.Routes[i].Dir = "", "return"
+				}
 			}
 			b, _ := json.Marshal(rep.Detail)
 			detail = string(b)
@@ -768,6 +851,7 @@ func (s *Service) record(r *kernel.Request) {
 			r.ID, t.Host, at.UnixMilli(), rep.PingMS, rep.DownBps, rep.UpBps, size, rep.Error, detail, spec.Method, server, spec.Opts.Threads, spec.Opts.IP)
 	}
 	s.Prune(context.Background())
+	s.pruneClients(context.Background())
 }
 
 // Recent 返回最近的结果，新的在前。
@@ -785,7 +869,18 @@ func (s *Service) Recent(ctx context.Context, limit int) ([]Result, error) {
 		}
 		out = append(out, r)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// “这台设备”测速的延迟、下载、上传是浏览器量的，单独存着。
+	for i := range out {
+		if out[i].Method == MethodClient {
+			if c, ok := s.client(ctx, out[i].RequestID); ok {
+				c.apply(&out[i])
+			}
+		}
+	}
+	return out, nil
 }
 
 // Get 返回一条结果，带明细。没有这条时返回 sql.ErrNoRows。
@@ -801,6 +896,25 @@ func (s *Service) Get(ctx context.Context, k Key) (*Result, error) {
 		var d Detail
 		if json.Unmarshal([]byte(detail), &d) == nil && d.V == DetailVersion {
 			r.Detail = &d
+		}
+	}
+	if r.Method == MethodDirect && r.Detail != nil {
+		// 直连测速的数字已经在明细里；这里只把之后贴进来的去程路由并进来。
+		if c, ok := s.client(ctx, r.RequestID); ok && c.Forward != nil {
+			r.Detail.Routes = append(r.Detail.Routes, *c.Forward)
+		}
+	}
+	if r.Method == MethodClient {
+		if c, ok := s.client(ctx, r.RequestID); ok {
+			c.apply(&r)
+			if r.Detail == nil {
+				r.Detail = &Detail{V: DetailVersion, Pings: []Ping{}}
+			}
+			if c.Forward != nil {
+				r.Detail.Routes = append(r.Detail.Routes, *c.Forward)
+				c.Forward = nil
+			}
+			r.Detail.Client = &c
 		}
 	}
 	return &r, nil
