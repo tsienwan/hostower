@@ -93,6 +93,12 @@ const dict: Record<string, string> = {
   "新用户名": "New username",
   "小写字母开头，3 到 32 个字符，只能用小写字母、数字、点、下划线和连字符。下次用密码登录时用新名字。": "Start with a lowercase letter, 3 to 32 characters, using only lowercase letters, digits, dots, underscores and hyphens. Use the new name next time you sign in with a password.",
   "用户名已改成 {name}": "Username changed to {name}",
+  "面板已经升级，这个页面还是旧版本的。":
+    "The panel has been upgraded, but this page is still the old version.",
+  "刷新后才能看到新版本的界面。":
+    "Refresh to see the new interface.",
+  "刷新页面":
+    "Refresh page",
 };
 
 export default dict;

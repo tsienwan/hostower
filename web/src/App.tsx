@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import {
   Activity, Bot, Box, Ellipsis, FolderSync, Gauge, LayoutDashboard, KeyRound, CircleAlert, CircleCheck, FileCode2, LayoutGrid, LogOut, OctagonPause, ScrollText,
-  Settings as SettingsIcon, ShieldCheck, SquareTerminal, TriangleAlert,
+  Settings as SettingsIcon, ShieldCheck, SquareTerminal, TriangleAlert, RefreshCw,
 } from "lucide-react";
 import { api } from "./api";
 import { connect, disconnect, fail, loadBoot, refreshHosts, refreshRequests, useStore } from "./store";
@@ -90,6 +90,18 @@ function Shell() {
   const pending = useStore((s) => s.requests.filter((r) => r.state === "pending").length);
   const loc = useLocation();
   const [now, setNow] = useState(Date.now());
+  // 面板重启过（多半是升级了）：这个页面的脚本可能还是旧版本的。去看一眼现在的首页还引不引用这个页面在用的脚本，
+  // 不引用了就提示刷新——不刷新的话，新版本的界面（新的卡片、按钮）看不到，左下角的版本号却已经是新的。
+  const [startedAt] = useState(boot.started);
+  const [stale, setStale] = useState(false);
+  useEffect(() => {
+    if (boot.started === startedAt) return;
+    const mine = document.querySelector('script[type="module"][src]')?.getAttribute("src");
+    if (!mine) return;
+    let on = true;
+    fetch("/", { cache: "no-store", credentials: "same-origin" }).then((r) => r.ok ? r.text() : "").then((html) => { if (on && html && !html.includes(mine)) setStale(true); }).catch(() => {});
+    return () => { on = false; };
+  }, [boot.started, startedAt]);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer); }, []);
   // 手机上的“更多”：底栏放不下的页面。换页面就收起来。
   const [more, setMore] = useState(false);
@@ -179,6 +191,12 @@ function Shell() {
           <div className="banner crit" role="alert">
             <OctagonPause />
             <b>{t("全部执行已暂停。")}</b>{t("新的操作、审批和指标采样都已停止，直到所有者在“设置”里恢复。")}
+          </div>
+        )}
+        {stale && (
+          <div className="banner warn" role="alert">
+            <RefreshCw />
+            <span><b>{t("面板已经升级，这个页面还是旧版本的。")}</b>{t("刷新后才能看到新版本的界面。")} <button className="link-btn" onClick={() => window.location.reload()}>{t("刷新页面")}</button></span>
           </div>
         )}
         {(boot.initialPassword || boot.defaultUsername) && (
