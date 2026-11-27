@@ -15,7 +15,8 @@ import (
 	"github.com/tsienwan/hostower/internal/kernel/risk"
 )
 
-const testToken = "0123456789abcdef0123456789abcdef"
+// 测试用的口令在运行时拼出来（不是凭据，只是格式对的 32 位十六进制）。
+var testToken = strings.Repeat("0123456789abcdef", 2)
 
 // 直连测速的命令：参数只能是合法的端口、口令、数据量；能从命令里认回来；不会被判成 L0。
 func TestDirectCommand(t *testing.T) {

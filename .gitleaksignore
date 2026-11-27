@@ -1,0 +1,3 @@
+# 密钥扫描的误报：这里只登记确认不是凭据的历史记录（指纹由 gitleaks 给出）。
+# 直连测速测试里写死过的一次性口令样例（0123…cdef），不是凭据；之后改成了运行时拼出来。
+7196c509074f78c8090a25acb879fd728bd3433a:internal/speedtest/direct_test.go:generic-api-key:18
