@@ -1513,6 +1513,7 @@ button.tag:hover { background: color-mix(in srgb, var(--text) 10%, transparent);
 /* 测速页 */
 .crit-text { color: var(--crit); font-size: 13px; }
 .warn-text { color: var(--warn); }
+.ok-text { color: var(--ok); }
 .speed-table td.num b { font-weight: 620; }
 @media (min-width: 761px) {
   .speed-table { table-layout: fixed; }

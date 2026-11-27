@@ -75,41 +75,6 @@ func TestClientParse(t *testing.T) {
 	}
 }
 
-// 贴进来的去程路由：认 Windows 的 tracert（中英文）、traceroute 和 mtr；别的文字都丢掉。
-func TestParsePasted(t *testing.T) {
-	win := "Tracing route to example.com [198.51.100.7]\r\nover a maximum of 30 hops:\r\n\r\n" +
-		"  1    <1 ms    <1 ms    <1 ms  192.168.1.1\r\n" + // hygiene:allow
-		"  2     3 ms     2 ms     3 ms  gw.example.com [192.0.2.1]\r\n" +
-		"  3     *        *        *     Request timed out.\r\n" +
-		"  4    38 ms    37 ms    38 ms  219.158.3.1\r\n" + // 公开的运营商骨干网段 hygiene:allow
-		"  5   162 ms   161 ms   160 ms  198.51.100.7\r\n\r\nTrace complete.\r\n"
-	r, err := ParsePasted(win)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(r.Hops) != 5 || r.Hops[0].IP != "192.168.1.1" || r.Hops[0].Net != "LAN" || r.Hops[0].MS != 1 || r.Hops[1].IP != "192.0.2.1" || // hygiene:allow
-		r.Hops[2].IP != "" || r.Hops[4].MS != 162 || r.Line != "联通 4837" || r.Dir != "forward" || r.Target != ForwardTarget {
-		t.Fatalf("tracert 读得不对：%+v", r)
-	}
-	zh := "通过最多 30 个跃点跟踪到 198.51.100.7 的路由\n\n  1     1 毫秒    <1 毫秒    <1 毫秒 192.168.1.1\n  2     *        *        *     请求超时。\n  3    25 毫秒    24 毫秒    25 毫秒 198.51.100.7\n" // hygiene:allow
-	if r, err = ParsePasted(zh); err != nil || len(r.Hops) != 3 || r.Hops[2].IP != "198.51.100.7" || r.Hops[2].MS != 25 {
-		t.Fatalf("中文 tracert 读得不对：%v %+v", err, r)
-	}
-	unix := "traceroute to 198.51.100.7 (198.51.100.7), 30 hops max, 60 byte packets\n 1  192.0.2.1 (192.0.2.1)  0.412 ms  0.398 ms\n 2  * * *\n 3  198.51.100.7 (198.51.100.7)  12.5 ms\n"
-	if r, err = ParsePasted(unix); err != nil || len(r.Hops) != 3 || r.Hops[0].MS != 0.41 || r.Hops[2].IP != "198.51.100.7" {
-		t.Fatalf("traceroute 读得不对：%v %+v", err, r)
-	}
-	mtr := "HOST: web-1   Loss%   Snt   Last   Avg  Best  Wrst StDev\n  1.|-- 192.0.2.1   0.0%    10    0.4   0.4   0.3   0.6   0.1\n  2.|-- ???        100.0    10    0.0   0.0   0.0   0.0   0.0\n  3.|-- 198.51.100.7  0.0%  10  12.1  12.3  11.9  13.0  0.3\n"
-	if r, err = ParsePasted(mtr); err != nil || len(r.Hops) != 3 || r.Hops[0].IP != "192.0.2.1" || r.Hops[1].IP != "" {
-		t.Fatalf("mtr 读得不对：%v %+v", err, r)
-	}
-	for _, bad := range []string{"", "hello", "198.51.100.7 is alive\n10.0.0.1 too", strings.Repeat("x", MaxPasted+1)} { // hygiene:allow
-		if _, err := ParsePasted(bad); err == nil {
-			t.Fatalf("%q 不应该认出路由", bad[:min(len(bad), 20)])
-		}
-	}
-}
-
 func clientDB(t *testing.T) *sql.DB {
 	t.Helper()
 	db, err := store.Open(t.TempDir())
@@ -120,7 +85,7 @@ func clientDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// 浏览器的数字并到结果上；去程路由贴上去、清掉；数字不对的不收。
+// 浏览器的数字并到结果上；数字不对的不收。
 func TestClientStore(t *testing.T) {
 	ctx := context.Background()
 	s := New(clientDB(t))
@@ -129,13 +94,6 @@ func TestClientStore(t *testing.T) {
 	}
 	m := Client{Pings: []float64{30, 10, 20}, Lost: 1, Proto: "h2", Conn: "wifi", IP: "203.0.113.9", Proxy: true,
 		Down: &Transfer{Bytes: 25e6, MS: 2000, Bps: 100e6, Conns: 4}, Up: &Transfer{Bytes: 6e6, MS: 2400, Bps: 20e6, Conns: 2}}
-	if err := s.SaveClient(ctx, "r1", "198.51.100.7", false, m); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.SaveForward(ctx, "r1", " 1  192.0.2.1  1.0 ms\n 2  198.51.100.9  9.0 ms\n"); err != nil {
-		t.Fatal(err)
-	}
-	// 重新交一次数字：去程路由还在。
 	if err := s.SaveClient(ctx, "r1", "198.51.100.7", false, m); err != nil {
 		t.Fatal(err)
 	}
@@ -148,17 +106,8 @@ func TestClientStore(t *testing.T) {
 		t.Fatalf("明细里没有浏览器的数字：%v %+v", err, r)
 	}
 	c := r.Detail.Client
-	if c.IP != "198.51.100.7" || c.Proxy || c.Proto != "h2" || c.Conn != "wifi" || c.Lost != 1 || c.Forward != nil {
+	if c.IP != "198.51.100.7" || c.Proxy || c.Proto != "h2" || c.Conn != "wifi" || c.Lost != 1 {
 		t.Fatalf("地址和代理应该是服务端填的：%+v", c)
-	}
-	if len(r.Detail.Routes) != 1 || r.Detail.Routes[0].Dir != "forward" || len(r.Detail.Routes[0].Hops) != 2 {
-		t.Fatalf("去程路由没有并进来：%+v", r.Detail.Routes)
-	}
-	if _, err := s.SaveForward(ctx, "r1", "  "); err != nil {
-		t.Fatal(err)
-	}
-	if r, _ = s.Get(ctx, Key{RequestID: "r1", Host: "web-1"}); len(r.Detail.Routes) != 0 || r.Detail.Client == nil {
-		t.Fatalf("去程路由应该清掉、数字留着：%+v", r.Detail)
 	}
 	for _, bad := range []Client{
 		{Pings: make([]float64, 2*ClientPings+1)},

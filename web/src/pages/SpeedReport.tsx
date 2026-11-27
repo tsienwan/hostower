@@ -32,9 +32,7 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
   const [r, setR] = useState<SpeedResult | null>(null);
   const [err, setErr] = useState("");
   const [geo, setGeo] = useState<SpeedGeoView | "loading" | null>(null);
-  // 贴上或移除去程路由后重新读一遍。
-  const [ver, setVer] = useState(0);
-  useEffect(() => { api.speedtestReport(requestId, host).then(setR).catch((e) => setErr(e instanceof Error ? e.message : String(e))); }, [requestId, host, ver]);
+  useEffect(() => { api.speedtestReport(requestId, host).then(setR).catch((e) => setErr(e instanceof Error ? e.message : String(e))); }, [requestId, host]);
   const d = r?.detail;
   const o = d?.ookla;
   const hasHops = !!d?.routes?.some((x) => x.hops.some((h) => h.ip));
@@ -43,7 +41,7 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
     if (!hasHops) return;
     setGeo("loading");
     api.speedtestGeo(requestId, host, lang()).then(setGeo).catch((e) => setGeo({ enabled: true, service: "", error: e instanceof Error ? e.message : String(e) }));
-  }, [hasHops, requestId, host, ver]);
+  }, [hasHops, requestId, host]);
   const direct = r?.method === "direct";
   const mine = r?.method === "client" || direct;
   const cl = mine ? d?.client : undefined;
@@ -84,7 +82,7 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
           </div>
           {!d ? <div className="note"><span>{t("这条记录没有明细：明细是这个版本才开始记录的，之前的测速只有汇总。")}</span></div> : (
             <>
-              {mine ? <ClientView direct={direct} c={cl} back={d.back} host={host} /> : o ? <OoklaView o={o} d={d} /> : <div className="sr-grid">
+              {mine ? <ClientView direct={direct} c={cl} back={d.back} host={host} net={geo && geo !== "loading" && cl?.ip ? netLabel(geo.hops?.[cl.ip]) : ""} /> : o ? <OoklaView o={o} d={d} /> : <div className="sr-grid">
                 <section className="sr-sec sr-card">
                   <h3>{t("延迟")}</h3>
                   <p className="hint">{t("连 {n} 次测速服务器，每次分段计时；延迟取 TCP 握手最快的一次。", { n: d.pings.length })}
@@ -124,7 +122,7 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
                 {!routes.length ? <p className="hint">{mine ? t("这次没有拿到回程路由。") : t("这次没有追踪路由。可以在测速页的“路由追踪目标”里添加目标，发起测速时勾选“顺便追踪路由”。")}</p> : (
                   <>
                     <p className="hint">{mine
-                      ? t("回程是从主机追踪到这台设备的地址；去程是这台设备到服务器，浏览器追踪不了，要在设备那边跑一次路由追踪贴进来。来回两个方向走的线路常常不一样。线路按公开的运营商骨干网段和节点所属的自治系统（AS）推测，只能作参考；不回应的节点显示为 *。")
+                      ? t("这是回程：从主机追踪到这台设备的地址。去程（这台设备到主机）在浏览器里追踪不了，所以这里没有；来回两个方向走的线路常常不一样。线路按公开的运营商骨干网段和节点所属的自治系统（AS）推测，只能作参考；不回应的节点显示为 *。")
                       : t("线路按公开的运营商骨干网段和节点所属的自治系统（AS）推测，只能作参考；不回应的节点显示为 *。看回程线路要追踪到你那边的地址。")}</p>
                     {geo === "loading" && <div className="note"><RefreshCw className="spin" /><span>{t("正在查询各跳的地区和运营商…")}</span></div>}
                     {g && !g.enabled && <div className="note"><span>{t("节点地区查询已关闭，只显示地址。所有者可以在测速页的“路由追踪目标”里打开。")}</span></div>}
@@ -133,7 +131,6 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
                     {g?.enabled && g.service && <span className="hint">{t("地区和运营商来自 {service}，按 IP 库推测，骨干网节点的位置常常只到国家或城市。", { service: g.service })}</span>}
                   </>
                 )}
-                {mine && <ForwardBox requestId={requestId} host={host} has={routes.some((x) => x.dir === "forward")} onSaved={() => setVer((v) => v + 1)} />}
               </section>
             </>
           )}
@@ -144,7 +141,7 @@ export function SpeedReport({ requestId, host, onClose }: { requestId: string; h
 }
 
 /** “这台设备”测速的明细：浏览器量的延迟，和这台设备的网络信息。 */
-function ClientView({ c, back, host, direct }: { c?: SpeedClient; back?: SpeedBack; host: string; direct: boolean }) {
+function ClientView({ c, back, host, direct, net }: { c?: SpeedClient; back?: SpeedBack; host: string; direct: boolean; net: string }) {
   const t = useT();
   const p = c?.pings ?? [];
   const conn: Record<string, string> = { wifi: "Wi-Fi", cellular: t("蜂窝网络"), ethernet: t("有线网络") };
@@ -160,6 +157,8 @@ function ClientView({ c, back, host, direct }: { c?: SpeedClient; back?: SpeedBa
           <dl className="kv sm">
             <dt>{t("往返时间")}</dt><dd className="num">{t("最小 {min}、中位 {med}、最大 {max} ms", { min: ms(Math.min(...p)), med: ms(median(p)), max: ms(Math.max(...p)) })}</dd>
             <dt>{t("抖动")}</dt><dd className="num">{ms(jitterOf(p))} ms</dd>
+            {!!c?.loadedDown && <><dt>{t("下载时的延迟")}</dt><dd className="num">{ms(c.loadedDown)} ms<span className="muted"> · {loadedDelta(t, c.loadedDown - median(p))}</span></dd></>}
+            {!!c?.loadedUp && <><dt>{t("上传时的延迟")}</dt><dd className="num">{ms(c.loadedUp)} ms<span className="muted"> · {loadedDelta(t, c.loadedUp - median(p))}</span></dd></>}
           </dl>
         )}
       </section>
@@ -167,39 +166,18 @@ function ClientView({ c, back, host, direct }: { c?: SpeedClient; back?: SpeedBa
         <h3>{t("网络")}</h3>
         <dl className="kv sm">
           <dt>{t("这台设备的地址")}</dt><dd className="mono">{c?.ip || "—"}</dd>
+          {net && <><dt>{t("所在网络")}</dt><dd>{net}</dd></>}
           <dt>{t("协议")}</dt><dd className="mono">{c?.proto || "—"}</dd>
           <dt>{t("连接类型")}</dt><dd>{c?.conn ? conn[c.conn] ?? c.conn : "—"}</dd>
           <dt>{t("从 {host} ping 它", { host })}</dt>
           <dd className="num">{!back ? "—" : back.recv === 0 ? t("不回应") : t("平均 {avg} ms，丢包 {loss}%", { avg: ms(back.avg), loss: Math.round(((back.sent - back.recv) / back.sent) * 100) })}</dd>
+          {!!c?.segs && <><dt>{t("回程重传率")}</dt><dd className={"num" + ((c.retrans ?? 0) / c.segs >= 0.01 ? " crit-text" : "")}>{(((c.retrans ?? 0) / c.segs) * 100).toFixed(2)}%<span className="muted"> · {t("{a} / {b} 个数据段", { a: c.retrans ?? 0, b: c.segs })}</span></dd></>}
+          {!!c?.tcpRtt && <><dt>{t("TCP 往返时间")}</dt><dd className="num">{ms(c.tcpRtt)} ms</dd></>}
         </dl>
+        {!!c?.segs && <span className="hint">{t("重传率是下载时 {host} 重发的数据段占比，从它的 TCP 连接上读的：回程丢包越多它越高，到 1% 以上速度就会明显受影响。", { host })}</span>}
         {back && back.recv === 0 && <span className="hint">{t("家用路由器和运营商的地址常常不回应 ping，不代表不通。")}</span>}
       </section>
     </div>
-  );
-}
-
-/** 去程路由：浏览器追踪不了，在设备那边的电脑上跑一次，把输出贴进来。 */
-function ForwardBox({ requestId, host, has, onSaved }: { requestId: string; host: string; has: boolean; onSaved: () => void }) {
-  const t = useT();
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const save = (v: string) => {
-    setBusy(true);
-    api.speedClientForward(requestId, host, v).then(() => { setText(""); toast(t("已保存")); onSaved(); }).catch(fail).finally(() => setBusy(false));
-  };
-  if (has) return <span><button className="btn ghost sm" disabled={busy} onClick={() => save("")}><Trash2 />{t("移除去程路由")}</button></span>;
-  const name = window.location.hostname;
-  return (
-    <details className="sr-route">
-      <summary><Plus className="muted" /><b>{t("添加去程路由")}</b><span className="muted">{t("这台设备 → 服务器")}</span></summary>
-      <div className="col" style={{ gap: 8, padding: "12px 14px" }}>
-        <span className="hint">{t("在和这台设备同一个网络里的电脑上运行下面的命令，把完整输出贴到这里。手机上可以用带路由追踪功能的网络工具，把结果按文字贴进来。")}</span>
-        <pre className="code">{"Windows:        tracert -d " + name + "\nmacOS / Linux:  traceroute -n " + name}</pre>
-        <textarea className="input mono" rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("把 tracert、traceroute 或 mtr 的输出贴在这里")} aria-label={t("去程路由的输出")} />
-        <span className="hint">{t("只留下每一跳的序号、IP 地址和时间，别的文字不保存。")}</span>
-        <span><button className="btn primary sm" disabled={busy || !text.trim()} onClick={() => save(text)}><Save />{t("保存")}</button></span>
-      </div>
-    </details>
   );
 }
 
@@ -258,7 +236,12 @@ function countryName(g: SpeedGeo): string | undefined {
   try { return new Intl.DisplayNames([lang()], { type: "region", style: "short" }).of(g.cc) ?? g.country; } catch { return g.country; }
 }
 
-function place(g?: SpeedGeo): string {
+/** 一个地址所在的网络：“上海 · China Telecom”。 */
+export function netLabel(g?: SpeedGeo): string {
+  return [place(g), g?.isp].filter(Boolean).join(" · ");
+}
+
+export function place(g?: SpeedGeo): string {
   if (!g) return "";
   const out: string[] = [];
   const bare = (v: string) => v.replace(/[市省]$/, "");
@@ -267,6 +250,11 @@ function place(g?: SpeedGeo): string {
     if (v && !out.some((x) => bare(x) === bare(v))) out.push(v);
   }
   return out.join(" ");
+}
+
+/** 加载时延迟比空闲时高多少。 */
+function loadedDelta(t: (k: string, v?: Record<string, string | number>) => string, d: number): string {
+  return d >= 1 ? t("比空闲时高 {n} ms", { n: ms(d) }) : t("和空闲时差不多");
 }
 
 type HopRow = { kind: "hop"; h: SpeedHop } | { kind: "gap"; from: number; to: number };
@@ -313,6 +301,8 @@ function RouteView({ r, host, geo, loading, open }: { r: SpeedRoute; host?: stri
   // 到公网目标却只有一跳：真实网络里至少要经过网关，这种结果是网络环境造成的假象。
   const direct = r.hops.length === 1 && !!r.hops[0].ip && r.hops[0].net !== "LAN";
   const end = [...r.hops].reverse().find((h) => h.ip && h.ms);
+  // 每跳探了不止一次（“这台设备”测速的回程路由）：多一栏丢包。
+  const probed = r.hops.some((h) => (h.sent ?? 0) > 1);
   const haul = longHaul(r.hops);
   // 长途段之前的节点，位置库却说它和目标那一侧（最后一个查得到地区的节点）在同一个国家：
   // 按延迟看它离主机很近，位置多半是地址的登记地。
@@ -323,7 +313,7 @@ function RouteView({ r, host, geo, loading, open }: { r: SpeedRoute; host?: stri
     <details className="sr-route" open={open}>
       <summary>
         <RouteIcon className="muted" />
-        <b>{r.dir === "return" ? t("回程：{host} → 这台设备", { host: host ?? "" }) : r.dir === "forward" ? t("去程：这台设备 → 服务器") : r.name ? ts(r.name) : r.target}</b>
+        <b>{r.dir === "return" ? t("回程：{host} → 这台设备", { host: host ?? "" }) : r.name ? ts(r.name) : r.target}</b>
         {(r.name || r.dir === "return") && <span className="mono muted">{r.target}</span>}
         {r.error ? <span className="badge crit">{ts(r.error)}</span>
           : r.line ? r.line.split(" + ").map((l) => <span key={l} className="badge accent">{ts(l)}</span>)
@@ -334,14 +324,14 @@ function RouteView({ r, host, geo, loading, open }: { r: SpeedRoute; host?: stri
       {r.hops.length > 0 && (
         <div className="table-wrap">
           <table className="table sr-table sr-hops">
-            <thead><tr><th>{t("跳")}</th><th>{t("IP 地址")}</th><th>{t("位置")}</th><th>{t("运营商")}</th><th>{t("延迟")}</th></tr></thead>
+            <thead><tr><th>{t("跳")}</th><th>{t("IP 地址")}</th><th>{t("位置")}</th><th>{t("运营商")}</th>{probed && <th>{t("丢包")}</th>}<th>{t("延迟")}</th></tr></thead>
             <tbody>
               {hopRows(r.hops).map((row) => {
                 if (row.kind === "gap") return (
                   <tr key={row.from} className="muted">
                     <td className="num">{row.from}–{row.to}</td>
                     <td className="mono">*</td>
-                    <td colSpan={3}>{t("这 {n} 跳都没有回应", { n: row.to - row.from + 1 })}</td>
+                    <td colSpan={probed ? 4 : 3}>{t("这 {n} 跳都没有回应", { n: row.to - row.from + 1 })}</td>
                   </tr>
                 );
                 const h = row.h;
@@ -361,13 +351,14 @@ function RouteView({ r, host, geo, loading, open }: { r: SpeedRoute; host?: stri
                         {!(h.net && !lan) && !gi?.isp && !asn && <span className="muted">—</span>}
                       </span>
                     </td>
+                    {probed && <td className={"num" + (h.sent && h.lost ? (h.lost === h.sent ? " muted" : " warn-text") : "")}>{h.sent ? `${h.lost ?? 0}/${h.sent}` : "—"}</td>}
                     <td className="num">{h.ip && h.ms ? ms(h.ms) + " ms" : "—"}</td>
                   </tr>
                 );
                 if (!haul || h.n !== haul.after) return hop;
                 return [hop, (
                   <tr key={h.n + "-haul"} className="sr-haul">
-                    <td colSpan={5}><ArrowDown /><span>{t("延迟在这里从 {a} ms 跳到 {b} ms：多半是长途段（跨境或海缆），这里之前的节点离主机近，之后的离目标近。", { a: ms(haul.from), b: ms(haul.to) })}</span></td>
+                    <td colSpan={probed ? 6 : 5}><ArrowDown /><span>{t("延迟在这里从 {a} ms 跳到 {b} ms：多半是长途段（跨境或海缆），这里之前的节点离主机近，之后的离目标近。", { a: ms(haul.from), b: ms(haul.to) })}</span></td>
                   </tr>
                 )];
               })}
@@ -375,6 +366,7 @@ function RouteView({ r, host, geo, loading, open }: { r: SpeedRoute; host?: stri
           </table>
         </div>
       )}
+      {probed && <span className="hint">{t("每一跳探了 {n} 次，“丢包”是没回应的次数。中间某一跳丢、后面的跳不丢，多半是那台路由器限制了回应的速率，不是真的丢包；从某一跳开始一直丢到最后，问题才在那一段。", { n: Math.max(...r.hops.map((h) => h.sent ?? 0)) })}</span>}
       {unreached && !r.error && <span className="hint">{r.dir === "return" ? t("最后一跳没有到达这台设备：家用路由器和运营商的地址常常不回应探测，前面的节点和线路仍然可以看。") : t("最后一跳没有到达目标：中间有节点不回应，或者目标不回应探测。")}</span>}
       {direct && <span className="hint">{t("只有 1 跳就到了目标，中间一个节点都没有：多半是主机所在的网络不按 TTL 逐跳转发探测包，由网络自己代答（比如 Docker Desktop 和一些容器、虚拟化的网络）。这种环境看不到真实路由，在真实的服务器上测才准。")}</span>}
     </details>

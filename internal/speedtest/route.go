@@ -17,13 +17,17 @@ type Hop struct {
 	IP  string  `json:"ip,omitempty"`
 	MS  float64 `json:"ms,omitempty"`
 	Net string  `json:"net,omitempty"` // 认出来的骨干网，见 backbones
+	// Sent 和 Lost 只在这一跳探了不止一次时有（“这台设备”测速的回程路由每跳探 ClientProbes 次）：发了几次、几次没回应。
+	// 这时 MS 是回应了的那几次的中位数。
+	Sent int `json:"sent,omitempty"`
+	Lost int `json:"lost,omitempty"`
 }
 
 // Route 是到一个目标的路由追踪结果。
 type Route struct {
 	Target string `json:"target"`
 	Name   string `json:"name,omitempty"` // 记录时按当时的设置填上的名字
-	// Dir 只在“这台设备”测速里有：return 是回程（主机 → 设备），forward 是贴进来的去程（设备 → 服务器）。
+	// Dir 只在“这台设备”测速里有：return 是回程（主机 → 设备）。
 	Dir   string   `json:"dir,omitempty"`
 	Hops  []Hop    `json:"hops"`
 	Nets  []string `json:"nets"`           // 按出现的顺序，去重
@@ -189,6 +193,25 @@ func addRouteLine(routes []Route, rest string) []Route {
 		h.Net = netOf(a)
 		h.MS, _ = strconv.ParseFloat(m[3], 64)
 		h.MS = round(h.MS)
+	}
+	// 每跳探了几次时（traceroute -q N）：一行里有几个 "<数字> ms" 和几个 "*"，数出来算丢包。
+	f := strings.Fields(line)
+	var times []float64
+	stars := 0
+	for i := 1; i < len(f); i++ {
+		if f[i] == "*" {
+			stars++
+		} else if f[i] == "ms" && i >= 2 {
+			if v, err := strconv.ParseFloat(f[i-1], 64); err == nil && v >= 0 && v < 60e3 {
+				times = append(times, v)
+			}
+		}
+	}
+	if total := stars + len(times); total > 1 && total <= 16 {
+		h.Sent, h.Lost = total, stars
+		if h.IP != "" && len(times) > 0 {
+			h.MS = round(median(times))
+		}
 	}
 	// tracepath 同一跳可能打两行（先探 MTU）；有地址的那行为准。
 	if k := len(r.Hops) - 1; k >= 0 && r.Hops[k].N == n {

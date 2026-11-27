@@ -26,6 +26,9 @@ const (
 	// DirectWait 是服务等浏览器连上来的秒数，DirectRun 是连上之后最多再跑的秒数；都写死在脚本里。
 	DirectWait = 120
 	DirectRun  = 75
+	// 一次测几台主机时，浏览器是一台一台测的：排在后面的要多等，每往后一位多等 DirectStep 秒。最多 DirectMaxHosts 台。
+	DirectStep     = 40
+	DirectMaxHosts = 8
 )
 
 var directTokenRe = regexp.MustCompile(`^[0-9a-f]{32}$`)
@@ -45,7 +48,7 @@ func validClientSize(mb int) bool {
 // directScript 是在主机上跑的临时测速服务（python3，只用标准库）。里面不能有单引号和反引号：它整个放在命令的单引号里。
 // 参数：端口、口令、数据量上限（MB）。它只认路径以口令开头的请求，只认第一个带对口令的来源地址，
 // 下载不超过上限、上传不超过上限的四分之一，没人来就在 DirectWait 秒后退出，有人来也最多再跑 DirectRun 秒。
-const directScript = `import sys,os,json,time,threading,socket,socketserver,re,math
+const directScript = `import sys,os,json,time,threading,socket,socketserver,re,math,struct
 from http.server import BaseHTTPRequestHandler
 PORT=int(sys.argv[1]);TOK=sys.argv[2];MB=int(sys.argv[3]);CAP=MB*1000000
 PAGE=rb"""<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=referrer content=no-referrer><title>Hostower</title>
@@ -61,6 +64,8 @@ const show=(i,n,ms)=>{$(i).textContent=(ms>0?n*8/ms/1000:0).toFixed(1)+" Mbps"};
 const pings=[];let lost=0;
 for(let i=0;i<22;i++){const a=now();try{const r=await fetch("ping?"+i,{cache:"no-store"});if(!r.ok)throw 0;if(i>1)pings.push(now()-a)}catch(e){if(i>1)lost++}}
 const s=[...pings].sort((a,b)=>a-b);$("p").textContent=s.length?s[s.length>>1].toFixed(1)+" ms":"-";
+const mid=v=>{const s=[...v].sort((a,b)=>a-b);return s.length?s[s.length>>1]:0};
+function loaded(){const v=[];let on=true;(async()=>{let i=0;while(on){const a=now();try{const r=await fetch("ping?l"+(i++),{cache:"no-store"});if(r.ok)v.push(now()-a)}catch(e){}await new Promise(r=>setTimeout(r,150))}})();return()=>{on=false;return mid(v)}}
 async function down(){const C=4,ac=new AbortController(),a=now();let n=0;
 const tm=setTimeout(()=>ac.abort(),SEC*1000),tk=setInterval(()=>show("d",n,now()-a),300);
 await Promise.all([...Array(C)].map(async(_,i)=>{try{const r=await fetch("down?mb="+Math.ceil(MB/C)+"&i="+i,{cache:"no-store",signal:ac.signal});if(!r.ok)return;const rd=r.body.getReader();for(;;){const x=await rd.read();if(x.done)break;n+=x.value.length}}catch(e){}}));
@@ -70,15 +75,26 @@ const buf=new Uint8Array(4194304);for(let o=0;o<buf.length;o+=65536)crypto.getRa
 const tk=setInterval(()=>show("u",n,now()-a),300);
 await Promise.all([...Array(C)].map(async()=>{while(now()-a<SEC*1000&&sent<cap){const k=Math.min(size,cap-sent);sent+=k;const b=now();try{const r=await fetch("up",{method:"POST",body:buf.subarray(0,k)});if(!r.ok)break;n+=k}catch(e){break}if(now()-b<300&&size<4194304)size*=2}}));
 clearInterval(tk);const ms=now()-a;show("u",n,ms);return{bytes:n,ms:ms,conns:C}}
-const dn=await down(),u=await up();
+let lp=loaded();const dn=await down();const ld=lp();lp=loaded();const u=await up();const lu=lp();
 let proto="",conn="";try{proto=performance.getEntriesByType("navigation")[0].nextHopProtocol||""}catch(e){}
 try{conn=(navigator.connection&&navigator.connection.type)||""}catch(e){}
-let ok=false;try{ok=(await fetch("done",{method:"POST",body:JSON.stringify({pings:pings,lost:lost,proto:proto,conn:conn,down:dn,up:u})})).ok}catch(e){}
+let ok=false;try{ok=(await fetch("done",{method:"POST",body:JSON.stringify({pings:pings,lost:lost,proto:proto,conn:conn,down:dn,up:u,ld:ld,lu:lu})})).ok}catch(e){}
 $("s").textContent=ok?T("done","Done. You can close this page."):T("fail","Could not hand the result back.");
-if(ok)setTimeout(()=>window.close(),1500)})()</script>""".replace(b"__MB__",str(MB).encode())
+if(!ok)return;const q=Array.isArray(L.q)?L.q:[];
+if(q.length&&q[0]&&/^http:\/\/[A-Za-z0-9.:\[\]-]+\/[0-9a-f]{32}\/$/.test(q[0].u)){const n=q[0];L.title=n.t;L.q=q.slice(1);$("s").textContent=T("next","Next host...");setTimeout(()=>location.replace(n.u+"#"+encodeURIComponent(JSON.stringify(L))),800)}
+else setTimeout(()=>window.close(),1500)})()</script>""".replace(b"__MB__",str(MB).encode())
 BLOB=os.urandom(1<<20)
 lock=threading.Lock()
-st={"ip":None,"first":0,"down":CAP,"up":CAP//4,"done":False}
+st={"ip":None,"first":0,"down":CAP,"up":CAP//4,"done":False,"segs":0,"retrans":0,"rtt":0}
+def tcpinfo(c):
+    try:
+        b=c.getsockopt(socket.IPPROTO_TCP,socket.TCP_INFO,192)
+        if len(b)<144:return
+        rtt=struct.unpack_from("I",b,68)[0];re_=struct.unpack_from("I",b,100)[0];so=struct.unpack_from("I",b,136)[0]
+        with lock:
+            st["segs"]+=so;st["retrans"]+=re_
+            if rtt>0 and (st["rtt"]==0 or rtt<st["rtt"]):st["rtt"]=rtt
+    except Exception:pass
 def out(s):
     sys.stdout.write("speedtest "+s+"\n");sys.stdout.flush()
 def fnum(v,top):
@@ -114,8 +130,10 @@ class H(BaseHTTPRequestHandler):
             if n<=0:return self.reply(429)
             self.send_response(200);self.send_header("Content-Type","application/octet-stream");self.send_header("Content-Length",str(n))
             self.send_header("Cache-Control","no-store");self.end_headers()
-            while n>0:
-                k=min(n,len(BLOB));self.wfile.write(BLOB[:k]);n-=k
+            try:
+                while n>0:
+                    k=min(n,len(BLOB));self.wfile.write(BLOB[:k]);n-=k
+            finally:tcpinfo(self.connection)
             return
         self.reply(404)
     def do_POST(self):
@@ -141,6 +159,8 @@ class H(BaseHTTPRequestHandler):
                 for k in ("down","up"):
                     t=j.get(k) or {}
                     out("direct %s bytes=%d ms=%.0f conns=%d"%(k,int(fnum(t.get("bytes",0),1e12)),fnum(t.get("ms",0),600000),int(fnum(t.get("conns",1),64))))
+                out("direct loaded down=%.2f up=%.2f"%(fnum(j.get("ld",0),60000),fnum(j.get("lu",0),60000)))
+                if st["segs"]>0:out("direct tcp segs=%d retrans=%d rtt=%.2f"%(st["segs"],st["retrans"],st["rtt"]/1000.0))
             except Exception:
                 return self.reply(400)
             st["done"]=True
@@ -172,7 +192,11 @@ time.sleep(0.3)
 
 // DirectCommand 生成直连测速的命令：在主机上开临时测速服务，等浏览器测完，再从主机追踪到它看到的来源地址并 ping 十次。
 // token 是面板生成的一次性口令（32 位十六进制）；install 为真时先装上缺少的 traceroute。
-func DirectCommand(port int, token string, sizeMB int, install bool) (string, error) {
+// slot 是这台主机在这一批里排第几（从 0 起）：浏览器一台一台测，排在后面的服务多等一会儿。
+func DirectCommand(port int, token string, sizeMB int, install bool, slot int) (string, error) {
+	if slot < 0 || slot >= DirectMaxHosts {
+		return "", errors.New("一次最多测 " + strconv.Itoa(DirectMaxHosts) + " 台主机")
+	}
 	if !ValidDirectPort(port) {
 		return "", errors.New("端口应该在 1024 到 65535 之间")
 	}
@@ -182,7 +206,7 @@ func DirectCommand(port int, token string, sizeMB int, install bool) (string, er
 	if !validClientSize(sizeMB) {
 		return "", errors.New("数据量不对")
 	}
-	script := strings.NewReplacer("__WAIT__", strconv.Itoa(DirectWait), "__RUN__", strconv.Itoa(DirectRun)).Replace(directScript)
+	script := strings.NewReplacer("__WAIT__", strconv.Itoa(DirectWait+slot*DirectStep), "__RUN__", strconv.Itoa(DirectRun)).Replace(directScript)
 	p, mb := strconv.Itoa(port), strconv.Itoa(sizeMB)
 	var b strings.Builder
 	if install {
@@ -191,7 +215,7 @@ func DirectCommand(port int, token string, sizeMB int, install bool) (string, er
 	b.WriteString(directMark + p + " size=" + mb + "'; ")
 	b.WriteString("if ! command -v python3 >/dev/null 2>&1; then echo 'speedtest error=no-python3'; else python3 -c '" + script + "' " + p + " " + token + " " + mb + " 2>&1 | { ip=''; " +
 		"while IFS= read -r l; do echo \"$l\"; case \"$l\" in 'speedtest client ip='*) ip=\"${l#speedtest client ip=}\";; esac; done; " +
-		"if [ -n \"$ip\" ]; then " + traceLoop("\"$ip\"") + backPing("\"$ip\"") + "; fi; }; fi")
+		"if [ -n \"$ip\" ]; then " + traceLoop("\"$ip\"", ClientProbes) + backPing("\"$ip\"") + "; fi; }; fi")
 	return b.String(), nil
 }
 
@@ -205,9 +229,11 @@ func directSpec(command string) (Spec, bool) {
 	}
 	port, _ := strconv.Atoi(m[1])
 	size, _ := strconv.Atoi(m[3])
-	for _, install := range []bool{false, true} {
-		if c, err := DirectCommand(port, m[2], size, install); err == nil && c == command {
-			return Spec{Method: MethodDirect, SizeMB: size}, true
+	for slot := 0; slot < DirectMaxHosts; slot++ {
+		for _, install := range []bool{false, true} {
+			if c, err := DirectCommand(port, m[2], size, install, slot); err == nil && c == command {
+				return Spec{Method: MethodDirect, SizeMB: size}, true
+			}
 		}
 	}
 	return Spec{}, false
@@ -254,6 +280,14 @@ func addDirectLine(c *Client, rest string) *Client {
 		c.Down = transfer()
 	case strings.HasPrefix(rest, "up "):
 		c.Up = transfer()
+	case strings.HasPrefix(rest, "loaded "):
+		c.LoadedDown, c.LoadedUp = num(m, "down"), num(m, "up")
+	case strings.HasPrefix(rest, "tcp "):
+		// 主机上的测速服务从 TCP 连接上读的：数不对（重发的比发的还多、离谱地大）就不要。
+		segs, retrans, rtt := num(m, "segs"), num(m, "retrans"), num(m, "rtt")
+		if segs >= 1 && segs <= 1e9 && retrans >= 0 && retrans <= segs && rtt >= 0 && rtt <= 60e3 {
+			c.Segs, c.Retrans, c.TCPRtt = int(segs), int(retrans), round(rtt)
+		}
 	}
 	return c
 }

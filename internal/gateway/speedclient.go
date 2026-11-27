@@ -1,15 +1,17 @@
 package gateway
 
 import (
+	"context"
 	crand "crypto/rand"
-	"database/sql"
 	"encoding/hex"
-	"errors"
 	"io"
 	mrand "math/rand/v2"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/tsienwan/hostower/internal/i18n"
 	"github.com/tsienwan/hostower/internal/kernel"
 	"github.com/tsienwan/hostower/internal/speedtest"
 )
@@ -43,7 +45,7 @@ func (s *Server) speedClientInfo(w http.ResponseWriter, r *http.Request) {
 	_, err := speedtest.ClientCommand(ip, false)
 	writeJSON(w, 200, map[string]any{"ip": ip, "traceable": err == nil, "proxy": s.TrustProxy,
 		"sizes": speedtest.ClientSizes, "seconds": speedtest.ClientSeconds, "pings": speedtest.ClientPings,
-		"directPort": speedtest.DirectPort, "directWait": speedtest.DirectWait})
+		"directPort": speedtest.DirectPort, "directWait": speedtest.DirectWait, "directMax": speedtest.DirectMaxHosts})
 }
 
 // speedClientPing 什么都不做：浏览器量的是这一个来回花了多久。
@@ -99,33 +101,52 @@ func (s *Server) speedClientRun(w http.ResponseWriter, r *http.Request) {
 		// Install 为真时，主机上没有 traceroute 和 tracepath 就先装上 traceroute。
 		Install bool `json:"install"`
 		Direct  bool `json:"direct"`
-		Port    int  `json:"port"`
-		SizeMB  int  `json:"sizeMb"`
+		// Hosts 只在直连时用：一次测几台主机（不给就是 Host 那一台）。
+		Hosts  []string `json:"hosts"`
+		Port   int      `json:"port"`
+		SizeMB int      `json:"sizeMb"`
 	}
 	if !readJSON(w, r, &in) {
 		return
 	}
-	if in.Host == "" {
+	if in.Host == "" && len(in.Hosts) == 0 {
 		writeErr(w, 400, "没有选中任何主机")
 		return
 	}
-	var cmd, intent string
 	out := map[string]any{}
+	hosts := []string{in.Host}
+	cmds := map[string]string{}
+	var intent string
 	if in.Direct {
-		var raw [16]byte
-		if _, err := crand.Read(raw[:]); err != nil {
-			writeErr(w, 500, "生成数据失败")
+		// 直连可以一次测几台：每台各开一个测速服务、各有一个口令，浏览器按这里的顺序一台一台测。
+		if len(in.Hosts) > 0 {
+			hosts = in.Hosts
+		}
+		if len(hosts) > speedtest.DirectMaxHosts {
+			writeErr(w, 400, "一次最多测 "+strconv.Itoa(speedtest.DirectMaxHosts)+" 台主机")
 			return
 		}
-		token := hex.EncodeToString(raw[:])
-		c, err := speedtest.DirectCommand(in.Port, token, in.SizeMB, in.Install)
-		if err != nil {
-			writeErr(w, 400, err.Error())
-			return
+		tokens := map[string]string{}
+		for i, h := range hosts {
+			if h == "" || tokens[h] != "" {
+				writeErr(w, 400, "没有选中任何主机")
+				return
+			}
+			var raw [16]byte
+			if _, err := crand.Read(raw[:]); err != nil {
+				writeErr(w, 500, "生成数据失败")
+				return
+			}
+			tokens[h] = hex.EncodeToString(raw[:])
+			c, err := speedtest.DirectCommand(in.Port, tokens[h], in.SizeMB, in.Install, i)
+			if err != nil {
+				writeErr(w, 400, err.Error())
+				return
+			}
+			cmds[h] = c
 		}
-		cmd = c
-		intent = "在 " + in.Host + " 上临时开一个测速服务（端口 " + strconv.Itoa(in.Port) + "），测这台设备和它之间的速度并追踪回程路由"
-		out["direct"] = map[string]any{"port": in.Port, "token": token}
+		intent = "在 " + strings.Join(hosts, "、") + " 上临时开一个测速服务（端口 " + strconv.Itoa(in.Port) + "），测这台设备和它之间的速度并追踪回程路由"
+		out["direct"] = map[string]any{"port": in.Port, "tokens": tokens}
 	} else {
 		ip := s.clientIP(r)
 		c, err := speedtest.ClientCommand(ip, in.Install)
@@ -133,14 +154,14 @@ func (s *Server) speedClientRun(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, 400, err.Error())
 			return
 		}
-		cmd = c
+		cmds[in.Host] = c
 		intent = "追踪从 " + in.Host + " 到这台设备（" + ip + "）的回程路由"
 		if in.Install {
 			intent = "安装缺少的 traceroute 并追踪从 " + in.Host + " 到这台设备（" + ip + "）的回程路由"
 		}
 	}
 	req, err := s.Kernel.SubmitCommand(r.Context(), actor(sessionOf(r)), kernel.CommandSpec{
-		Hosts: []string{in.Host}, Commands: map[string]string{in.Host: cmd}, Snippet: speedtest.Tag, Intent: intent})
+		Hosts: hosts, Commands: cmds, Snippet: speedtest.Tag, Intent: intent, Strategy: kernel.Strategy{Concurrency: len(hosts)}})
 	if err != nil {
 		fail(w, err)
 		return
@@ -175,29 +196,32 @@ func (s *Server) speedClientResult(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
-// speedClientForward 把贴进来的去程路由（在设备那边跑的 tracert / traceroute 的输出）记到一条“这台设备”测速上；内容为空是清掉。
-func (s *Server) speedClientForward(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		Request string `json:"request"`
-		Host    string `json:"host"`
-		Text    string `json:"text"`
-	}
-	if !readJSON(w, r, &in) {
+// speedClientNets 查最近这些“这台设备”测速是从哪些网络测的：把结果里记的设备地址交给地区查询服务，返回每个地址的地区和运营商。
+// 和路由节点的地区查询是同一个开关；关着的时候什么都不查。
+func (s *Server) speedClientNets(w http.ResponseWriter, r *http.Request) {
+	if !s.Speedtest.GeoEnabled() {
+		writeJSON(w, 200, map[string]any{"enabled": false, "service": speedtest.GeoService})
 		return
 	}
-	res, err := s.Speedtest.Get(r.Context(), speedtest.Key{RequestID: in.Request, Host: in.Host})
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && res.Method != speedtest.MethodClient && res.Method != speedtest.MethodDirect) {
-		writeErr(w, 404, "没有这条测速记录")
-		return
-	}
+	list, err := s.Speedtest.Recent(r.Context(), 200)
 	if err != nil {
 		writeErr(w, 500, "读取失败")
 		return
 	}
-	route, err := s.Speedtest.SaveForward(r.Context(), in.Request, in.Text)
-	if err != nil {
-		writeErr(w, 400, err.Error())
-		return
+	seen := map[string]bool{}
+	var ips []string
+	for _, x := range list {
+		if x.ClientIP != "" && !seen[x.ClientIP] && len(ips) < 40 {
+			seen[x.ClientIP] = true
+			ips = append(ips, x.ClientIP)
+		}
 	}
-	writeJSON(w, 200, map[string]any{"route": route})
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	geo, err := s.Speedtest.Geo(ctx, ips, i18n.Get(r.URL.Query().Get("lang")).Geo)
+	out := map[string]any{"enabled": true, "service": speedtest.GeoService, "nets": geo}
+	if err != nil {
+		out["error"] = err.Error()
+	}
+	writeJSON(w, 200, out)
 }

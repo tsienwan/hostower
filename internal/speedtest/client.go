@@ -19,7 +19,6 @@ import (
 //     只代表“这台设备 ↔ 面板”这一段；面板前面有反向代理或 CDN 时，量到的是到代理那一段。
 //   - 回程路由（主机 → 这台设备）和别的命令一样交给内核：在选中的主机上对面板看到的来源地址跑一次路由追踪，再 ping 十次。
 //     地址是网关从连接上读出来的，不接受请求里自报的。
-//   - 去程路由（这台设备 → 服务器）浏览器追踪不了：可以在电脑上跑 tracert / traceroute，把输出贴进来，按同一份网段表认线路。
 
 // MethodClient 是“这台设备”这种测速方式。
 const MethodClient = "client"
@@ -36,6 +35,9 @@ const ClientPings = 20
 // ClientVersion 是 Client 存成 JSON 时的格式版本。
 const ClientVersion = 1
 
+// ClientProbes 是回程路由每一跳探几次：探几次才看得出哪一跳在丢包。
+const ClientProbes = 5
+
 const clientMark = "echo 'speedtest client ip="
 
 // ClientCommand 生成“从主机追踪到这台设备”的命令：先路由追踪，再 ping 十次看丢包和抖动（家用路由器常常不回应，那就只有路由）。
@@ -46,10 +48,10 @@ func ClientCommand(ip string, install bool) (string, error) {
 		return "", errors.New("读不出这台设备的来源地址，没法追踪回程路由")
 	}
 	ip = a.Unmap().String()
-	trace, err := traceScript([]string{ip})
-	if err != nil {
+	if !ValidTarget(ip) {
 		return "", errors.New("这台设备的来源地址不能用来追踪路由")
 	}
+	trace := traceLoop("'"+ip+"'", ClientProbes)
 	var b strings.Builder
 	if install {
 		b.WriteString(installTraceroute)
@@ -117,7 +119,7 @@ func addBackLine(p *HostPing, line string) *HostPing {
 	return p
 }
 
-// Client 是浏览器交回来的测量结果（这台设备 ↔ 面板），加上之后贴进来的去程路由。
+// Client 是浏览器交回来的测量结果（这台设备 ↔ 面板，或直连测速时这台设备 ↔ 主机）。
 // 数字是浏览器自己量的、由登录的用户提交，只用来显示；地址由服务端填。
 type Client struct {
 	V     int    `json:"v"`
@@ -130,8 +132,14 @@ type Client struct {
 	Lost  int       `json:"lost,omitempty"`
 	Down  *Transfer `json:"down,omitempty"`
 	Up    *Transfer `json:"up,omitempty"`
-	// Forward 是贴进来的去程路由。
-	Forward *Route `json:"forward,omitempty"`
+	// LoadedDown、LoadedUp 是下载、上传进行时量到的往返时间（毫秒，中位数）：带宽跑满时延迟涨多少。
+	LoadedDown float64 `json:"loadedDown,omitempty"`
+	LoadedUp   float64 `json:"loadedUp,omitempty"`
+	// 下面三项只有直连测速有，是主机上的测速服务从下载用的那几条 TCP 连接上读的（不是浏览器报的）：
+	// 一共发了多少个数据段、重发了多少个，以及内核估的往返时间（毫秒，取几条连接里最小的）。重发多说明回程在丢包。
+	Segs    int     `json:"segs,omitempty"`
+	Retrans int     `json:"retrans,omitempty"`
+	TCPRtt  float64 `json:"tcpRtt,omitempty"`
 }
 
 var clientWordRe = regexp.MustCompile(`^[a-z0-9./-]{1,16}$`)
@@ -150,7 +158,7 @@ func cleanTransfer(t *Transfer) (*Transfer, error) {
 	return &Transfer{Bytes: math.Round(t.Bytes), MS: round(t.MS), Bps: math.Round(t.Bps), Conns: t.Conns}, nil
 }
 
-// clean 检查并整理浏览器交来的数字；地址、代理和去程路由不从这里来。
+// clean 检查并整理浏览器交来的数字；地址和代理不从这里来。
 func (c Client) clean() (Client, error) {
 	out := Client{V: ClientVersion, Pings: []float64{}, Lost: c.Lost}
 	if len(c.Pings) > 2*ClientPings || c.Lost < 0 || c.Lost > 2*ClientPings {
@@ -169,6 +177,10 @@ func (c Client) clean() (Client, error) {
 	if out.Up, err = cleanTransfer(c.Up); err != nil {
 		return out, err
 	}
+	if !okNum(c.LoadedDown, 60e3) || !okNum(c.LoadedUp, 60e3) {
+		return out, errors.New("测量结果里的数字不对")
+	}
+	out.LoadedDown, out.LoadedUp = round(c.LoadedDown), round(c.LoadedUp)
 	if clientWordRe.MatchString(c.Proto) {
 		out.Proto = c.Proto
 	}
@@ -233,95 +245,18 @@ func (s *Service) putClient(ctx context.Context, id string, c Client) error {
 	return err
 }
 
-// SaveClient 记下浏览器对一次“这台设备”测速交回来的数字。ip 和 proxy 由网关填；已经贴过的去程路由留着。
+// SaveClient 记下浏览器对一次“这台设备”测速交回来的数字。ip 和 proxy 由网关填。
 func (s *Service) SaveClient(ctx context.Context, id, ip string, proxy bool, measured Client) error {
 	c, err := measured.clean()
 	if err != nil {
 		return err
 	}
 	c.IP, c.Proxy = ip, proxy
-	if old, ok := s.client(ctx, id); ok {
-		c.Forward = old.Forward
-	}
 	return s.putClient(ctx, id, c)
-}
-
-// SaveForward 把贴进来的去程路由（tracert、traceroute、tracepath、mtr 的输出）解析后记到一次“这台设备”测速上；text 为空是清掉。
-func (s *Service) SaveForward(ctx context.Context, id, text string) (*Route, error) {
-	c, _ := s.client(ctx, id)
-	if strings.TrimSpace(text) == "" {
-		c.Forward = nil
-		return nil, s.putClient(ctx, id, c)
-	}
-	r, err := ParsePasted(text)
-	if err != nil {
-		return nil, err
-	}
-	c.Forward = &r
-	return &r, s.putClient(ctx, id, c)
 }
 
 // pruneClients 删掉已经没有对应测速结果的浏览器数据。留一天的余量：浏览器的数字可能比请求先到。
 func (s *Service) pruneClients(ctx context.Context) {
 	s.db.ExecContext(ctx, `DELETE FROM speedtest_clients WHERE ts < ? AND request_id NOT IN (SELECT request_id FROM speedtests)`,
 		time.Now().Add(-24*time.Hour).UnixMilli())
-}
-
-// ForwardTarget 是去程路由在 Route.Target 里的写法（它没有“目标地址”：是从设备到服务器）。
-const ForwardTarget = "forward"
-
-var (
-	// 一跳的开头：traceroute / tracert（" 3  "）、tracepath（" 3:  "、" 3?: "）、mtr（" 3.|-- "）。
-	pastedHopRe = regexp.MustCompile(`^\s*(\d{1,2})(?:\?)?(?::\s+|\.\|--\s*|\s+)(.*)$`)
-	// 时间：英文系统是 "12 ms"、"<1 ms"，中文 Windows 是 "12 毫秒"。
-	pastedMsRe = regexp.MustCompile(`([0-9]+(?:\.[0-9]+)?)\s?(?:ms|毫秒)`)
-)
-
-// MaxPasted 是贴进来的路由输出最多多少字节。
-const MaxPasted = 16 << 10
-
-// ParsePasted 从贴进来的路由追踪输出里读出每一跳，并推测线路。认 Windows 的 tracert、traceroute、tracepath 和 mtr 的报告。
-// 贴进来的是外来的文字：只留跳数、合法的 IP 地址和时间，别的都丢掉。
-func ParsePasted(text string) (Route, error) {
-	r := Route{Target: ForwardTarget, Dir: "forward", Hops: []Hop{}, Nets: []string{}}
-	if len(text) > MaxPasted {
-		return r, errors.New("贴进来的内容太长了")
-	}
-	last := 0
-	for _, line := range strings.Split(text, "\n") {
-		m := pastedHopRe.FindStringSubmatch(strings.TrimRight(line, "\r "))
-		if m == nil {
-			continue
-		}
-		n, _ := strconv.Atoi(m[1])
-		if n <= last || n > 64 || len(r.Hops) >= 64 {
-			continue
-		}
-		h := Hop{N: n}
-		for _, f := range strings.Fields(m[2]) {
-			if a, err := netip.ParseAddr(strings.Trim(f, "[]()")); err == nil {
-				h.IP = a.String()
-				h.Net = netOf(a)
-				break
-			}
-		}
-		if h.IP != "" {
-			if t := pastedMsRe.FindStringSubmatch(m[2]); t != nil {
-				h.MS, _ = strconv.ParseFloat(t[1], 64)
-				h.MS = round(h.MS)
-			}
-		}
-		r.Hops = append(r.Hops, h)
-		last = n
-	}
-	found := false
-	for _, h := range r.Hops {
-		found = found || h.IP != ""
-	}
-	if !found {
-		return r, errors.New("没有从贴进来的内容里认出路由：请贴 tracert、traceroute 或 mtr 的完整输出")
-	}
-	rs := []Route{r}
-	finishRoutes(rs)
-	return rs[0], nil
 }

@@ -296,10 +296,10 @@ export const api = {
   speedtestDelete: (items: { requestId: string; host: string }[], all = false) => call<{ deleted: number }>("POST", "/speedtest/delete", { items, all }),
   runSpeedtest: (p: { hosts: string[]; method: SpeedMethod; sizeMb: number; server: number; install: string[]; routes: boolean; threads: SpeedThreads; ip: SpeedIP }) => call<Req>("POST", "/speedtest", p),
   speedClient: () => call<SpeedClientInfo>("GET", "/speedtest/client"),
-  speedClientRun: (host: string, install: boolean, direct?: { port: number; sizeMb: number }) =>
-    call<{ request: Req; direct?: { port: number; token: string } }>("POST", "/speedtest/client/run", { host, install, direct: !!direct, ...direct }),
+  speedClientRun: (host: string, install: boolean, direct?: { hosts: string[]; port: number; sizeMb: number }) =>
+    call<{ request: Req; direct?: { port: number; tokens: Record<string, string> } }>("POST", "/speedtest/client/run", { host, install, direct: !!direct, ...direct }),
+  speedClientNets: (lang: string) => call<{ enabled: boolean; nets?: Record<string, SpeedGeo> }>("GET", `/speedtest/client/nets?lang=${encodeURIComponent(lang)}`),
   speedClientResult: (request: string, measure: SpeedClientMeasure) => call<{ ok: boolean }>("PUT", "/speedtest/client/result", { request, measure }),
-  speedClientForward: (request: string, host: string, text: string) => call<{ route: SpeedRoute | null }>("PUT", "/speedtest/client/forward", { request, host, text }),
   speedtestCheck: (hosts: string[]) => call<{ hosts: { host: string; curl: boolean; trace: boolean; error?: string }[] }>("POST", "/speedtest/check", { hosts }),
   oidc: () => call<OIDCView>("GET", "/auth/oidc"),
   saveOIDC: (c: OIDCConfig & { secret: string; clearSecret: boolean }) => call<OIDCView>("PUT", "/auth/oidc", c),
@@ -494,16 +494,17 @@ export interface RetentionView { retention: Retention; fine: number[]; coarse: n
 export interface SpeedRetention { days: number; perHost: number }
 export type SpeedMethod = "ookla" | "cloudflare" | "client" | "direct";
 /** “这台设备”测速：面板看到的来源地址、能不能追踪、面板前面有没有反向代理，以及可选的数据量。 */
-export interface SpeedClientInfo { ip: string; traceable: boolean; proxy: boolean; sizes: number[]; seconds: number; pings: number; directPort: number; directWait: number }
+export interface SpeedClientInfo { ip: string; traceable: boolean; proxy: boolean; sizes: number[]; seconds: number; pings: number; directPort: number; directWait: number; directMax: number }
 /** 浏览器量到的数字（这台设备 ↔ 面板）。 */
-export interface SpeedClientMeasure { pings: number[]; lost?: number; down?: SpeedTransfer; up?: SpeedTransfer; proto?: string; conn?: string }
-export interface SpeedClient extends SpeedClientMeasure { ip?: string; proxy?: boolean }
+export interface SpeedClientMeasure { pings: number[]; lost?: number; down?: SpeedTransfer; up?: SpeedTransfer; proto?: string; conn?: string; loadedDown?: number; loadedUp?: number }
+/** segs、retrans、tcpRtt 只有直连测速有：主机从下载用的 TCP 连接上读的数据段数、重发数和往返时间。 */
+export interface SpeedClient extends SpeedClientMeasure { ip?: string; proxy?: boolean; segs?: number; retrans?: number; tcpRtt?: number }
 /** 从主机 ping 这台设备的结果；recv 为 0 是对方不回应。 */
 export interface SpeedBack { sent: number; recv: number; min?: number; avg?: number; max?: number; jitter?: number }
 export type SpeedThreads = "single" | "multi";
 /** 空是自动（按系统默认）。 */
 export type SpeedIP = "" | "4" | "6";
-export interface SpeedResult { requestId: string; host: string; ts: number; pingMs: number; downBps: number; upBps: number; sizeMb: number; method: SpeedMethod; server?: string; threads?: SpeedThreads | ""; ip?: SpeedIP; error?: string; detail?: SpeedDetail }
+export interface SpeedResult { requestId: string; host: string; ts: number; pingMs: number; downBps: number; upBps: number; sizeMb: number; method: SpeedMethod; server?: string; threads?: SpeedThreads | ""; ip?: SpeedIP; clientIp?: string; error?: string; detail?: SpeedDetail }
 export interface SpeedConfig {
   results: SpeedResult[]; sizes: number[]; server: string; retention: SpeedRetention; targets: SpeedTarget[]; maxTargets: number;
   geo: boolean; geoService: string; ookla: OoklaLicense; searchService: string; presets: SpeedPreset[];
@@ -534,8 +535,8 @@ export interface SpeedDetail {
   client?: SpeedClient;
 }
 export interface SpeedTransfer { bytes: number; ms: number; ttfb?: number; bps: number; conns?: number }
-export interface SpeedHop { n: number; ip?: string; ms?: number; net?: string }
-export interface SpeedRoute { target: string; name?: string; dir?: "return" | "forward"; hops: SpeedHop[]; nets: string[]; line?: string; error?: string }
+export interface SpeedHop { n: number; ip?: string; ms?: number; net?: string; sent?: number; lost?: number }
+export interface SpeedRoute { target: string; name?: string; dir?: "return"; hops: SpeedHop[]; nets: string[]; line?: string; error?: string }
 /** 节点地区：第三方查询服务给的文字，只按纯文本显示。 */
 export interface SpeedGeo { country?: string; cc?: string; region?: string; city?: string; isp?: string; as?: string; net?: string }
 export interface SpeedGeoView { enabled: boolean; service: string; hops?: Record<string, SpeedGeo>; routes?: SpeedRoute[]; error?: string }

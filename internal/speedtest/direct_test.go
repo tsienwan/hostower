@@ -30,7 +30,7 @@ func TestDirectCommand(t *testing.T) {
 	}
 	e := risk.New()
 	for _, install := range []bool{false, true} {
-		cmd, err := DirectCommand(DirectPort, testToken, 25, install)
+		cmd, err := DirectCommand(DirectPort, testToken, 25, install, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -52,12 +52,23 @@ func TestDirectCommand(t *testing.T) {
 			t.Fatal("改过脚本的命令不应该被认成测速")
 		}
 	}
+	// 一次测几台时，排在后面的多等一会儿；也能认回来。排得太靠后的不收。
+	later, err := DirectCommand(DirectPort, testToken, 25, false, 3)
+	if err != nil || !strings.Contains(later, fmt.Sprintf("time.time()-t0>%d:", DirectWait+3*DirectStep)) {
+		t.Fatalf("排在后面的应该多等：%v", err)
+	}
+	if spec, ok := SpecOf(later); !ok || spec.Method != MethodDirect {
+		t.Fatal("排在后面的命令没有认回来")
+	}
+	if _, err := DirectCommand(DirectPort, testToken, 25, false, DirectMaxHosts); err == nil {
+		t.Fatal("超过一次能测的台数应该拒绝")
+	}
 	for _, bad := range []struct {
 		port, size int
 		token      string
 	}{{80, 25, testToken}, {70000, 25, testToken}, {DirectPort, 26, testToken}, {DirectPort, 25, "abc"},
 		{DirectPort, 25, strings.Repeat("g", 32)}, {DirectPort, 25, testToken[:31] + "'"}} {
-		if _, err := DirectCommand(bad.port, bad.token, bad.size, false); err == nil {
+		if _, err := DirectCommand(bad.port, bad.token, bad.size, false, 0); err == nil {
 			t.Fatalf("应该拒绝：%+v", bad)
 		}
 	}
@@ -72,9 +83,12 @@ func TestDirectParse(t *testing.T) {
 		"speedtest direct pings=31.20,30.10,35.50 lost=1 proto=http/1.1 conn=wifi",
 		"speedtest direct down bytes=25000000 ms=2000 conns=4",
 		"speedtest direct up bytes=6250000 ms=5000 conns=2",
+		"speedtest direct loaded down=55.50 up=40.25",
+		"speedtest direct tcp segs=20000 retrans=150 rtt=30.12",
 		"speedtest route 203.0.113.24 traceroute to 203.0.113.24, 30 hops max",
-		"speedtest route 203.0.113.24  1  192.0.2.1  0.5 ms",
-		"speedtest route 203.0.113.24  2  203.0.113.24  31.0 ms",
+		"speedtest route 203.0.113.24  1  192.0.2.1  0.5 ms  0.7 ms  0.6 ms * 0.4 ms",
+		"speedtest route 203.0.113.24  2  * * * * *",
+		"speedtest route 203.0.113.24  3  203.0.113.24  31.0 ms 198.51.100.9  33.0 ms * * 32.0 ms",
 		"speedtest back 10 packets transmitted, 0 received, 100% packet loss, time 9210ms",
 	}, "\n")
 	rep := Parse(out)
@@ -88,8 +102,21 @@ func TestDirectParse(t *testing.T) {
 	if rep.PingMS != 31.2 || rep.DownBps != 100e6 || rep.UpBps != 10e6 {
 		t.Fatalf("汇总不对：%v %v %v", rep.PingMS, rep.DownBps, rep.UpBps)
 	}
-	if len(rep.Detail.Routes) != 1 || len(rep.Detail.Routes[0].Hops) != 2 || rep.Detail.Back == nil {
+	if c.LoadedDown != 55.5 || c.LoadedUp != 40.25 || c.Segs != 20000 || c.Retrans != 150 || c.TCPRtt != 30.12 {
+		t.Fatalf("加载时延迟和重传不对：%+v", c)
+	}
+	if len(rep.Detail.Routes) != 1 || len(rep.Detail.Routes[0].Hops) != 3 || rep.Detail.Back == nil {
 		t.Fatalf("路由不对：%+v", rep.Detail)
+	}
+	// 每跳探五次：数出发了几次、丢了几次，延迟取回应了的那几次的中位数。
+	h := rep.Detail.Routes[0].Hops
+	if h[0].Sent != 5 || h[0].Lost != 1 || h[0].MS != 0.55 || h[1].Sent != 5 || h[1].Lost != 5 || h[1].IP != "" ||
+		h[2].IP != "203.0.113.24" || h[2].Sent != 5 || h[2].Lost != 2 || h[2].MS != 32 {
+		t.Fatalf("每跳的丢包不对：%+v", h)
+	}
+	// 重发的比发的还多：不收。
+	if rep := Parse(strings.Replace(out, "retrans=150", "retrans=99999", 1)); rep.Detail.Client == nil || rep.Detail.Client.Segs != 0 {
+		t.Fatalf("离谱的重传数应该丢掉：%+v", rep.Detail.Client)
 	}
 	for in, want := range map[string]string{
 		"speedtest direct port=28080 size=25\nspeedtest error=no-python3":                              "python3",
@@ -215,14 +242,16 @@ func TestDirectScript(t *testing.T) {
 	if code := post(tok+"done", []byte(`{"pings":[1e99]}`)); code != 400 {
 		t.Fatalf("离谱的数字应该是 400，现在是 %d", code)
 	}
-	done := `{"pings":[12.345,11.2],"lost":0,"proto":"http/1.1","conn":"<b>","down":{"bytes":25000000,"ms":2000,"conns":4},"up":{"bytes":4194304,"ms":1000,"conns":2}}`
+	done := `{"pings":[12.345,11.2],"lost":0,"proto":"http/1.1","conn":"<b>","down":{"bytes":25000000,"ms":2000,"conns":4},"up":{"bytes":4194304,"ms":1000,"conns":2},"ld":20.5,"lu":18}`
 	if code := post(tok+"done", []byte(done)); code != 200 {
 		t.Fatalf("交结果：%d", code)
 	}
-	out := "speedtest direct port=1 size=25\nspeedtest client ip=127.0.0.1\n" + next() + "\n" + next() + "\n" + next()
+	// 五行：延迟、下载、上传、加载时延迟、TCP 连接上读的（Linux 上才有，测试只在有 python3 的 Linux 环境里跑）。
+	out := "speedtest direct port=1 size=25\nspeedtest client ip=127.0.0.1\n" + next() + "\n" + next() + "\n" + next() + "\n" + next() + "\n" + next()
 	rep := Parse(out)
 	c := rep.Detail.Client
-	if rep.Error != "" || c == nil || len(c.Pings) != 2 || c.Conn != "" || c.Proto != "http/1.1" || rep.DownBps != 100e6 || c.Up == nil || c.Up.Bytes != 4194304 {
+	if rep.Error != "" || c == nil || len(c.Pings) != 2 || c.Conn != "" || c.Proto != "http/1.1" || rep.DownBps != 100e6 || c.Up == nil || c.Up.Bytes != 4194304 ||
+		c.LoadedDown != 20.5 || c.LoadedUp != 18 || c.Segs < 100 || c.Retrans > c.Segs {
 		t.Fatalf("脚本的输出解析不对：%+v\n%s", rep, out)
 	}
 	wait := make(chan error, 1)

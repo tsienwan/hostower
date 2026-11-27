@@ -265,6 +265,10 @@ SELECT 'panel.listen', '127.0.0.1:18443'
 WHERE EXISTS (SELECT 1 FROM users)
   AND NOT EXISTS (SELECT 1 FROM settings WHERE key = 'panel.listen');
 `,
+	// v20：“这台设备”测速记下设备的来源地址，页面用它标出每次是从哪个网络测的、按网络对比。之前的结果没有记，是空的。
+	`
+ALTER TABLE speedtests ADD COLUMN client_ip TEXT NOT NULL DEFAULT '';
+`,
 }
 
 // SchemaVersion 是当前代码认识的结构版本。

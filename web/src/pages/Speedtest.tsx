@@ -12,7 +12,7 @@ import { ApprovalCard } from "./Requests";
 import { cached, remember } from "../cache";
 import { ts, useT } from "../i18n";
 import { SpeedReport, SpeedTargets } from "./SpeedReport";
-import { ClientCard } from "./SpeedClient";
+import { ClientCard, useClientNets } from "./SpeedClient";
 
 const TAG = "builtin:speedtest@1";
 
@@ -382,6 +382,7 @@ export function SpeedtestPage() {
   const [openReq, setOpenReq] = useState("");
   const [report, setReport] = useState<SpeedResult | null>(null);
   const load = useCallback(() => api.speedtest().then((r) => setData(remember("speedtest", r))).catch(fail), []);
+  const nets = useClientNets(data?.results);
   useEffect(() => { load(); }, [load]);
 
   // 有测速请求在等待或执行时，每 5 秒刷新一次结果。
@@ -426,7 +427,7 @@ export function SpeedtestPage() {
           ))}
           <div className="speed-layout">
           <div className="speed-main">
-          <ClientCard onDone={load} />
+          <ClientCard onDone={load} results={data?.results ?? []} nets={nets} />
           <div className="card">
             <div className="card-head"><h2>{t("各主机最近一次结果")}</h2></div>
             {hosts.length === 0 ? <Empty icon={<Gauge />} title={t("还没有主机")} /> : (
@@ -474,7 +475,7 @@ export function SpeedtestPage() {
               </div>
             )}
           </div>
-          {data && <SpeedHistory results={data.results} reload={load} onReport={setReport} />}
+          {data && <SpeedHistory results={data.results} nets={nets} reload={load} onReport={setReport} />}
           </div>
           {data && (
             <section className="speed-settings" aria-label={t("测速设置")}>
@@ -496,10 +497,12 @@ export function SpeedtestPage() {
 }
 
 /** 测速历史：可以删单条、清空，所有者可以设定保留规则。删的只是测速结果的副本，请求和输出仍在审计里。 */
-function SpeedHistory({ results, reload, onReport }: { results: SpeedResult[]; reload: () => void; onReport: (r: SpeedResult) => void }) {
+function SpeedHistory({ results, nets, reload, onReport }: { results: SpeedResult[]; nets: Record<string, string>; reload: () => void; onReport: (r: SpeedResult) => void }) {
   const t = useT();
   const owner = useStore((s) => s.boot?.user?.role === "owner");
   const paged = usePaged(results, 20);
+  // “这台设备”测速是从哪个网络测的（认不出就写地址）。
+  const via = (r: SpeedResult) => r.clientIp ? " · " + (nets[r.clientIp] || r.clientIp) : "";
   const [ret, setRet] = useState<{ retention: { days: number; perHost: number }; days: number[]; perHost: number[] } | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { api.speedtestRetention().then(setRet).catch(() => setRet(null)); }, []);
@@ -543,7 +546,7 @@ function SpeedHistory({ results, reload, onReport }: { results: SpeedResult[]; r
                       <td className="num">{mbps(r.downBps)}</td>
                       <td className="num">{mbps(r.upBps)}</td>
                     </>}
-                    <td className="hide-sm muted sp-via" title={[r.server, optsLabel(t, r.threads, r.ip)].filter(Boolean).join(" · ")}>{r.method === "client" ? t("这台设备 ↔ 面板") : r.method === "direct" ? t("这台设备 ↔ {host}", { host: r.host }) : r.method === "ookla" ? r.server || "Speedtest" : "Cloudflare"}{optsLabel(t, r.threads, r.ip) && <small className="sp-opt"> · {optsLabel(t, r.threads, r.ip)}</small>}</td>
+                    <td className="hide-sm muted sp-via" title={[r.server, optsLabel(t, r.threads, r.ip)].filter(Boolean).join(" · ")}>{r.method === "client" ? t("这台设备 ↔ 面板") + via(r) : r.method === "direct" ? t("这台设备 ↔ {host}", { host: r.host }) + via(r) : r.method === "ookla" ? r.server || "Speedtest" : "Cloudflare"}{optsLabel(t, r.threads, r.ip) && <small className="sp-opt"> · {optsLabel(t, r.threads, r.ip)}</small>}</td>
                     <td className="hide-sm muted num">{r.sizeMb ? r.sizeMb + " MB" : "—"}</td>
                     <td className="muted" title={stamp(r.ts)}>{ago(r.ts)}</td>
                     <td className="act" onClick={(e) => e.stopPropagation()}>

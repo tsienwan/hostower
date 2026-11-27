@@ -22,10 +22,6 @@ const dict: Record<string, string> = {
     "Invalid numbers in the measurement results",
   "测量结果里的延迟次数不对":
     "Invalid latency sample count in the measurement results",
-  "贴进来的内容太长了":
-    "The pasted content is too long",
-  "没有从贴进来的内容里认出路由：请贴 tracert、traceroute 或 mtr 的完整输出":
-    "No route recognized in the pasted content: paste the full output of tracert, traceroute or mtr",
   "端口应该在 1024 到 65535 之间":
     "The port must be between 1024 and 65535",
   "口令不对":
@@ -40,6 +36,8 @@ const dict: Record<string, string> = {
     "This device never connected: the speed test page wasn't opened, or the host's firewall or the cloud provider's security group doesn't allow this port",
   "这台设备连上来了，但没有在限定时间里测完":
     "This device connected but didn't finish the test within the time limit",
+  "一次最多测 {a} 台主机":
+    "Up to {a} hosts can be tested at a time",
 };
 
 export default dict;

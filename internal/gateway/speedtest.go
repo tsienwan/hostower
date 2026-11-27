@@ -64,6 +64,9 @@ func (s *Server) speedtestGeo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var ips []string
+	if res.ClientIP != "" {
+		ips = append(ips, res.ClientIP)
+	}
 	if res.Detail != nil {
 		for _, rt := range res.Detail.Routes {
 			for _, h := range rt.Hops {

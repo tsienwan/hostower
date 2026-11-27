@@ -6,26 +6,32 @@ const dict: Record<string, string> = {
     "Test this device",
   "把正在看面板的这台设备（比如家里、公司或外面连着网的手机）当成一个节点：量它和任意一台主机之间的延迟、下载、上传，再从那台主机追踪回到它的路由，看回程走的哪条线路、经过哪些节点。":
     "Treats the device viewing the panel (say, a phone online at home, at work or on the go) as a node: measures latency, download and upload between it and any host, then traces the route from that host back to it to show which line the return route takes and which hops it passes.",
-  "测哪台主机":
-    "Host to test",
-  "没有在线的主机":
-    "No hosts online",
+  "各网络最近一次":
+    "Latest for each network",
+  "没有拿到结果":
+    "No result received",
   "速度测到哪里":
     "Speed test target",
-  "这台主机（直连）":
-    "This host (direct)",
-  "在 {host} 上临时开一个测速服务，这台设备的浏览器直接连它量延迟、下载、上传，再从 {host} 追踪回到这台设备。服务只认带一次性口令的地址，最多等 {w} 秒，测完自己退出。开端口是一次变更（L1），需要批准。":
-    "Starts a temporary speed test service on {host}. This device's browser connects to it directly to measure latency, download and upload, then the route is traced from {host} back to this device. The service only accepts the address carrying a one-time token, waits at most {w} seconds, and exits by itself when the test is done. Opening a port is a change (L1) and needs approval.",
-  "延迟和速度量的是这台设备和面板之间；{host} 只用来追踪回到这台设备的路由。":
-    "Latency and speed are measured between this device and the panel; {host} is only used to trace the route back to this device.",
-  "主机的地址和端口":
-    "Host address and port",
-  "主机的地址":
-    "Host address",
-  "填这台设备能直接连到的地址（公网 IP 或域名）。主机的防火墙和云厂商的安全组要放行这个 TCP 端口，端口在 1024 到 65535 之间。":
-    "Enter an address this device can reach directly (public IP or domain name). The host's firewall and the cloud provider's security group must allow this TCP port, which must be between 1024 and 65535.",
+  "主机（直连）":
+    "Hosts (direct)",
+  "在选中的主机上各临时开一个测速服务，这台设备的浏览器一台一台直接连过去量延迟、下载、上传，再从每台主机追踪回到这台设备，最后排成一张对比表。服务只认带一次性口令的地址，测完自己退出。开端口是一次变更（L1），需要批准，一次批准管这一批。":
+    "Starts a temporary speed test service on each selected host. This device's browser connects to them directly, one at a time, to measure latency, download and upload, then the route is traced from each host back to this device and everything is lined up in one comparison table. The service only accepts the address carrying a one-time token and exits by itself when the test is done. Opening a port is a change (L1) and needs approval; one approval covers the whole batch.",
+  "延迟和速度量的是这台设备和面板之间；选中的主机只用来追踪回到这台设备的路由。":
+    "Latency and speed are measured between this device and the panel; the selected hosts are only used to trace the route back to this device.",
+  "测哪些主机（最多 {n} 台）":
+    "Hosts to test (up to {n})",
+  "{host} 的地址":
+    "Address of {host}",
+  "地址填这台设备能直接连到的（公网 IP 或域名）。按勾选的顺序一台一台测。":
+    "Enter addresses this device can reach directly (public IP or domain name). Hosts are tested one at a time, in the order you selected them.",
+  "每台主机的防火墙和云厂商的安全组都要放行这个 TCP 端口，端口在 1024 到 65535 之间。":
+    "Each host's firewall and the cloud provider's security group must allow this TCP port, which must be between 1024 and 65535.",
   "测速页由主机直接提供，用的是 HTTP：浏览器可能提示“不安全”，选择继续访问即可。页面上只有测速用的随机数据，不涉及面板的登录信息。":
     "The speed test page is served directly by the host over HTTP: the browser may warn that it is \"not secure\"; just choose to continue. The page carries only random data for the test and nothing about your panel sign-in.",
+  "回程路由从哪台主机追踪":
+    "Host to trace the return route from",
+  "没有在线的主机":
+    "No hosts online",
   "这台设备的地址":
     "This device's address",
   "这是面板看到的来源地址，回程路由就追踪到它。用了代理或 VPN 访问面板时，它是代理的出口地址。":
@@ -36,8 +42,8 @@ const dict: Record<string, string> = {
     "No traceable source address could be read (for example, when visiting from a loopback address), so the test can't run.",
   "数据量上限":
     "Data limit",
-  "下载最多 {d} MB、上传最多 {u} MB，各自最多跑 {s} 秒，先到哪个算哪个。会消耗主机和这台设备的流量，最多约 {total} MB。":
-    "Download up to {d} MB and upload up to {u} MB, each for at most {s} seconds, whichever comes first. This uses traffic on the host and on this device, up to about {total} MB.",
+  "每台下载最多 {d} MB、上传最多 {u} MB，各自最多跑 {s} 秒，先到哪个算哪个。会消耗主机和这台设备的流量，这次最多约 {total} MB。":
+    "Per host, download up to {d} MB and upload up to {u} MB, each for at most {s} seconds, whichever comes first. This uses traffic on the hosts and on this device, up to about {total} MB for this run.",
   "正在检查主机上有没有 traceroute…":
     "Checking whether the host has traceroute…",
   "{host} 上没有 traceroute 或 tracepath，追踪不了路由。":
@@ -54,30 +60,48 @@ const dict: Record<string, string> = {
     "Test finished. You can close this page and return to the panel.",
   "结果没有交回去，请回到面板重试。":
     "The result wasn't delivered. Return to the panel and try again.",
-  "查看报告":
-    "View report",
+  "接着测下一台…":
+    "Moving on to the next host…",
+  "没有测成":
+    "Test didn't complete",
+  "测完了":
+    "Test finished",
+  "正在追踪回程路由…":
+    "Tracing the return route…",
+  "正在测…":
+    "Testing…",
+  "等这台设备连上来":
+    "Waiting for this device to connect",
+  "正在启动测速服务…":
+    "Starting the speed test service…",
   "批准后才会在主机上开测速服务":
     "The speed test service starts on the host only after approval",
   "这会在 {host} 上临时开一个端口（{port}），等这台设备连上来测速，测完自己退出。":
     "This temporarily opens a port ({port}) on {host}, waits for this device to connect and run the test, then exits by itself.",
-  "正在 {host} 上启动测速服务…":
-    "Starting the speed test service on {host}…",
-  "测速服务已经在 {host} 上等着了。在这台设备上打开测速页，它会自己开始测。":
-    "The speed test service is waiting on {host}. Open the speed test page on this device and it will start by itself.",
+  "正在主机上启动测速服务…":
+    "Starting the speed test service on the host…",
+  "测速服务已经在等着了。在这台设备上打开测速页，它会自己开始，一台一台测下去。":
+    "The speed test service is waiting. Open the speed test page on this device and it will start by itself, testing the hosts one at a time.",
+  "打开测速页（还有 {n} 台）":
+    "Open speed test page ({n} left)",
   "打开测速页":
     "Open speed test page",
-  "打不开或一直转圈：主机的防火墙或云厂商的安全组没有放行 TCP 端口 {port}，或者地址 {addr} 这台设备连不上。服务最多等 {w} 秒。":
-    "If it won't open or keeps loading: the host's firewall or the cloud provider's security group doesn't allow TCP port {port}, or this device can't reach {addr}. The service waits at most {w} seconds.",
-  "这台设备已经连上，正在另一个页面里测…":
-    "This device is connected; the test is running in another page…",
-  "正在从 {host} 追踪到这台设备，最多要半分钟…":
-    "Tracing from {host} to this device; this can take up to half a minute…",
-  "测完了，在报告里看速度、线路和每一跳。":
-    "Test finished; see speed, line and each hop in the report.",
-  "没有测成，原因在报告或请求详情里。":
-    "The test didn't complete; see the report or the request details for the reason.",
-  "正在测…":
-    "Testing…",
+  "打不开或一直转圈：那台主机的防火墙或云厂商的安全组没有放行 TCP 端口 {port}，或者填的地址这台设备连不上。回到这里可以接着测剩下的。服务最多等 {w} 秒。":
+    "If it won't open or keeps loading: that host's firewall or the cloud provider's security group doesn't allow TCP port {port}, or this device can't reach the address you entered. Come back here to continue with the remaining hosts. The service waits at most {w} seconds.",
+  "正在另一个页面里测 {host}…":
+    "Testing {host} in another page…",
+  "下载时的延迟":
+    "Latency during download",
+  "回程重传率":
+    "Return retransmission rate",
+  "回程线路":
+    "Return line",
+  "延迟最低":
+    "Lowest latency",
+  "延迟和速度是这台设备的浏览器直接和每台主机量的；回程线路是从主机追踪回来认出的，只能作参考。每台的明细在各自的报告里。":
+    "Latency and speed are measured by this device's browser directly with each host; the return line is identified by tracing back from the host and is only a reference. Details for each host are in its own report.",
+  "查看报告":
+    "View report",
   "失败 {n} 次":
     "{n} failed",
   "没有测出来":
@@ -88,6 +112,8 @@ const dict: Record<string, string> = {
     "The return route is traced only after approval",
   "这次要先安装 traceroute，是一次变更；速度不受影响，已经在测。":
     "This run has to install traceroute first, which is a change; speed is not affected and is already being measured.",
+  "正在从 {host} 追踪到这台设备，最多要半分钟…":
+    "Tracing from {host} to this device; this can take up to half a minute…",
   "回程路由追踪完了，在报告里看线路和每一跳。":
     "The return route has been traced; see the line and each hop in the report.",
   "回程路由没有追踪成功，报告里只有速度。":
@@ -102,8 +128,8 @@ const dict: Record<string, string> = {
     "{n} in total",
   "这次没有拿到回程路由。":
     "No return route was obtained this time.",
-  "回程是从主机追踪到这台设备的地址；去程是这台设备到服务器，浏览器追踪不了，要在设备那边跑一次路由追踪贴进来。来回两个方向走的线路常常不一样。线路按公开的运营商骨干网段和节点所属的自治系统（AS）推测，只能作参考；不回应的节点显示为 *。":
-    "The return route is traced from the host to this device's address; the forward route is from this device to the server, which a browser can't trace, so run a route trace on the device side and paste it in. The two directions often take different lines. Lines are inferred from published carrier backbone ranges and each hop's autonomous system (AS), so treat them as a hint; hops that don't reply show as *.",
+  "这是回程：从主机追踪到这台设备的地址。去程（这台设备到主机）在浏览器里追踪不了，所以这里没有；来回两个方向走的线路常常不一样。线路按公开的运营商骨干网段和节点所属的自治系统（AS）推测，只能作参考；不回应的节点显示为 *。":
+    "This is the return route, traced from the host to this device's address. The forward route (this device to the host) cannot be traced from a browser, so it is not shown; the two directions often take different lines. Lines are inferred from public carrier backbone ranges and each hop's autonomous system (AS) and are only a reference; hops that do not reply are shown as *.",
   "蜂窝网络":
     "Cellular",
   "有线网络":
@@ -118,6 +144,8 @@ const dict: Record<string, string> = {
     "Round-trip time",
   "最小 {min}、中位 {med}、最大 {max} ms":
     "Min {min}, median {med}, max {max} ms",
+  "上传时的延迟":
+    "Latency during upload",
   "连接类型":
     "Connection type",
   "从 {host} ping 它":
@@ -126,26 +154,22 @@ const dict: Record<string, string> = {
     "No reply",
   "平均 {avg} ms，丢包 {loss}%":
     "Average {avg} ms, {loss}% packet loss",
+  "{a} / {b} 个数据段":
+    "{a} / {b} segments",
+  "TCP 往返时间":
+    "TCP round-trip time",
+  "重传率是下载时 {host} 重发的数据段占比，从它的 TCP 连接上读的：回程丢包越多它越高，到 1% 以上速度就会明显受影响。":
+    "The retransmission rate is the share of segments {host} had to resend during the download, read from its TCP connection: the more loss on the return path, the higher it gets, and above 1% speed is noticeably affected.",
   "家用路由器和运营商的地址常常不回应 ping，不代表不通。":
     "Home routers and carrier addresses often don't reply to ping; that doesn't mean they are unreachable.",
-  "移除去程路由":
-    "Remove forward route",
-  "添加去程路由":
-    "Add forward route",
-  "这台设备 → 服务器":
-    "This device → server",
-  "在和这台设备同一个网络里的电脑上运行下面的命令，把完整输出贴到这里。手机上可以用带路由追踪功能的网络工具，把结果按文字贴进来。":
-    "Run the command below on a computer on the same network as this device and paste the full output here. On a phone, use a network tool with route tracing and paste the result as text.",
-  "把 tracert、traceroute 或 mtr 的输出贴在这里":
-    "Paste the output of tracert, traceroute or mtr here",
-  "去程路由的输出":
-    "Forward route output",
-  "只留下每一跳的序号、IP 地址和时间，别的文字不保存。":
-    "Only each hop's number, IP address and times are kept; other text is not saved.",
+  "比空闲时高 {n} ms":
+    "{n} ms higher than idle",
+  "和空闲时差不多":
+    "About the same as idle",
   "回程：{host} → 这台设备":
     "Return: {host} → this device",
-  "去程：这台设备 → 服务器":
-    "Forward: this device → server",
+  "每一跳探了 {n} 次，“丢包”是没回应的次数。中间某一跳丢、后面的跳不丢，多半是那台路由器限制了回应的速率，不是真的丢包；从某一跳开始一直丢到最后，问题才在那一段。":
+    "Each hop was probed {n} times; \"Loss\" is the number of probes that got no reply. If a middle hop shows loss but later hops don't, that router is most likely rate-limiting its replies rather than really dropping packets; only when loss starts at a hop and continues to the end is the problem in that stretch.",
   "最后一跳没有到达这台设备：家用路由器和运营商的地址常常不回应探测，前面的节点和线路仍然可以看。":
     "The last hop didn't reach this device: home routers and carrier addresses often don't reply to probes, but the earlier hops and the line are still shown.",
 };

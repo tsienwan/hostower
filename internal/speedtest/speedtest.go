@@ -212,12 +212,14 @@ func traceScript(routes []string) (string, error) {
 		}
 		list.WriteString("'" + r + "'")
 	}
-	return traceLoop(list.String()), nil
+	return traceLoop(list.String(), 1), nil
 }
 
 // traceLoop 是对 list 里的每个目标跑一次路由追踪的循环；list 是已经写成 shell 词的目标（带引号的字面量，或者 "$ip"）。
-func traceLoop(list string) string {
-	return "for t in " + list + "; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q 1 -w 1 -m 30 \"$t\" 2>/dev/null || traceroute -n -q 1 -w 1 -m 30 \"$t\" 2>&1; " +
+// probes 是每一跳探几次：探不止一次才看得出哪一跳在丢包（tracepath 没有这个选项，用它时每跳还是一次）。
+func traceLoop(list string, probes int) string {
+	q := strconv.Itoa(probes)
+	return "for t in " + list + "; do if command -v traceroute >/dev/null 2>&1; then traceroute -n -I -q " + q + " -w 1 -m 30 \"$t\" 2>/dev/null || traceroute -n -q " + q + " -w 1 -m 30 \"$t\" 2>&1; " +
 		"elif command -v tracepath >/dev/null 2>&1; then tracepath -n -m 30 \"$t\" 2>&1; else echo 'error=no-traceroute'; fi | " +
 		"while IFS= read -r l; do echo \"speedtest route $t $l\"; done; done; "
 }
@@ -307,7 +309,9 @@ type Result struct {
 	Server    string  `json:"server,omitempty"`  // Ookla 用的服务器（给人看的名字）
 	Threads   string  `json:"threads,omitempty"` // single 或 multi；之前的结果没有记，是空的
 	IP        string  `json:"ip,omitempty"`      // 4 或 6；空是自动
-	Error     string  `json:"error,omitempty"`
+	// ClientIP 只在“这台设备”测速里有：设备的来源地址（面板看到的，或直连时主机看到的）。页面用它标出是从哪个网络测的。
+	ClientIP string `json:"clientIp,omitempty"`
+	Error    string `json:"error,omitempty"`
 	// Detail 只在单条报告里返回；列表里不带。之前的结果没有明细，是 nil。
 	Detail *Detail `json:"detail,omitempty"`
 }
@@ -561,6 +565,7 @@ func Parse(output string) Report {
 			return Report{Error: "没有拿到测速结果"}
 		}
 		cc.V, cc.IP = ClientVersion, directIPSeen
+		cc.Segs, cc.Retrans, cc.TCPRtt = c.Segs, c.Retrans, c.TCPRtt
 		d.Client = &cc
 		rep.PingMS = median(cc.Pings)
 		if cc.Down != nil {
@@ -847,8 +852,15 @@ func (s *Service) record(r *kernel.Request) {
 			b, _ := json.Marshal(rep.Detail)
 			detail = string(b)
 		}
-		s.db.Exec(`INSERT OR IGNORE INTO speedtests (request_id, host, ts, ping_ms, down_bps, up_bps, size_mb, error, detail, method, server, threads, ip) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-			r.ID, t.Host, at.UnixMilli(), rep.PingMS, rep.DownBps, rep.UpBps, size, rep.Error, detail, spec.Method, server, spec.Opts.Threads, spec.Opts.IP)
+		clientIP := ""
+		switch {
+		case spec.Method == MethodClient && len(spec.Routes) == 1:
+			clientIP = spec.Routes[0]
+		case rep.Detail.Client != nil:
+			clientIP = rep.Detail.Client.IP
+		}
+		s.db.Exec(`INSERT OR IGNORE INTO speedtests (request_id, host, ts, ping_ms, down_bps, up_bps, size_mb, error, detail, method, server, threads, ip, client_ip) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			r.ID, t.Host, at.UnixMilli(), rep.PingMS, rep.DownBps, rep.UpBps, size, rep.Error, detail, spec.Method, server, spec.Opts.Threads, spec.Opts.IP, clientIP)
 	}
 	s.Prune(context.Background())
 	s.pruneClients(context.Background())
@@ -856,7 +868,7 @@ func (s *Service) record(r *kernel.Request) {
 
 // Recent 返回最近的结果，新的在前。
 func (s *Service) Recent(ctx context.Context, limit int) ([]Result, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT request_id, host, ts, ping_ms, down_bps, up_bps, size_mb, error, method, server, threads, ip FROM speedtests ORDER BY ts DESC LIMIT ?`, limit)
+	rows, err := s.db.QueryContext(ctx, `SELECT request_id, host, ts, ping_ms, down_bps, up_bps, size_mb, error, method, server, threads, ip, client_ip FROM speedtests ORDER BY ts DESC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -864,7 +876,7 @@ func (s *Service) Recent(ctx context.Context, limit int) ([]Result, error) {
 	out := []Result{}
 	for rows.Next() {
 		var r Result
-		if err := rows.Scan(&r.RequestID, &r.Host, &r.TS, &r.PingMS, &r.DownBps, &r.UpBps, &r.SizeMB, &r.Error, &r.Method, &r.Server, &r.Threads, &r.IP); err != nil {
+		if err := rows.Scan(&r.RequestID, &r.Host, &r.TS, &r.PingMS, &r.DownBps, &r.UpBps, &r.SizeMB, &r.Error, &r.Method, &r.Server, &r.Threads, &r.IP, &r.ClientIP); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -887,8 +899,8 @@ func (s *Service) Recent(ctx context.Context, limit int) ([]Result, error) {
 func (s *Service) Get(ctx context.Context, k Key) (*Result, error) {
 	var r Result
 	var detail string
-	err := s.db.QueryRowContext(ctx, `SELECT request_id, host, ts, ping_ms, down_bps, up_bps, size_mb, error, detail, method, server, threads, ip FROM speedtests WHERE request_id = ? AND host = ?`,
-		k.RequestID, k.Host).Scan(&r.RequestID, &r.Host, &r.TS, &r.PingMS, &r.DownBps, &r.UpBps, &r.SizeMB, &r.Error, &detail, &r.Method, &r.Server, &r.Threads, &r.IP)
+	err := s.db.QueryRowContext(ctx, `SELECT request_id, host, ts, ping_ms, down_bps, up_bps, size_mb, error, detail, method, server, threads, ip, client_ip FROM speedtests WHERE request_id = ? AND host = ?`,
+		k.RequestID, k.Host).Scan(&r.RequestID, &r.Host, &r.TS, &r.PingMS, &r.DownBps, &r.UpBps, &r.SizeMB, &r.Error, &detail, &r.Method, &r.Server, &r.Threads, &r.IP, &r.ClientIP)
 	if err != nil {
 		return nil, err
 	}
@@ -898,21 +910,11 @@ func (s *Service) Get(ctx context.Context, k Key) (*Result, error) {
 			r.Detail = &d
 		}
 	}
-	if r.Method == MethodDirect && r.Detail != nil {
-		// 直连测速的数字已经在明细里；这里只把之后贴进来的去程路由并进来。
-		if c, ok := s.client(ctx, r.RequestID); ok && c.Forward != nil {
-			r.Detail.Routes = append(r.Detail.Routes, *c.Forward)
-		}
-	}
 	if r.Method == MethodClient {
 		if c, ok := s.client(ctx, r.RequestID); ok {
 			c.apply(&r)
 			if r.Detail == nil {
 				r.Detail = &Detail{V: DetailVersion, Pings: []Ping{}}
-			}
-			if c.Forward != nil {
-				r.Detail.Routes = append(r.Detail.Routes, *c.Forward)
-				c.Forward = nil
 			}
 			r.Detail.Client = &c
 		}

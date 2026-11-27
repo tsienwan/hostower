@@ -22,10 +22,6 @@ const dict: Record<string, string> = {
     "Die Zahlen im Messergebnis sind ungültig",
   "测量结果里的延迟次数不对":
     "Die Anzahl der Latenzmessungen im Messergebnis ist ungültig",
-  "贴进来的内容太长了":
-    "Der eingefügte Inhalt ist zu lang",
-  "没有从贴进来的内容里认出路由：请贴 tracert、traceroute 或 mtr 的完整输出":
-    "Im eingefügten Inhalt wurde keine Route erkannt: Bitte die vollständige Ausgabe von tracert, traceroute oder mtr einfügen",
   "端口应该在 1024 到 65535 之间":
     "Der Port muss zwischen 1024 und 65535 liegen",
   "口令不对":
@@ -40,6 +36,8 @@ const dict: Record<string, string> = {
     "Dieses Gerät hat sich nicht verbunden: Die Testseite wurde nicht geöffnet, oder die Firewall des Hosts bzw. die Sicherheitsgruppe des Cloud-Anbieters gibt diesen Port nicht frei",
   "这台设备连上来了，但没有在限定时间里测完":
     "Dieses Gerät hat sich verbunden, der Test wurde aber nicht innerhalb des Zeitlimits abgeschlossen",
+  "一次最多测 {a} 台主机":
+    "Höchstens {a} Hosts pro Durchlauf",
 };
 
 export default dict;

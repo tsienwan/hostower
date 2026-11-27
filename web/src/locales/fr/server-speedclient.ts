@@ -22,10 +22,6 @@ const dict: Record<string, string> = {
     "Les chiffres des résultats de mesure sont incorrects",
   "测量结果里的延迟次数不对":
     "Le nombre de mesures de latence dans les résultats est incorrect",
-  "贴进来的内容太长了":
-    "Le contenu collé est trop long",
-  "没有从贴进来的内容里认出路由：请贴 tracert、traceroute 或 mtr 的完整输出":
-    "Aucune route reconnue dans le contenu collé : collez la sortie complète de tracert, traceroute ou mtr",
   "端口应该在 1024 到 65535 之间":
     "Le port doit être compris entre 1024 et 65535",
   "口令不对":
@@ -40,6 +36,8 @@ const dict: Record<string, string> = {
     "Cet appareil ne s’est pas connecté : la page de test n’a pas été ouverte, ou le pare-feu de l’hôte ou le groupe de sécurité du fournisseur cloud n’autorise pas ce port",
   "这台设备连上来了，但没有在限定时间里测完":
     "Cet appareil s’est connecté, mais le test ne s’est pas terminé dans le temps imparti",
+  "一次最多测 {a} 台主机":
+    "{a} hôtes au plus par test",
 };
 
 export default dict;

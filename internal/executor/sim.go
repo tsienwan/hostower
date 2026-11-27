@@ -427,7 +427,9 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 		out = append(out, "speedtest direct port="+m[1]+" size="+m[2], "speedtest listen port="+m[1], "speedtest client ip="+t,
 			"speedtest direct pings="+strings.Join(pings, ",")+" lost=0 proto=http/1.1 conn=wifi",
 			fmt.Sprintf("speedtest direct down bytes=%.0f ms=%.0f conns=4", size*1e6, size*8/down*1000),
-			fmt.Sprintf("speedtest direct up bytes=%.0f ms=%.0f conns=2", size*250e3, size*2/up*1000))
+			fmt.Sprintf("speedtest direct up bytes=%.0f ms=%.0f conns=2", size*250e3, size*2/up*1000),
+			fmt.Sprintf("speedtest direct loaded down=%.2f up=%.2f", ping*1.35, ping*1.15),
+			fmt.Sprintf("speedtest direct tcp segs=%.0f retrans=%.0f rtt=%.2f", size*700, size*700*sh.seed*0.02, ping*0.98))
 		if !sh.hasTrace() {
 			out = append(out, "speedtest route "+t+" error=no-traceroute")
 		} else {
@@ -435,10 +437,16 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 			out = append(out, "speedtest route "+t+" traceroute to "+t+", 30 hops max, 60 byte packets")
 			for n, h := range hops {
 				if h == "*" {
-					out = append(out, fmt.Sprintf("speedtest route %s %2d  *", t, n+1))
+					out = append(out, fmt.Sprintf("speedtest route %s %2d  * * * * *", t, n+1))
 					continue
 				}
-				out = append(out, fmt.Sprintf("speedtest route %s %2d  %s  %.3f ms", t, n+1, h, 0.4+ping*float64(n)/float64(len(hops)-1)))
+				ms := 0.4 + ping*float64(n)/float64(len(hops)-1)
+				// 每跳探五次；第四跳演示“这一跳丢了几次、后面不丢”（多半是路由器限制回应）。
+				if n == 3 {
+					out = append(out, fmt.Sprintf("speedtest route %s %2d  %s  %.3f ms * %.3f ms * %.3f ms", t, n+1, h, ms, ms*1.02, ms*1.05))
+				} else {
+					out = append(out, fmt.Sprintf("speedtest route %s %2d  %s  %.3f ms  %.3f ms  %.3f ms  %.3f ms  %.3f ms", t, n+1, h, ms, ms*1.03, ms*0.98, ms*1.01, ms*1.06))
+				}
 			}
 		}
 		out = append(out, "speedtest back 10 packets transmitted, 0 received, 100% packet loss, time 9210ms")
@@ -463,10 +471,16 @@ func (s *Sim) canned(h inventory.Host, sh *simHost, command string) ([]string, i
 			out = append(out, "speedtest route "+t+" traceroute to "+t+", 30 hops max, 60 byte packets")
 			for n, h := range hops {
 				if h == "*" {
-					out = append(out, fmt.Sprintf("speedtest route %s %2d  *", t, n+1))
+					out = append(out, fmt.Sprintf("speedtest route %s %2d  * * * * *", t, n+1))
 					continue
 				}
-				out = append(out, fmt.Sprintf("speedtest route %s %2d  %s  %.3f ms", t, n+1, h, 0.4+ping*float64(n)/float64(len(hops)-1)))
+				ms := 0.4 + ping*float64(n)/float64(len(hops)-1)
+				// 每跳探五次；第四跳演示“这一跳丢了几次、后面不丢”（多半是路由器限制回应）。
+				if n == 3 {
+					out = append(out, fmt.Sprintf("speedtest route %s %2d  %s  %.3f ms * %.3f ms * %.3f ms", t, n+1, h, ms, ms*1.02, ms*1.05))
+				} else {
+					out = append(out, fmt.Sprintf("speedtest route %s %2d  %s  %.3f ms  %.3f ms  %.3f ms  %.3f ms  %.3f ms", t, n+1, h, ms, ms*1.03, ms*0.98, ms*1.01, ms*1.06))
+				}
 			}
 		}
 		if sh.seed < 0.7 {

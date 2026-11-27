@@ -18,7 +18,8 @@ func TestKeepOldListen(t *testing.T) {
 		if _, err := db.Exec(prepare); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", 18)); err != nil {
+		// v20 加的列要先去掉，不然重跑会撞上。
+		if _, err := db.Exec("ALTER TABLE speedtests DROP COLUMN client_ip; " + fmt.Sprintf("PRAGMA user_version = %d", 18)); err != nil {
 			t.Fatal(err)
 		}
 		db.Close()
