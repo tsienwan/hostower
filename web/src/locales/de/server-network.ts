@@ -81,6 +81,10 @@ const dict: Record<string, string> = {
   "登录账号不是 root，也没有 sudo：启动不了 Nginx": "Das Login-Konto ist nicht root und hat kein sudo: Nginx nicht startbar",
   "{a} 端口已经被 {b} 占用：把地址写成带端口的形式（比如 app.example.com:8443），或者先把那个程序改到别的端口": "Port {a} wird bereits von {b} belegt: Schreiben Sie die Adresse mit Port (zum Beispiel app.example.com:8443) oder verlegen Sie das Programm zuerst auf einen anderen Port",
   "转发到的地址只能是 IPv4 地址或主机名（不带协议、端口和路径）": "Die Zieladresse muss eine IPv4-Adresse oder ein Hostname sein (ohne Protokoll, Port und Pfad)",
+  "把 {a} 上的站点 {b} 改成转发到 {c}": "Site {b} auf {a} ändern: Weiterleitung an {c}",
+  "把 {a} 上的站点 {b} 改成静态目录 {c}": "Site {b} auf {a} ändern: statisches Verzeichnis {c}",
+  "把 {a} 上的站点 {b} 改成跳转到 {c}": "Site {b} auf {a} ändern: Umleitung nach {c}",
+  "这样改会换掉站点对外的端口（只用 HTTP 是 80，HTTPS 是 443）：把地址写成带端口的形式另加一个站点，再撤下这个": "Diese Änderung würde den öffentlichen Port der Site wechseln (80 nur mit HTTP, 443 mit HTTPS): Fügen Sie eine weitere Site mit dem Port in der Adresse hinzu und entfernen Sie dann diese",
 };
 
 export default dict;

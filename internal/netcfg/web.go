@@ -197,8 +197,8 @@ func installPkgs(st Status, pkgs, fail string) (string, error) {
 	return "", errors.New("这台主机的系统不支持一键安装，请在主机上自己安装")
 }
 
-// normalize 校验表单并补上默认值，返回要写的站点。
-func (st Status) normalize(req SiteRequest) (Site, error) {
+// normalize 校验表单并补上默认值，返回要写的站点。replace 为真是修改已有的站点：地址本来就在，不算重复。
+func (st Status) normalize(req SiteRequest, replace bool) (Site, error) {
 	addr := strings.ToLower(strings.TrimSpace(req.Address))
 	ip, err := ValidAddress(addr)
 	if err != nil {
@@ -225,7 +225,7 @@ func (st Status) normalize(req SiteRequest) (Site, error) {
 		return Site{}, errors.New("服务器只能是 Caddy 或 Nginx")
 	}
 	for _, o := range st.Sites {
-		if o.Address == addr {
+		if o.Address == addr && !replace {
 			return Site{}, errors.New("这个地址已经有站点了，先撤下它再添加")
 		}
 	}
@@ -352,10 +352,11 @@ func (s Site) caddyConfig(cert, key string) string {
 	return b.String()
 }
 
-func caddySiteAdd(s Site, req SiteRequest) string {
+func caddySiteAdd(s Site, req SiteRequest, update bool) string {
 	file := SiteFile("caddy", s.Address)
 	var b strings.Builder
 	b.WriteString(portGuard(s))
+	b.WriteString(keepPrev(file, update))
 	b.WriteString(step("mkdir -p "+SitesDir, "创建 "+SitesDir+" 失败"))
 	b.WriteString(step("install -d -o caddy -g caddy /var/log/caddy", "创建日志目录 /var/log/caddy 失败"))
 	b.WriteString(`grep -qs '^import ` + SitesDir + `/' ` + Caddyfile + ` || { ` +
@@ -363,9 +364,36 @@ func caddySiteAdd(s Site, req SiteRequest) string {
 		`; } || { echo 'hostower: 改不了 ` + Caddyfile + `'; exit 1; }; `)
 	b.WriteString(writeRoot(file, s.caddyConfig(req.Cert, req.Key), "写站点配置失败"))
 	b.WriteString("{ " + asRoot("caddy validate --config "+Caddyfile+" --adapter caddyfile") + "; } || { " +
-		asRoot("mv -f "+file+" "+file+".rejected") + "; echo 'hostower: Caddy 配置校验没通过，已撤下这个站点（地址重复或者写法不对）'; exit 1; }; ")
-	b.WriteString(reloadOrRollback("caddy", file))
+		siteUndo(file, update) + "; echo " + snippet.Quote("hostower: Caddy 配置校验没通过，"+undone(update)+"（地址重复或者写法不对）") + "; exit 1; }; ")
+	b.WriteString(reloadOrRollback("caddy", file, update))
 	return b.String()
+}
+
+// 修改站点时，新配置写在原来的文件上：先留一份改之前的（.prev，不会被服务读到），校验或重载失败就放回去，原来的站点不受影响。
+// 改成功后这一份留着不删（和撤下站点留 .removed 一样）：想退回去时看得到原来写的是什么；下次修改会覆盖它。
+
+// keepPrev 在修改站点前留一份原来的配置；添加站点时是空的。
+func keepPrev(file string, update bool) string {
+	if !update {
+		return ""
+	}
+	return step("cp -p "+file+" "+file+".prev", "备份原来的站点配置失败，没有改动任何东西")
+}
+
+// siteUndo 是新配置不能用时怎么退回去：把它撤下（改名 .rejected，留着好查原因）；修改站点时再把改之前的那一份放回来。
+func siteUndo(file string, update bool) string {
+	u := asRoot("mv -f " + file + " " + file + ".rejected")
+	if update {
+		u += "; " + asRoot("mv -f "+file+".prev "+file)
+	}
+	return u
+}
+
+func undone(update bool) string {
+	if update {
+		return "已恢复成修改前的配置"
+	}
+	return "已撤下这个站点"
 }
 
 // ---------- Nginx ----------
@@ -465,15 +493,22 @@ func (s Site) nginxConfig(tls, cert, key string) string {
 	return b.String()
 }
 
-func nginxTest(file, fail string) string {
-	return "{ " + asRoot("nginx -t") + "; } || { " + asRoot("mv -f "+file+" "+file+".rejected") + "; echo " + snippet.Quote("hostower: "+fail) + "; exit 1; }; "
+func nginxTest(file, fail string, update bool) string {
+	return "{ " + asRoot("nginx -t") + "; } || { " + siteUndo(file, update) + "; echo " + snippet.Quote("hostower: "+fail) + "; exit 1; }; "
 }
 
-func nginxSiteAdd(st Status, s Site, req SiteRequest) (string, error) {
+// nginxSiteAdd 渲染写一个 Nginx 站点。old 不是 nil 时是修改已有的站点（old 是改之前的样子）。
+func nginxSiteAdd(st Status, s Site, req SiteRequest, old *Site) (string, error) {
 	file := SiteFile("nginx", s.Address)
+	update := old != nil
 	var b strings.Builder
 	b.WriteString(portGuard(s))
-	if s.TLS == "le" {
+	b.WriteString(keepPrev(file, update))
+	// 原来就是 Let's Encrypt 的站点，证书已经在了：不用再走一遍“先 HTTP、再申请”。
+	if s.TLS == "le" && update && old.TLS == "le" {
+		b.WriteString(writeRoot(file, s.nginxConfig("le", "", ""), "写站点配置失败"))
+		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，"+undone(true)+"（写法不对）", true))
+	} else if s.TLS == "le" {
 		if !st.Certbot.Installed {
 			in, err := installPkgs(st, "certbot", "安装 certbot 失败")
 			if err != nil {
@@ -484,24 +519,31 @@ func nginxSiteAdd(st Status, s Site, req SiteRequest) (string, error) {
 		b.WriteString(step("mkdir -p "+ACMERoot, "创建 "+ACMERoot+" 失败"))
 		// 第一步：先用 HTTP 把站点开起来，Let's Encrypt 要从 80 端口访问验证文件。
 		b.WriteString(writeRoot(file, s.nginxConfig("http", "", ""), "写站点配置失败"))
-		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，已撤下这个站点（地址重复或者写法不对）"))
-		b.WriteString(reloadOrRollback("nginx", file))
+		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，"+undone(update)+"（地址重复或者写法不对）", update))
+		b.WriteString(reloadOrRollback("nginx", file, update))
 		mail := "--register-unsafely-without-email"
 		if req.Email != "" {
 			mail = "-m " + snippet.Quote(req.Email)
 		}
 		host := s.Address
-		b.WriteString(step("certbot certonly --webroot -w "+ACMERoot+" -d "+host+" --cert-name "+host+
-			" --non-interactive --agree-tos "+mail+" --keep-until-expiring --deploy-hook 'systemctl reload nginx'",
-			"申请证书失败：站点先以 HTTP 提供。请确认域名已经解析到这台主机、80 端口能从外面访问，再撤下站点重新添加"))
+		certbot := "certbot certonly --webroot -w " + ACMERoot + " -d " + host + " --cert-name " + host +
+			" --non-interactive --agree-tos " + mail + " --keep-until-expiring --deploy-hook 'systemctl reload nginx'"
+		if update {
+			// 修改站点时申请不到证书：放回改之前的配置，站点照原样提供。
+			b.WriteString("{ " + asRoot(certbot) + "; } || { " + siteUndo(file, true) + "; " + asRoot("systemctl reload-or-restart nginx") + "; echo " +
+				snippet.Quote("hostower: 申请证书失败，"+undone(true)+"。请确认域名已经解析到这台主机、80 端口能从外面访问") + "; exit 1; }; ")
+		} else {
+			b.WriteString(step(certbot,
+				"申请证书失败：站点先以 HTTP 提供。请确认域名已经解析到这台主机、80 端口能从外面访问，再撤下站点重新添加"))
+		}
 		// 第二步：证书到手，换成 HTTPS 的配置。
 		b.WriteString(writeRoot(file, s.nginxConfig("le", "", ""), "写站点配置失败"))
-		b.WriteString(nginxTest(file, "证书已经申请到，但 HTTPS 配置没通过校验，已撤下这个站点"))
+		b.WriteString(nginxTest(file, "证书已经申请到，但 HTTPS 配置没通过校验，"+undone(update), update))
 	} else {
 		b.WriteString(writeRoot(file, s.nginxConfig(s.TLS, req.Cert, req.Key), "写站点配置失败"))
-		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，已撤下这个站点（地址重复、证书路径不对或者写法不对）"))
+		b.WriteString(nginxTest(file, "Nginx 配置校验没通过，"+undone(update)+"（地址重复、证书路径不对或者写法不对）", update))
 	}
-	b.WriteString(reloadOrRollback("nginx", file))
+	b.WriteString(reloadOrRollback("nginx", file, update))
 	return b.String(), nil
 }
 
@@ -510,7 +552,7 @@ func SiteAddCommand(st Status, req SiteRequest) (string, Site, error) {
 	if !st.CanRoot() {
 		return "", Site{}, st.rootErr("改不了站点配置")
 	}
-	s, err := st.normalize(req)
+	s, err := st.normalize(req, false)
 	if err != nil {
 		return "", Site{}, err
 	}
@@ -519,8 +561,8 @@ func SiteAddCommand(st Status, req SiteRequest) (string, Site, error) {
 	}
 	var cmd string
 	if s.Server == "caddy" {
-		cmd = caddySiteAdd(s, req)
-	} else if cmd, err = nginxSiteAdd(st, s, req); err != nil {
+		cmd = caddySiteAdd(s, req, false)
+	} else if cmd, err = nginxSiteAdd(st, s, req, nil); err != nil {
 		return "", Site{}, err
 	}
 	what := s.Target
@@ -528,6 +570,38 @@ func SiteAddCommand(st Status, req SiteRequest) (string, Site, error) {
 		what = "→ " + s.Target
 	}
 	return cmd + `echo ` + snippet.Quote("hostower: 站点 "+s.Address+" "+what+" 已生效"), s, nil
+}
+
+// SiteUpdateCommand 渲染“修改站点”：地址和服务器不变，类型、目标、HTTPS 方式和选项按表单重写。
+// 新配置写在原来的文件上，先留一份改之前的；校验或重载失败就放回去，原来的站点照常提供。
+// 要换地址（域名或对外端口）就是另一个站点：撤下再添加。
+func SiteUpdateCommand(st Status, req SiteRequest) (string, Site, error) {
+	if !st.CanRoot() {
+		return "", Site{}, st.rootErr("改不了站点配置")
+	}
+	old, err := st.site(req.Address)
+	if err != nil {
+		return "", Site{}, err
+	}
+	req.Server = old.Server
+	s, err := st.normalize(req, true)
+	if err != nil {
+		return "", Site{}, err
+	}
+	if sitePort(s) != sitePort(old) {
+		return "", Site{}, errors.New("这样改会换掉站点对外的端口（只用 HTTP 是 80，HTTPS 是 443）：把地址写成带端口的形式另加一个站点，再撤下这个")
+	}
+	var cmd string
+	if s.Server == "caddy" {
+		cmd = caddySiteAdd(s, req, true)
+	} else if cmd, err = nginxSiteAdd(st, s, req, &old); err != nil {
+		return "", Site{}, err
+	}
+	what := s.Target
+	if s.Kind == "redirect" {
+		what = "→ " + s.Target
+	}
+	return cmd + `echo ` + snippet.Quote("hostower: 站点 "+s.Address+" 已改成 "+what), s, nil
 }
 
 // pipeRoot 把标准输入交给一条以 root 身份运行的命令（同 asRoot）。
@@ -608,11 +682,15 @@ func portGuard(s Site) string {
 
 // reloadOrRollback 在添加站点时重载服务；失败就把刚写的站点文件撤下、打出日志、再重启一次服务回到原来的配置。
 // 重启是为了把 Caddy 从“重载中”里拉出来：它重载失败后会一直停在那个状态，之后的重载和启动都会卡住。
-func reloadOrRollback(server, file string) string {
+func reloadOrRollback(server, file string, update bool) string {
 	name := serverName(server)
-	return "{ " + asRoot("systemctl reload-or-restart "+server) + "; } || { " + asRoot("mv -f "+file+" "+file+".rejected") + "; " +
+	msg := "已撤下这个站点并恢复原来的配置"
+	if update {
+		msg = undone(true)
+	}
+	return "{ " + asRoot("systemctl reload-or-restart "+server) + "; } || { " + siteUndo(file, update) + "; " +
 		asRoot("journalctl -u "+server+" -n 20 --no-pager") + "; " + asRoot("systemctl restart "+server) + "; echo " +
-		snippet.Quote("hostower: 重载 "+name+" 失败，已撤下这个站点并恢复原来的配置，原因见上面的日志") + "; exit 1; }; "
+		snippet.Quote("hostower: 重载 "+name+" 失败，"+msg+"，原因见上面的日志") + "; exit 1; }; "
 }
 
 // ServerStartCommand 启动装好了但没在运行的 Caddy 或 Nginx。

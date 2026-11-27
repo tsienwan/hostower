@@ -167,6 +167,30 @@ func TestSites(t *testing.T) {
 	if _, _, err := SiteAddCommand(st, SiteRequest{Address: "kuma.example.com", Port: 3001}); err == nil {
 		t.Error("地址重复应被拒绝")
 	}
+	// 修改站点：地址不变，写在原来的文件上；先留一份改之前的，失败就放回去。
+	up, site, err := SiteUpdateCommand(st, SiteRequest{Address: "Kuma.Example.com", Port: 4000, Upstream: "192.0.2.20"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := "/etc/caddy/sites.d/kuma.example.com.caddy"
+	for _, s := range []string{"cp -p " + file + " " + file + ".prev", "reverse_proxy 192.0.2.20:4000", "caddy validate",
+		"mv -f " + file + " " + file + ".rejected", "mv -f " + file + ".prev " + file, "已恢复成修改前的配置"} {
+		if !strings.Contains(up, s) {
+			t.Errorf("修改站点的命令里缺少 %q：\n%s", s, up)
+		}
+	}
+	if strings.Contains(up, "已撤下这个站点") || strings.Contains(up, "rm -f") || site.Target != "192.0.2.20:4000" {
+		t.Errorf("修改失败时不应该撤下原来的站点：%+v", site)
+	}
+	if got := e.Classify(up).Level; got != risk.L1 {
+		t.Errorf("修改站点应是 L1，得到 %s：%+v", got, e.Classify(up).Findings)
+	}
+	if _, _, err := SiteUpdateCommand(st, SiteRequest{Address: "other.example.com", Port: 3001}); err == nil {
+		t.Error("不是 Hostower 加的站点不能改")
+	}
+	if _, _, err := SiteUpdateCommand(st, SiteRequest{Address: "kuma.example.com", Port: 3001, TLS: "http"}); err == nil {
+		t.Error("会换掉对外端口的修改应被拒绝")
+	}
 	rm, err := SiteRemoveCommand(st, "kuma.example.com")
 	if err != nil || !strings.Contains(rm, ".removed") || e.Classify(rm).Level != risk.L1 {
 		t.Errorf("撤下站点不对：%v\n%s", err, rm)

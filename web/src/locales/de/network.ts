@@ -178,6 +178,11 @@ const dict: Record<string, string> = {
     "Der Port, auf dem der Dienst auf jenem Host lauscht. WebSocket wird unterstützt.",
   "流量会先到这台主机，再转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是明文 HTTP；那台主机上的服务不能只监听 127.0.0.1，端口要让这台主机连得上，建议在那台主机的防火墙里只对这台主机的 IP 放行。":
     "Der Verkehr erreicht zuerst diesen Host und wird dann an {addr} weitergeleitet: Uploads und Downloads zählen beide zum Traffic dieses Hosts. Die Strecke zwischen den beiden Hosts ist unverschlüsseltes HTTP; der Dienst auf dem anderen Host darf nicht nur auf 127.0.0.1 lauschen, und sein Port muss von diesem Host aus erreichbar sein. In der Firewall des anderen Hosts den Port am besten nur für die IP dieses Hosts freigeben.",
+  "修改站点": "Site bearbeiten",
+  "修改站点 {addr}": "Site {addr} bearbeiten",
+  "地址（域名和对外端口）改不了：要换的话另加一个站点，再撤下这个。": "Die Adresse (Domain und öffentlicher Port) lässt sich nicht ändern: Fügen Sie eine weitere Site hinzu und entfernen Sie dann diese.",
+  "证书和私钥的路径要重新填一遍：Hostower 不记它们。": "Geben Sie die Pfade von Zertifikat und Schlüssel erneut ein: Hostower speichert sie nicht.",
+  "新配置写在原来的站点文件上，先留一份改之前的，再校验配置（caddy validate / nginx -t），通过才重载；校验或重载不过会自动恢复成修改前的配置，原来的站点不受影响。": "Die neue Konfiguration wird in die vorhandene Site-Datei geschrieben, nachdem eine Kopie der alten gesichert wurde, dann geprüft (caddy validate / nginx -t) und nur bei Erfolg neu geladen; schlägt die Prüfung oder das Neuladen fehl, wird automatisch die vorherige Konfiguration wiederhergestellt, und die bestehende Site bleibt unberührt.",
 };
 
 export default dict;

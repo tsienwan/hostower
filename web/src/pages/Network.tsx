@@ -3,7 +3,7 @@
 // （改防火墙、Fail2ban 和 Tailscale 是 L2，改站点、申请和续期证书是 L1）。远端的内容（日志、证书信息）一律按纯文本显示。
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Ban, ExternalLink, FileText, Globe, KeyRound, Lock, Play, Plus, RefreshCw, Settings2, Shield, ShieldAlert, ShieldCheck, ShieldOff, Trash2, TriangleAlert } from "lucide-react";
+import { Ban, ExternalLink, FileText, Globe, KeyRound, Lock, Pencil, Play, Plus, RefreshCw, Settings2, Shield, ShieldAlert, ShieldCheck, ShieldOff, Trash2, TriangleAlert } from "lucide-react";
 import { api, type F2BConfig, type NetPort, type NetSite, type NetworkView, type Preview, type Req, type AppPlanResult, type SiteForm, type SiteKind, type SiteServer, type SiteTLS } from "../api";
 import { backAfterApproval, fail, onHost, useRequestFinished, useStore } from "../store";
 import { Empty, Modal } from "../ui";
@@ -95,7 +95,7 @@ export function NetworkPanel({ host }: { host: string }) {
   const [data, setData] = useState<NetworkView | null>(() => cached<NetworkView>("net:" + host) ?? null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [dialog, setDialog] = useState<null | "setup" | "allow" | "site" | "caddy" | "nginx" | "start-caddy" | "start-nginx" | "f2b" | { remove: NetPort } | { unsite: string }
+  const [dialog, setDialog] = useState<null | "setup" | "allow" | "site" | "caddy" | "nginx" | "start-caddy" | "start-nginx" | "f2b" | { remove: NetPort } | { unsite: string } | { editSite: NetSite }
     | { log: string } | { cert: "dry-run" | "renew" } | { force: string } | { unban: { jail: string; ip: string } }>(null);
   // 从应用页跳过来时带着端口：直接打开“添加站点”。
   const presetPort = Number(sp.get("port")) || 0;
@@ -218,6 +218,7 @@ export function NetworkPanel({ host }: { host: string }) {
                       <td className="mono">{s.target}</td>
                       <td><TLSBadge site={s} /></td>
                       <td className="act">
+                        <button className="btn ghost icon sm" title={t("修改站点")} aria-label={t("修改站点")} disabled={!canRoot} onClick={() => setDialog({ editSite: s })}><Pencil /></button>
                         <button className="btn ghost icon sm" title={t("看日志")} aria-label={t("看日志")} onClick={() => setDialog({ log: s.address })}><FileText /></button>
                         <button className="btn ghost icon sm" title={t("撤下站点")} aria-label={t("撤下站点")} onClick={() => setDialog({ unsite: s.address })}><Trash2 /></button>
                       </td>
@@ -330,6 +331,7 @@ export function NetworkPanel({ host }: { host: string }) {
       {dialog === "setup" && <SetupDialog host={host} data={data} onClose={() => setDialog(null)} />}
       {dialog === "allow" && <AllowDialog host={host} tool={toolName} onClose={() => setDialog(null)} />}
       {dialog === "site" && <SiteDialog host={host} data={data} port={presetPort} onClose={() => setDialog(null)} />}
+      {dialog && typeof dialog === "object" && "editSite" in dialog && <SiteDialog host={host} data={data} port={0} edit={dialog.editSite} onClose={() => setDialog(null)} />}
       {dialog === "caddy" && <PlanDialog title={t("在 {host} 上安装 Caddy", { host })} onClose={() => setDialog(null)} send={(preview) => api.hostSites(host, { action: "install-caddy", preview })}>
         <p className="dim">{t("从系统软件源安装 Caddy 并开机自启。装好后它默认在 80 端口提供一个欢迎页。")}</p></PlanDialog>}
       {dialog && typeof dialog === "object" && "remove" in dialog && (
@@ -458,11 +460,20 @@ function inTailnet(addr: string): boolean {
   return !!m && Number(m[1]) >= 64 && Number(m[1]) <= 127;
 }
 
-function SiteDialog({ host, data, port: preset, onClose }: { host: string; data: NetworkView; port: number; onClose: () => void }) {
+/** 添加站点；给了 edit 就是修改这个站点：地址和服务器不变，其余按原来的样子填好。 */
+function SiteDialog({ host, data, port: preset, edit, onClose }: { host: string; data: NetworkView; port: number; edit?: NetSite; onClose: () => void }) {
   const t = useT();
   const st = data.status;
   const servers: SiteServer[] = [...(st.caddy.installed ? ["caddy" as const] : []), ...(st.nginx.installed ? ["nginx" as const] : [])];
-  const [f, setF] = useState<SiteForm>({
+  // 修改时把原来的目标拆回表单：反向代理是“地址:端口”，静态目录和跳转整个就是目标。
+  const oldUp = edit?.kind === "proxy" ? /^(.*):(\d+)$/.exec(edit.target) : null;
+  const oldRemote = oldUp && oldUp[1] !== "127.0.0.1" ? oldUp[1] : "";
+  const [f, setF] = useState<SiteForm>(edit ? {
+    server: edit.server, address: edit.address, kind: edit.kind, port: oldUp ? Number(oldUp[2]) : 0, upstream: oldRemote,
+    dir: edit.kind === "static" ? edit.target : "", url: edit.kind === "redirect" ? edit.target : "", tls: edit.tls,
+    // 原来就是 Let's Encrypt 的站点，协议当初已经同意过。
+    email: "", agree: edit.tls === "le", cert: "", key: "", maxBody: edit.maxBody ?? 0, hsts: !!edit.hsts, keepHttp: !!edit.keepHttp, perm: !!edit.perm,
+  } : {
     server: servers[0] ?? "caddy", address: "", kind: "proxy", port: preset || 0, upstream: "", dir: "", url: "", tls: servers[0] === "nginx" ? "le" : "auto",
     email: "", agree: false, cert: "", key: "", maxBody: 100, hsts: false, keepHttp: false, perm: false,
   });
@@ -474,7 +485,7 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
     const ip = tn?.state === "Running" ? tn.ips.find((x) => x.startsWith("100.")) : undefined;
     return [...(ip ? [{ name: `${h.name} · Tailscale`, addr: ip }] : []), ...(a ? [{ name: h.name, addr: a }] : [])];
   });
-  const [where, setWhere] = useState<"local" | "host" | "custom">("local");
+  const [where, setWhere] = useState<"local" | "host" | "custom">(() => !oldRemote ? "local" : others.some((o) => o.addr === oldRemote) ? "host" : "custom");
   const remote = f.kind === "proxy" && where !== "local" ? f.upstream.trim() : "";
   const viaTS = inTailnet(remote);
   // 给一个现成的端口：常见的备用 HTTPS 端口里第一个没人在监听的。
@@ -505,23 +516,25 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
   const setPub = (v: string) => { if (typedPort) set({ address: typed.slice(0, -typedPort.length - 1) }); setPubText(v); };
   const suggested = typed && sitePort !== sparePort ? `${typedPort ? typed.slice(0, -typedPort.length - 1) : typed}:${sparePort}` : "";
   const busy443 = !holder && tls !== "http" && !hasPort && st.listen.some((l) => l.port === 443) && !st.sites.some((x) => x.server === f.server && x.tls !== "http") && !(f.server === "caddy" && st.caddy.active);
-  const send = (preview: boolean) => api.hostSites(host, { action: "add", ...f, address: addr, tls, dir: f.dir.trim(), url: f.url.trim(), cert: f.cert.trim(), key: f.key.trim(), email: f.email.trim(), preview });
+  // 修改时只能选不换对外端口的 HTTPS 方式（地址里没写端口时，只用 HTTP 是 80、HTTPS 是 443）。
+  const samePort = (v: SiteTLS) => !edit || !!typedPort || (v === "http") === (edit.tls === "http");
+  const send = (preview: boolean) => api.hostSites(host, { action: edit ? "update" : "add", ...f, address: edit ? edit.address : addr, tls, dir: f.dir.trim(), url: f.url.trim(), cert: f.cert.trim(), key: f.key.trim(), email: f.email.trim(), preview });
   return (
-    <PlanDialog title={t("在 {host} 上添加站点", { host })} onClose={onClose} ready={ready} send={send}>
+    <PlanDialog title={edit ? t("修改站点 {addr}", { addr: edit.address }) : t("在 {host} 上添加站点", { host })} onClose={onClose} ready={ready} send={send}>
       <div className="form-grid">
-        {servers.length > 1 && <div className="field"><label>{t("用哪个服务器")}</label>
+        {!edit && servers.length > 1 && <div className="field"><label>{t("用哪个服务器")}</label>
           <Select value={f.server} onChange={(v) => set({ server: v as SiteServer })} options={servers.map((s) => ({ value: s, label: s === "nginx" ? "Nginx" : "Caddy" }))} /></div>}
         <div className="field"><label>{t("站点类型")}</label>
           <Select value={f.kind} onChange={(v) => set({ kind: v as SiteKind })} options={[
             { value: "proxy", label: t("反向代理"), hint: t("转发到本机端口") }, { value: "static", label: t("静态目录") }, { value: "redirect", label: t("跳转"), hint: t("跳到别的网址") }]} /></div>
         <div className="field"><label htmlFor="site-addr">{t("访问地址")}</label>
-          <input id="site-addr" className="input mono" value={f.address} onChange={(e) => set({ address: e.target.value })} placeholder="app.example.com" spellCheck={false} />
-          <span className="hint">{t("域名要先解析到这台主机，才能申请证书。也可以写 IP。")}</span>
+          <input id="site-addr" className="input mono" value={f.address} disabled={!!edit} onChange={(e) => set({ address: e.target.value })} placeholder="app.example.com" spellCheck={false} />
+          <span className="hint">{edit ? t("地址（域名和对外端口）改不了：要换的话另加一个站点，再撤下这个。") : t("域名要先解析到这台主机，才能申请证书。也可以写 IP。")}</span>
         </div>
-        <div className="field"><label htmlFor="site-pub">{t("对外端口")}</label>
+        {!edit && <div className="field"><label htmlFor="site-pub">{t("对外端口")}</label>
           <input id="site-pub" className="input mono" inputMode="numeric" value={typedPort || pubText} onChange={(e) => setPub(e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder={tls === "http" ? "80" : "443"} />
           <span className="hint">{t("浏览器访问这个站点用的端口，由 {server} 监听。默认 443（只用 HTTP 时是 80）；被别的程序占着就换一个。", { server: f.server === "nginx" ? "Nginx" : "Caddy" })}</span>
-        </div>
+        </div>}
         {f.kind === "proxy" && <div className="field"><label>{t("转发到哪里")}</label>
           <Select value={where === "host" ? f.upstream : where} onChange={(v) => {
             if (v === "local") { setWhere("local"); set({ upstream: "" }); } else if (v === "custom") { setWhere("custom"); set({ upstream: "" }); } else { setWhere("host"); set({ upstream: v }); }
@@ -543,7 +556,7 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
             // 端口还是默认值时跟着换：只用 HTTP 是 80，HTTPS 是 443。
             if (v === "http" && pubText === "443") setPubText("80");
             if (v !== "http" && pubText === "80") setPubText("443");
-          }} options={tlsOptions} />
+          }} options={tlsOptions.filter((o) => samePort(o.value))} />
           <span className="hint">{tls === "auto" ? t("Caddy 自动申请证书并在到期前续期。")
             : tls === "le" ? t("先以 HTTP 开站，用 certbot 从 80 端口验证域名、申请证书，再换成 HTTPS。certbot 会在到期前自动续期。")
             : tls === "internal" ? t("浏览器会提示证书不受信任，适合内网或测试。")
@@ -580,9 +593,12 @@ function SiteDialog({ host, data, port: preset, onClose }: { host: string; data:
       {remote && viaTS && <div className="note"><TriangleAlert /><span>{t("流量会先到这台主机，再经 Tailscale 转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是加密的，那台主机的端口不用对公网开放；它上面的服务不能只监听 127.0.0.1。", { addr: remote })}</span></div>}
       {remote && !viaTS && <div className="note warn"><TriangleAlert /><span>{t("流量会先到这台主机，再转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是明文 HTTP；那台主机上的服务不能只监听 127.0.0.1，端口要让这台主机连得上，建议在那台主机的防火墙里只对这台主机的 IP 放行。", { addr: remote })}</span></div>}
       {holder && <div className="note crit"><TriangleAlert /><span>{t("{port} 端口已经被 {proc} 占用，这样添加会失败。把“对外端口”换成别的（比如 {example}），或者先把那个程序改到别的端口。", { port: sitePort, proc: holder.proc!, example: sparePort })}
-        {suggested && <><br /><button type="button" className="btn sm" style={{ marginTop: 6 }} onClick={() => setPub(String(sparePort))}>{t("改用 {address}", { address: suggested })}</button></>}</span></div>}
+        {suggested && !edit && <><br /><button type="button" className="btn sm" style={{ marginTop: 6 }} onClick={() => setPub(String(sparePort))}>{t("改用 {address}", { address: suggested })}</button></>}</span></div>}
       {busy443 && <div className="note warn"><TriangleAlert /><span>{t("443 端口已经有程序在监听（比如 3x-ui 的 Xray）：HTTPS 站点可能起不来。")}</span></div>}
-      <p className="hint">{t("写入一个单独的站点文件，先校验配置（caddy validate / nginx -t），通过才重载；校验不过会自动撤下，不影响已有的站点。")}</p>
+      {edit && tls === "custom" && <div className="note"><span>{t("证书和私钥的路径要重新填一遍：Hostower 不记它们。")}</span></div>}
+      <p className="hint">{edit
+        ? t("新配置写在原来的站点文件上，先留一份改之前的，再校验配置（caddy validate / nginx -t），通过才重载；校验或重载不过会自动恢复成修改前的配置，原来的站点不受影响。")
+        : t("写入一个单独的站点文件，先校验配置（caddy validate / nginx -t），通过才重载；校验不过会自动撤下，不影响已有的站点。")}</p>
     </PlanDialog>
   );
 }

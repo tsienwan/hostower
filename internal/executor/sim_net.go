@@ -393,7 +393,8 @@ func (s *Sim) netCommand(h inventory.Host, sh *simHost, cmd string) (lines []str
 		if strings.Contains(cmd, netcfg.NginxDir+"/") {
 			server = "nginx"
 		}
-		if _, dup := n.sites[m[1]]; dup {
+		update := strings.Contains(cmd, ".prev")
+		if _, dup := n.sites[m[1]]; dup && !update {
 			return append(lines, "Error: ambiguous site definition: "+m[1], "hostower: Caddy 配置校验没通过，已撤下这个站点（地址重复或者写法不对）"), 1, true
 		}
 		if server == "caddy" {
@@ -408,7 +409,11 @@ func (s *Sim) netCommand(h inventory.Host, sh *simHost, cmd string) (lines []str
 				"This certificate expires on 2027-02-17.", "Certbot has set up a scheduled task to automatically renew this certificate in the background.")
 		}
 		n.sites[m[1]] = simSite{server: server, marker: m[2]}
-		say("hostower: 站点 " + m[1] + " 已生效")
+		if update {
+			say("hostower: 站点 " + m[1] + " 已改好")
+		} else {
+			say("hostower: 站点 " + m[1] + " 已生效")
+		}
 	}
 	if m := simSiteRmRe.FindStringSubmatch(cmd); m != nil {
 		for a, st := range n.sites {

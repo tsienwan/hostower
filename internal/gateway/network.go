@@ -117,7 +117,7 @@ func (s *Server) hostFirewall(w http.ResponseWriter, r *http.Request) {
 }
 
 type siteBody struct {
-	Action string `json:"action"` // add | remove | install-caddy | install-nginx | start-caddy | start-nginx
+	Action string `json:"action"` // add | update | remove | install-caddy | install-nginx | start-caddy | start-nginx
 	netcfg.SiteRequest
 	Preview bool `json:"preview"`
 }
@@ -146,6 +146,17 @@ func (s *Server) hostSites(w http.ResponseWriter, r *http.Request) {
 			intent = "在 " + name + " 上添加跳转 " + site.Address + " → " + site.Target
 		default:
 			intent = "在 " + name + " 上添加站点 " + site.Address + " → " + site.Target
+		}
+	case "update":
+		var site netcfg.Site
+		cmd, site, err = netcfg.SiteUpdateCommand(st, in.SiteRequest)
+		switch site.Kind {
+		case "static":
+			intent = "把 " + name + " 上的站点 " + site.Address + " 改成静态目录 " + site.Target
+		case "redirect":
+			intent = "把 " + name + " 上的站点 " + site.Address + " 改成跳转到 " + site.Target
+		default:
+			intent = "把 " + name + " 上的站点 " + site.Address + " 改成转发到 " + site.Target
 		}
 	case "remove":
 		cmd, err = netcfg.SiteRemoveCommand(st, addr)

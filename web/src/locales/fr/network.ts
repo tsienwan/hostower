@@ -178,6 +178,11 @@ const dict: Record<string, string> = {
     "Le port sur lequel le service écoute sur cet hôte. WebSocket est pris en charge.",
   "流量会先到这台主机，再转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是明文 HTTP；那台主机上的服务不能只监听 127.0.0.1，端口要让这台主机连得上，建议在那台主机的防火墙里只对这台主机的 IP 放行。":
     "Le trafic arrive d’abord sur cet hôte, puis est transmis à {addr} : envois et téléchargements comptent dans le trafic de cet hôte. Le tronçon entre les deux hôtes est en HTTP non chiffré ; le service de l’autre hôte ne doit pas écouter uniquement sur 127.0.0.1 et son port doit être joignable depuis cet hôte. Dans le pare-feu de l’autre hôte, n’autorisez ce port que pour l’IP de cet hôte.",
+  "修改站点": "Modifier le site",
+  "修改站点 {addr}": "Modifier le site {addr}",
+  "地址（域名和对外端口）改不了：要换的话另加一个站点，再撤下这个。": "L’adresse (domaine et port public) ne peut pas être modifiée : ajoutez un autre site, puis retirez celui-ci.",
+  "证书和私钥的路径要重新填一遍：Hostower 不记它们。": "Saisissez à nouveau les chemins du certificat et de la clé : Hostower ne les conserve pas.",
+  "新配置写在原来的站点文件上，先留一份改之前的，再校验配置（caddy validate / nginx -t），通过才重载；校验或重载不过会自动恢复成修改前的配置，原来的站点不受影响。": "La nouvelle configuration est écrite dans le fichier de site existant après en avoir gardé une copie, puis validée (caddy validate / nginx -t) et rechargée seulement si elle passe ; si la validation ou le rechargement échoue, la configuration précédente est restaurée automatiquement et le site existant n’est pas affecté.",
 };
 
 export default dict;

@@ -178,6 +178,11 @@ const dict: Record<string, string> = {
     "The port the service listens on at that host. WebSocket is supported.",
   "流量会先到这台主机，再转到 {addr}：上传和下载都算这台主机的流量。两台主机之间这一段是明文 HTTP；那台主机上的服务不能只监听 127.0.0.1，端口要让这台主机连得上，建议在那台主机的防火墙里只对这台主机的 IP 放行。":
     "Traffic reaches this host first and is then forwarded to {addr}: uploads and downloads both count against this host’s traffic. The hop between the two hosts is plain HTTP; the service on that host must not listen only on 127.0.0.1, and its port must be reachable from this host. In that host’s firewall, allow the port only from this host’s IP.",
+  "修改站点": "Edit site",
+  "修改站点 {addr}": "Edit site {addr}",
+  "地址（域名和对外端口）改不了：要换的话另加一个站点，再撤下这个。": "The address (domain and public port) cannot be changed: add another site, then remove this one.",
+  "证书和私钥的路径要重新填一遍：Hostower 不记它们。": "Enter the certificate and key paths again: Hostower does not keep them.",
+  "新配置写在原来的站点文件上，先留一份改之前的，再校验配置（caddy validate / nginx -t），通过才重载；校验或重载不过会自动恢复成修改前的配置，原来的站点不受影响。": "The new configuration is written over the existing site file after keeping a copy of the old one, then validated (caddy validate / nginx -t) and only reloaded if it passes; if validation or reload fails, the previous configuration is restored automatically and the existing site is unaffected.",
 };
 
 export default dict;
