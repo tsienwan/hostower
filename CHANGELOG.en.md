@@ -4,6 +4,22 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.8
+
+### Added
+
+- Sites can be edited: the site list on the Network tab has an **Edit** button for changing the site type, forward target, HTTPS mode and options without removing and re-adding the site. The new configuration is validated first; if validation or reload fails, the previous configuration is restored automatically and the existing site is unaffected. A copy of the previous configuration is kept on the host (`.prev`). The domain and public port cannot be changed: add another site, then remove the old one.
+- After the panel is upgraded, pages that are still open show a banner asking you to refresh: previously, after an automatic upgrade the version shown in the corner was already the new one while new features stayed invisible until the page was reloaded.
+
+### Changed
+
+- The panel's default listen port changes from 18443 to 8693 (install script, Docker images, compose examples and documentation all follow).
+
+### Upgrade notes
+
+- Existing panels keep their port: if you never set a listen address under **Settings → Panel**, the upgrade pins it to the previous `127.0.0.1:18443` (the database schema goes to 19 and migrates automatically). Change it under **Settings → Panel** if you want the new port.
+- Docker deployments: the listen port inside the image is now 8693. If you keep an older compose file, change the port mapping from `18443:18443` to `8693:8693` (or `127.0.0.1:18443:8693` to keep the host-side port); deployments that set `HOSTOWER_LISTEN` themselves are unaffected.
+
 ## v0.5.7
 
 ### Added
