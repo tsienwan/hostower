@@ -4,6 +4,24 @@
 
 Versions follow [Semantic Versioning](https://semver.org/). Each release groups the changes users will notice; the newest release is at the top.
 
+## v0.5.9
+
+### Added
+
+- **This device** speed tests can cover several hosts at once: in direct mode, tick up to 8 hosts and approve once; the browser tests them one after another and the panel shows a comparison table with latency, download, upload, latency during download, return retransmission rate and return line, marking the host with the lowest latency.
+- Two line-quality metrics: latency while downloading and uploading (how much latency rises when the link is saturated), and, in direct mode, the return retransmission rate (the share of segments the host had to resend while you download, read from its TCP connections; the more loss on the return path, the higher it is).
+- The return route now probes every hop 5 times, and the report gains a per-hop loss column that shows which segment has the problem.
+- Each test is labelled with the network it was run from (region and carrier): shown in the history, and the Speed test page lists the latest result for every network × host pair, making it easy to compare home, office and mobile networks. It uses the same region lookup as route hops; the owner can turn it off on the Speed test page.
+
+### Changed
+
+- Removed pasting a forward route into the report: the forward path (this device to the host) cannot be traced from a browser, so the report shows only the return route and says why. Forward routes pasted earlier are no longer shown.
+
+### Upgrade notes
+
+- The database schema goes to 20; it migrates automatically on upgrade.
+- When a batch includes a host with higher sensitivity, the whole request is approved at the highest level.
+
 ## v0.5.8
 
 ### Added
