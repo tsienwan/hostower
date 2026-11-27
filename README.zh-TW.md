@@ -134,10 +134,10 @@ docker compose -f compose.host.yaml up -d
 sudo cat data/initial-password
 ```
 
-用這組密碼以 `admin` 登入 <http://localhost:18443>，然後在 **設定 → 安全** 裡修改密碼，並新增 Passkey 或動態驗證碼。compose 檔只監聽 `127.0.0.1`；部署在遠端伺服器時，先建立一條 SSH 通道，再在自己的電腦上開啟同一個位址：
+用這組密碼以 `admin` 登入 <http://localhost:8693>，然後在 **設定 → 安全** 裡修改密碼，並新增 Passkey 或動態驗證碼。compose 檔只監聽 `127.0.0.1`；部署在遠端伺服器時，先建立一條 SSH 通道，再在自己的電腦上開啟同一個位址：
 
 ```bash
-ssh -L 18443:127.0.0.1:18443 user@your-server
+ssh -L 8693:127.0.0.1:8693 user@your-server
 ```
 
 ### 3. 透過 HTTPS 對外提供
@@ -146,7 +146,7 @@ ssh -L 18443:127.0.0.1:18443 user@your-server
 
 ```
 hostower.example.com {
-    reverse_proxy 127.0.0.1:18443
+    reverse_proxy 127.0.0.1:8693
 }
 ```
 
@@ -172,7 +172,7 @@ go build -o bin/hostower ./cmd/hostower
 ./bin/hostower serve --dev
 ```
 
-開啟 <http://localhost:18443>，輸入啟動日誌裡印出的權杖。可以試試：
+開啟 <http://localhost:8693>，輸入啟動日誌裡印出的權杖。可以試試：
 
 - 在「執行」裡輸入 `df -h`（自動執行）、`systemctl restart nginx`（需要核准）、`rm -rf /`（被拒絕），看等級判定預覽怎麼變。
 - 對 `group:prod` 執行一條變更：群組裡有高敏感主機，會強制逐台輪流執行，並要求輸入主機數量確認。
@@ -220,7 +220,7 @@ go build -o bin/hostower ./cmd/hostower
 
 按建議順序：
 
-1. **只在本機或私有網路存取**（預設）：監聽 `127.0.0.1:18443`。
+1. **只在本機或私有網路存取**（預設）：監聽 `127.0.0.1:8693`。
 2. **放在會驗證身分的反向代理或通道之後**：`HOSTOWER_TLS=proxy`，`HOSTOWER_PUBLIC_URL=https://…`。
 3. **塔台自己終結 TLS**：`HOSTOWER_TLS_CERT` / `HOSTOWER_TLS_KEY`（只接受 TLS 1.3）。
 

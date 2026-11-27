@@ -194,7 +194,7 @@ const dict: Record<string, string> = {
   "证书文件不是 PEM 格式": "Certificate file is not in PEM format",
   "证书无法解析": "Certificate cannot be parsed",
   "开发模式下不能改面板设置（开发模式只监听本机）": "Panel settings cannot be changed in dev mode (dev mode only listens locally)",
-  "监听地址应形如 127.0.0.1:18443 或 0.0.0.0:18443": "Listen address should look like 127.0.0.1:18443 or 0.0.0.0:18443",
+  "监听地址应形如 127.0.0.1:8693 或 0.0.0.0:8693": "Listen address should look like 127.0.0.1:8693 or 0.0.0.0:8693",
   "会话时长应在 5 分钟到 30 天之间": "Session lifetime must be between 5 minutes and 30 days",
   "证书和私钥读不出来或不匹配：请确认两个文件的路径在塔台所在的机器（容器）里存在": "Certificate and private key cannot be read or do not match: make sure both file paths exist on the machine (container) running the tower",
 

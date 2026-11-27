@@ -20,7 +20,7 @@ WorkingDirectory=/var/lib/hostower
 Environment=HOSTOWER_DATA=/var/lib/hostower/data
 Environment=HOSTOWER_CONFIG=/var/lib/hostower/config
 Environment=HOSTOWER_MASTER_KEY_FILE=/var/lib/hostower/master_key
-# 监听地址、访问地址、TLS 证书、会话时长都在页面的“设置 → 面板”里改（默认只监听 127.0.0.1:18443）。
+# 监听地址、访问地址、TLS 证书、会话时长都在页面的“设置 → 面板”里改（默认只监听 127.0.0.1:8693）。
 # 也可以在这里用环境变量写死，但环境变量优先于页面上的设置：写了之后页面上改的要等去掉它、重启后才生效。
 # 例如放在反向代理或隧道之后时：
 # Environment=HOSTOWER_TLS=proxy

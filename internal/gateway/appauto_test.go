@@ -45,7 +45,7 @@ func appSetup(t *testing.T) *Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	authSvc, err := auth.New(db, "http://localhost:18443", true)
+	authSvc, err := auth.New(db, "http://localhost:8693", true)
 	if err != nil {
 		t.Fatal(err)
 	}

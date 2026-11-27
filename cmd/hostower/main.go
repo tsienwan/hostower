@@ -65,7 +65,7 @@ const usage = `Hostower —— 自托管的多主机运维灯塔
 环境变量（监听、访问地址、TLS、会话时长也可以在“设置”页里改；环境变量优先）：
   HOSTOWER_DATA             数据目录（默认 ./data）
   HOSTOWER_CONFIG           配置目录：inventory.yaml、snippets/、rules/（默认 ./config）
-  HOSTOWER_LISTEN           监听地址（默认 127.0.0.1:18443）
+  HOSTOWER_LISTEN           监听地址（默认 127.0.0.1:8693）
   HOSTOWER_PUBLIC_URL       浏览器访问塔台用的地址（Passkey 绑定到它）
   HOSTOWER_TLS_CERT / _KEY  证书与私钥文件：塔台自己终结 TLS
   HOSTOWER_TLS=proxy        声明前面有一层终结 TLS 的反向代理

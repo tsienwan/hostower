@@ -120,7 +120,7 @@ if [ "$FIRST" = 1 ]; then
   echo
   say "它只监听本机的 127.0.0.1。在远程服务器上，先在自己的电脑上建一条 SSH 隧道，再打开上面的地址：" \
       "It listens on 127.0.0.1 only. On a remote server, open an SSH tunnel from your computer first, then browse to the URL above:"
-  echo "  ssh -L 18443:127.0.0.1:18443 <user>@<server>"
+  echo "  ssh -L 8693:127.0.0.1:8693 <user>@<server>"
   # shellcheck disable=SC1111 # 中文引号是有意的
   say "登录后请立刻修改密码，并在“设置 → 安全”里添加 Passkey 或动态码。" \
       "After signing in, change the password and add a Passkey or authenticator under Settings → Security."

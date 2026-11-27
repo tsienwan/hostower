@@ -71,7 +71,7 @@ func chatSetup(t *testing.T) (*Server, *fakeChat) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	authSvc, err := auth.New(db, "http://localhost:18443", true)
+	authSvc, err := auth.New(db, "http://localhost:8693", true)
 	if err != nil {
 		t.Fatal(err)
 	}

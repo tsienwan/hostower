@@ -18,7 +18,7 @@ func TestBuiltinLocalHost(t *testing.T) {
 		t.Skip("这台机器没有 /bin/sh")
 	}
 	dir := t.TempDir()
-	cfg := Config{DataDir: dir, ConfigDir: dir, Listen: "127.0.0.1:18443", Dev: true}
+	cfg := Config{DataDir: dir, ConfigDir: dir, Listen: "127.0.0.1:8693", Dev: true}
 	cfg.finalize()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	a, err := Open(cfg, log)

@@ -134,10 +134,10 @@ docker compose -f compose.host.yaml up -d
 sudo cat data/initial-password
 ```
 
-이 비밀번호로 <http://localhost:18443>에 `admin`으로 로그인한 뒤 **설정 → 보안**에서 비밀번호를 바꾸고 Passkey 또는 인증 코드를 추가하세요. compose 파일은 `127.0.0.1`에서만 수신합니다. 원격 서버라면 먼저 SSH 터널을 열고 내 컴퓨터에서 같은 주소를 엽니다.
+이 비밀번호로 <http://localhost:8693>에 `admin`으로 로그인한 뒤 **설정 → 보안**에서 비밀번호를 바꾸고 Passkey 또는 인증 코드를 추가하세요. compose 파일은 `127.0.0.1`에서만 수신합니다. 원격 서버라면 먼저 SSH 터널을 열고 내 컴퓨터에서 같은 주소를 엽니다.
 
 ```bash
-ssh -L 18443:127.0.0.1:18443 user@your-server
+ssh -L 8693:127.0.0.1:8693 user@your-server
 ```
 
 ### 3. HTTPS로 외부에 제공
@@ -146,7 +146,7 @@ TLS를 종료하는 리버스 프록시 뒤에 둡니다. `compose.yaml`에서 `
 
 ```
 hostower.example.com {
-    reverse_proxy 127.0.0.1:18443
+    reverse_proxy 127.0.0.1:8693
 }
 ```
 
@@ -172,7 +172,7 @@ go build -o bin/hostower ./cmd/hostower
 ./bin/hostower serve --dev
 ```
 
-<http://localhost:18443>을 열고 시작 로그에 출력된 토큰을 입력합니다. 다음을 시도해 보세요.
+<http://localhost:8693>을 열고 시작 로그에 출력된 토큰을 입력합니다. 다음을 시도해 보세요.
 
 - **실행** 페이지에서 `df -h`(자동 실행), `systemctl restart nginx`(승인 필요), `rm -rf /`(거부)를 입력하고 등급 판정 미리 보기가 어떻게 바뀌는지 확인합니다.
 - `group:prod`에 변경 명령을 실행합니다. 그룹에 민감도가 높은 호스트가 있으므로 한 대씩 순차 실행이 강제되고, 호스트 수를 입력해 확인해야 합니다.
@@ -220,7 +220,7 @@ go build -o bin/hostower ./cmd/hostower
 
 권장 순서는 다음과 같습니다.
 
-1. **로컬 머신이나 사설망에서만 접근**(기본값): `127.0.0.1:18443`에서 수신합니다.
+1. **로컬 머신이나 사설망에서만 접근**(기본값): `127.0.0.1:8693`에서 수신합니다.
 2. **사용자 인증을 수행하는 리버스 프록시나 터널 뒤에 배치**: `HOSTOWER_TLS=proxy`, `HOSTOWER_PUBLIC_URL=https://…`.
 3. **타워가 직접 TLS를 종료**: `HOSTOWER_TLS_CERT` / `HOSTOWER_TLS_KEY`(TLS 1.3만 허용).
 

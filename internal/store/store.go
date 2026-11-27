@@ -257,6 +257,14 @@ CREATE TABLE speedtest_clients (
 	data       TEXT NOT NULL
 );
 `,
+	// v19：面板的默认监听端口从 18443 换成 8693。已经在用的面板（有用户了）如果没在“设置 → 面板”里设过监听地址，
+	// 就把原来的默认值记成它的设置：升级后端口不变，指向它的反向代理和书签不用改。新装的面板库里还没有用户，用新的默认值。
+	`
+INSERT INTO settings (key, value)
+SELECT 'panel.listen', '127.0.0.1:18443'
+WHERE EXISTS (SELECT 1 FROM users)
+  AND NOT EXISTS (SELECT 1 FROM settings WHERE key = 'panel.listen');
+`,
 }
 
 // SchemaVersion 是当前代码认识的结构版本。

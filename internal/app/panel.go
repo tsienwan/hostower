@@ -194,7 +194,7 @@ func (a *App) SavePanel(values map[string]string) (Config, error) {
 		host, port, err := net.SplitHostPort(v)
 		n, perr := strconv.Atoi(port)
 		if err != nil || perr != nil || n < 1 || n > 65535 || (host != "" && net.ParseIP(host) == nil && host != "localhost") {
-			return Config{}, errors.New("监听地址应形如 127.0.0.1:18443 或 0.0.0.0:18443")
+			return Config{}, errors.New("监听地址应形如 127.0.0.1:8693 或 0.0.0.0:8693")
 		}
 	}
 	if v := clean["session_minutes"]; v != "" {
@@ -244,7 +244,7 @@ func (c Config) withoutPanelEnv() Config {
 	b := c
 	b.FromEnv = map[string]bool{}
 	if c.FromEnv["listen"] {
-		b.Listen = "127.0.0.1:18443"
+		b.Listen = "127.0.0.1:8693"
 	}
 	if c.FromEnv["public_url"] {
 		b.PublicURL = ""

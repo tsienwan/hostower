@@ -37,9 +37,9 @@ COPY --from=build /out/hostower /hostower
 COPY --from=build /out/data /data
 ENV HOSTOWER_DATA=/data \
     HOSTOWER_CONFIG=/config \
-    HOSTOWER_LISTEN=0.0.0.0:18443 \
+    HOSTOWER_LISTEN=0.0.0.0:8693 \
     HOSTOWER_LOCAL=host
-EXPOSE 18443
+EXPOSE 8693
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD ["/hostower", "healthcheck"]
 ENTRYPOINT ["/hostower"]
@@ -51,9 +51,9 @@ COPY --from=build /out/hostower /hostower
 COPY --from=build --chown=65532:65532 /out/data /data
 ENV HOSTOWER_DATA=/data \
     HOSTOWER_CONFIG=/config \
-    HOSTOWER_LISTEN=0.0.0.0:18443
+    HOSTOWER_LISTEN=0.0.0.0:8693
 USER 65532:65532
-EXPOSE 18443
+EXPOSE 8693
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD ["/hostower", "healthcheck"]
 ENTRYPOINT ["/hostower"]

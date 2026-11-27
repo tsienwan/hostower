@@ -18,13 +18,13 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     tmpfs: [/tmp]
-    ports: ["127.0.0.1:18443:18443"]
+    ports: ["127.0.0.1:8693:8693"]
     volumes:
       - ./data:/data
       - ./config:/config:ro
     environment:
       HOSTOWER_TLS: proxy
-      HOSTOWER_PUBLIC_URL: http://localhost:18443
+      HOSTOWER_PUBLIC_URL: http://localhost:8693
       # HOSTOWER_MASTER_KEY_FILE: /run/secrets/master_key
     # secrets: [master_key]
 # secrets:

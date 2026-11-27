@@ -194,7 +194,7 @@ const dict: Record<string, string> = {
   "证书文件不是 PEM 格式": "Zertifikatsdatei ist nicht im PEM-Format",
   "证书无法解析": "Zertifikat lässt sich nicht parsen",
   "开发模式下不能改面板设置（开发模式只监听本机）": "Im Entwicklungsmodus lassen sich die Panel-Einstellungen nicht ändern (er lauscht nur lokal)",
-  "监听地址应形如 127.0.0.1:18443 或 0.0.0.0:18443": "Die Listen-Adresse sollte wie 127.0.0.1:18443 oder 0.0.0.0:18443 aussehen",
+  "监听地址应形如 127.0.0.1:8693 或 0.0.0.0:8693": "Die Listen-Adresse sollte wie 127.0.0.1:8693 oder 0.0.0.0:8693 aussehen",
   "会话时长应在 5 分钟到 30 天之间": "Die Sitzungsdauer muss zwischen 5 Minuten und 30 Tagen liegen",
   "证书和私钥读不出来或不匹配：请确认两个文件的路径在塔台所在的机器（容器）里存在": "Zertifikat und privater Schlüssel sind nicht lesbar oder passen nicht zusammen: Stellen Sie sicher, dass beide Pfade auf dem Rechner (im Container) existieren, auf dem der Tower läuft",
 

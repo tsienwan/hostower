@@ -195,7 +195,7 @@ func (n *simNet) detect(h inventory.Host) []string {
 		out = append(out, "== ts-status", "== ts-prefs")
 	}
 	out = append(out, "== client", "198.51.100.10")
-	out = append(out, "== sshd", "== listen", "LISTEN 0 4096 0.0.0.0:22 0.0.0.0:*", "LISTEN 0 4096 127.0.0.1:18443 0.0.0.0:*")
+	out = append(out, "== sshd", "== listen", "LISTEN 0 4096 0.0.0.0:22 0.0.0.0:*", "LISTEN 0 4096 127.0.0.1:8693 0.0.0.0:*")
 	if n.caddyOn || n.nginxOn {
 		out = append(out, "LISTEN 0 4096 *:80 *:*")
 	}

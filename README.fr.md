@@ -134,10 +134,10 @@ docker compose -f compose.host.yaml up -d
 sudo cat data/initial-password
 ```
 
-Connectez-vous en tant que `admin` avec ce mot de passe sur <http://localhost:18443>, puis changez le mot de passe et ajoutez une Passkey ou une application d’authentification dans **Paramètres → Sécurité**. Les fichiers compose n’écoutent que sur `127.0.0.1` ; sur un serveur distant, ouvrez d’abord un tunnel SSH puis ouvrez la même adresse sur votre ordinateur :
+Connectez-vous en tant que `admin` avec ce mot de passe sur <http://localhost:8693>, puis changez le mot de passe et ajoutez une Passkey ou une application d’authentification dans **Paramètres → Sécurité**. Les fichiers compose n’écoutent que sur `127.0.0.1` ; sur un serveur distant, ouvrez d’abord un tunnel SSH puis ouvrez la même adresse sur votre ordinateur :
 
 ```bash
-ssh -L 18443:127.0.0.1:18443 user@your-server
+ssh -L 8693:127.0.0.1:8693 user@your-server
 ```
 
 ### 3. Le servir en HTTPS
@@ -146,7 +146,7 @@ Placez Hostower derrière un proxy inverse qui termine TLS. Dans `compose.yaml`,
 
 ```
 hostower.example.com {
-    reverse_proxy 127.0.0.1:18443
+    reverse_proxy 127.0.0.1:8693
 }
 ```
 
@@ -172,7 +172,7 @@ go build -o bin/hostower ./cmd/hostower
 ./bin/hostower serve --dev
 ```
 
-Ouvrez <http://localhost:18443> et saisissez le jeton affiché dans le journal de démarrage. À essayer :
+Ouvrez <http://localhost:8693> et saisissez le jeton affiché dans le journal de démarrage. À essayer :
 
 - Sur la page **Exécuter**, tapez `df -h` (exécuté automatiquement), `systemctl restart nginx` (nécessite une approbation) et `rm -rf /` (refusé), et regardez l'aperçu du risque changer.
 - Lancez une modification sur `group:prod` : le groupe contient un hôte de sensibilité élevée, l'exécution est donc forcée hôte par hôte et vous devez saisir le nombre d'hôtes pour confirmer.
@@ -220,7 +220,7 @@ Pour les problèmes courants et des conseils sur la connexion des hôtes, sudo, 
 
 Par ordre de préférence :
 
-1. **Machine locale ou réseau privé uniquement** (par défaut) : écoute sur `127.0.0.1:18443`.
+1. **Machine locale ou réseau privé uniquement** (par défaut) : écoute sur `127.0.0.1:8693`.
 2. **Derrière un proxy inverse ou un tunnel qui authentifie les utilisateurs** : `HOSTOWER_TLS=proxy`, `HOSTOWER_PUBLIC_URL=https://…`.
 3. **La tour termine elle-même TLS** : `HOSTOWER_TLS_CERT` / `HOSTOWER_TLS_KEY` (TLS 1.3 uniquement).
 

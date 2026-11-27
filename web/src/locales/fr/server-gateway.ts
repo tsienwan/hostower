@@ -194,7 +194,7 @@ const dict: Record<string, string> = {
   "证书文件不是 PEM 格式": "Le fichier de certificat n'est pas au format PEM",
   "证书无法解析": "Le certificat ne peut pas être analysé",
   "开发模式下不能改面板设置（开发模式只监听本机）": "Les paramètres du panneau ne peuvent pas être modifiés en mode développement (il n'écoute qu'en local)",
-  "监听地址应形如 127.0.0.1:18443 或 0.0.0.0:18443": "L'adresse d'écoute doit ressembler à 127.0.0.1:18443 ou 0.0.0.0:18443",
+  "监听地址应形如 127.0.0.1:8693 或 0.0.0.0:8693": "L'adresse d'écoute doit ressembler à 127.0.0.1:8693 ou 0.0.0.0:8693",
   "会话时长应在 5 分钟到 30 天之间": "La durée de session doit être comprise entre 5 minutes et 30 jours",
   "证书和私钥读不出来或不匹配：请确认两个文件的路径在塔台所在的机器（容器）里存在": "Le certificat et la clé privée ne peuvent pas être lus ou ne correspondent pas : vérifiez que les deux chemins existent sur la machine (le conteneur) qui exécute la tour",
 

@@ -134,10 +134,10 @@ docker compose -f compose.host.yaml up -d
 sudo cat data/initial-password
 ```
 
-Sign in as `admin` with that password at <http://localhost:18443>. Then change the password and add a Passkey or authenticator under **Settings → Security**. The compose files only listen on `127.0.0.1`; on a remote server, open an SSH tunnel first and browse to the same address on your computer:
+Sign in as `admin` with that password at <http://localhost:8693>. Then change the password and add a Passkey or authenticator under **Settings → Security**. The compose files only listen on `127.0.0.1`; on a remote server, open an SSH tunnel first and browse to the same address on your computer:
 
 ```bash
-ssh -L 18443:127.0.0.1:18443 user@your-server
+ssh -L 8693:127.0.0.1:8693 user@your-server
 ```
 
 ### 3. Serve it over HTTPS
@@ -146,7 +146,7 @@ Put Hostower behind a reverse proxy that terminates TLS. In `compose.yaml`, set 
 
 ```
 hostower.example.com {
-    reverse_proxy 127.0.0.1:18443
+    reverse_proxy 127.0.0.1:8693
 }
 ```
 
@@ -172,7 +172,7 @@ go build -o bin/hostower ./cmd/hostower
 ./bin/hostower serve --dev
 ```
 
-Open <http://localhost:18443> and enter the token printed in the startup log. Things to try:
+Open <http://localhost:8693> and enter the token printed in the startup log. Things to try:
 
 - On the **Run** page, type `df -h` (runs automatically), `systemctl restart nginx` (needs approval) and `rm -rf /` (refused), and watch the risk preview change.
 - Run a change against `group:prod`: the group contains a high-sensitivity host, so the run is forced to go one host at a time and you must type the number of hosts to confirm.
@@ -220,7 +220,7 @@ For common problems and tips on connecting hosts, sudo, Docker and apps, see the
 
 In order of preference:
 
-1. **Local machine or private network only** (default): listens on `127.0.0.1:18443`.
+1. **Local machine or private network only** (default): listens on `127.0.0.1:8693`.
 2. **Behind a reverse proxy or tunnel that authenticates users**: `HOSTOWER_TLS=proxy`, `HOSTOWER_PUBLIC_URL=https://…`.
 3. **The tower terminates TLS itself**: `HOSTOWER_TLS_CERT` / `HOSTOWER_TLS_KEY` (TLS 1.3 only).
 

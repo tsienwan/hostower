@@ -134,10 +134,10 @@ docker compose -f compose.host.yaml up -d
 sudo cat data/initial-password
 ```
 
-このパスワードで <http://localhost:18443> に `admin` としてログインし、**設定 → セキュリティ** でパスワードを変更して、Passkey または認証コードを追加してください。compose ファイルは `127.0.0.1` でのみ待ち受けます。リモートサーバーの場合は、先に SSH トンネルを張り、手元のコンピューターで同じアドレスを開きます。
+このパスワードで <http://localhost:8693> に `admin` としてログインし、**設定 → セキュリティ** でパスワードを変更して、Passkey または認証コードを追加してください。compose ファイルは `127.0.0.1` でのみ待ち受けます。リモートサーバーの場合は、先に SSH トンネルを張り、手元のコンピューターで同じアドレスを開きます。
 
 ```bash
-ssh -L 18443:127.0.0.1:18443 user@your-server
+ssh -L 8693:127.0.0.1:8693 user@your-server
 ```
 
 ### 3. HTTPS で公開する
@@ -146,7 +146,7 @@ TLS を終端するリバースプロキシの背後に置きます。`compose.y
 
 ```
 hostower.example.com {
-    reverse_proxy 127.0.0.1:18443
+    reverse_proxy 127.0.0.1:8693
 }
 ```
 
@@ -172,7 +172,7 @@ go build -o bin/hostower ./cmd/hostower
 ./bin/hostower serve --dev
 ```
 
-<http://localhost:18443> を開き、起動ログに表示されたトークンを入力します。次のことを試してみてください。
+<http://localhost:8693> を開き、起動ログに表示されたトークンを入力します。次のことを試してみてください。
 
 - **実行** ページで `df -h`（自動実行）、`systemctl restart nginx`（承認が必要）、`rm -rf /`（拒否される）を入力し、判定プレビューがどう変わるかを見る。
 - `group:prod` に対して変更を実行する：グループに高感度のホストが含まれているため、1 台ずつのローリング実行が強制され、確認のためにホスト数の入力を求められます。
@@ -220,7 +220,7 @@ go build -o bin/hostower ./cmd/hostower
 
 おすすめ順に：
 
-1. **ローカルマシンまたはプライベートネットワークからのみアクセス**（デフォルト）：`127.0.0.1:18443` で待ち受けます。
+1. **ローカルマシンまたはプライベートネットワークからのみアクセス**（デフォルト）：`127.0.0.1:8693` で待ち受けます。
 2. **本人確認を行うリバースプロキシまたはトンネルの背後に置く**：`HOSTOWER_TLS=proxy`、`HOSTOWER_PUBLIC_URL=https://…`。
 3. **タワー自身が TLS を終端する**：`HOSTOWER_TLS_CERT` / `HOSTOWER_TLS_KEY`（TLS 1.3 のみ受け付けます）。
 

@@ -134,10 +134,10 @@ docker compose -f compose.host.yaml up -d
 sudo cat data/initial-password
 ```
 
-用这个密码以 `admin` 登录 <http://localhost:18443>，然后在 **设置 → 安全** 里修改密码，并添加 Passkey 或动态码。compose 文件只监听 `127.0.0.1`；部署在远程服务器上时，先建一条 SSH 隧道，再在自己电脑上打开同一个地址：
+用这个密码以 `admin` 登录 <http://localhost:8693>，然后在 **设置 → 安全** 里修改密码，并添加 Passkey 或动态码。compose 文件只监听 `127.0.0.1`；部署在远程服务器上时，先建一条 SSH 隧道，再在自己电脑上打开同一个地址：
 
 ```bash
-ssh -L 18443:127.0.0.1:18443 user@your-server
+ssh -L 8693:127.0.0.1:8693 user@your-server
 ```
 
 ### 3. 通过 HTTPS 对外访问
@@ -146,7 +146,7 @@ ssh -L 18443:127.0.0.1:18443 user@your-server
 
 ```
 hostower.example.com {
-    reverse_proxy 127.0.0.1:18443
+    reverse_proxy 127.0.0.1:8693
 }
 ```
 
@@ -172,7 +172,7 @@ go build -o bin/hostower ./cmd/hostower
 ./bin/hostower serve --dev
 ```
 
-打开 <http://localhost:18443>，输入启动日志里打印的令牌。可以试试：
+打开 <http://localhost:8693>，输入启动日志里打印的令牌。可以试试：
 
 - 在“执行”里输入 `df -h`（自动执行）、`systemctl restart nginx`（要批准）、`rm -rf /`（被拒绝），看判级预览怎么变。
 - 对 `group:prod` 执行一条变更：组里有高敏感主机，会强制逐台滚动，并要求输入主机数量确认。
@@ -220,7 +220,7 @@ go build -o bin/hostower ./cmd/hostower
 
 按推荐顺序：
 
-1. **只在本机或私网访问**（默认）：监听 `127.0.0.1:18443`。
+1. **只在本机或私网访问**（默认）：监听 `127.0.0.1:8693`。
 2. **放在会验证身份的反向代理或隧道之后**：`HOSTOWER_TLS=proxy`，`HOSTOWER_PUBLIC_URL=https://…`。
 3. **塔台自己终结 TLS**：`HOSTOWER_TLS_CERT` / `HOSTOWER_TLS_KEY`（只接受 TLS 1.3）。
 

@@ -60,7 +60,7 @@ func ConfigFromEnv(dev bool) Config {
 	c := Config{
 		DataDir:   env("HOSTOWER_DATA", "./data"),
 		ConfigDir: os.Getenv("HOSTOWER_CONFIG"),
-		Listen:    env("HOSTOWER_LISTEN", "127.0.0.1:18443"),
+		Listen:    env("HOSTOWER_LISTEN", "127.0.0.1:8693"),
 		PublicURL: os.Getenv("HOSTOWER_PUBLIC_URL"),
 		TLSCert:   os.Getenv("HOSTOWER_TLS_CERT"),
 		TLSKey:    os.Getenv("HOSTOWER_TLS_KEY"),

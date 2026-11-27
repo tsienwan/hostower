@@ -134,10 +134,10 @@ docker compose -f compose.host.yaml up -d
 sudo cat data/initial-password
 ```
 
-Melden Sie sich mit diesem Passwort als `admin` unter <http://localhost:18443> an. Ändern Sie danach unter **Einstellungen → Sicherheit** das Passwort und fügen Sie einen Passkey oder Authenticator hinzu. Die Compose-Dateien lauschen nur auf `127.0.0.1`; auf einem entfernten Server öffnen Sie zuerst einen SSH-Tunnel und rufen dieselbe Adresse auf Ihrem Rechner auf:
+Melden Sie sich mit diesem Passwort als `admin` unter <http://localhost:8693> an. Ändern Sie danach unter **Einstellungen → Sicherheit** das Passwort und fügen Sie einen Passkey oder Authenticator hinzu. Die Compose-Dateien lauschen nur auf `127.0.0.1`; auf einem entfernten Server öffnen Sie zuerst einen SSH-Tunnel und rufen dieselbe Adresse auf Ihrem Rechner auf:
 
 ```bash
-ssh -L 18443:127.0.0.1:18443 user@your-server
+ssh -L 8693:127.0.0.1:8693 user@your-server
 ```
 
 ### 3. Über HTTPS bereitstellen
@@ -146,7 +146,7 @@ Stellen Sie Hostower hinter einen Reverse Proxy, der TLS terminiert. Setzen Sie 
 
 ```
 hostower.example.com {
-    reverse_proxy 127.0.0.1:18443
+    reverse_proxy 127.0.0.1:8693
 }
 ```
 
@@ -172,7 +172,7 @@ go build -o bin/hostower ./cmd/hostower
 ./bin/hostower serve --dev
 ```
 
-Öffnen Sie <http://localhost:18443> und geben Sie das Token ein, das im Startprotokoll ausgegeben wird. Was Sie ausprobieren können:
+Öffnen Sie <http://localhost:8693> und geben Sie das Token ein, das im Startprotokoll ausgegeben wird. Was Sie ausprobieren können:
 
 - Geben Sie auf der Seite **Ausführen** `df -h` (wird automatisch ausgeführt), `systemctl restart nginx` (benötigt eine Genehmigung) und `rm -rf /` (wird abgelehnt) ein und beobachten Sie, wie sich die Risikovorschau ändert.
 - Führen Sie eine Änderung gegen `group:prod` aus: Die Gruppe enthält einen Host mit hoher Sensibilität, daher wird die Ausführung Host für Host erzwungen, und Sie müssen zur Bestätigung die Anzahl der Hosts eingeben.
@@ -220,7 +220,7 @@ Häufige Probleme und Tipps zum Anbinden von Hosts, zu sudo, Docker und Apps fin
 
 In der Reihenfolge der Empfehlung:
 
-1. **Nur lokaler Rechner oder privates Netzwerk** (Standard): lauscht auf `127.0.0.1:18443`.
+1. **Nur lokaler Rechner oder privates Netzwerk** (Standard): lauscht auf `127.0.0.1:8693`.
 2. **Hinter einem Reverse-Proxy oder Tunnel, der Benutzer authentifiziert**: `HOSTOWER_TLS=proxy`, `HOSTOWER_PUBLIC_URL=https://…`.
 3. **Der Tower terminiert TLS selbst**: `HOSTOWER_TLS_CERT` / `HOSTOWER_TLS_KEY` (nur TLS 1.3).
 

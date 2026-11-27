@@ -14,7 +14,7 @@ func TestPublicURLWithIP(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	for _, u := range []string{"https://192.0.2.10:18443", "https://[2001:db8::1]:18443"} {
+	for _, u := range []string{"https://192.0.2.10:8693", "https://[2001:db8::1]:8693"} {
 		s, err := New(db, u, false)
 		if err != nil {
 			t.Fatalf("%s：用 IP 地址访问也应该能启动：%v", u, err)
